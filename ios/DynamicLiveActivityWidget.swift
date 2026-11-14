@@ -1,0 +1,67 @@
+import ActivityKit
+import SwiftUI
+import WidgetKit
+
+@available(iOS 16.1, *)
+public struct DynamicLiveActivityWidget: Widget {
+  public init() {}
+
+  public var body: some WidgetConfiguration {
+    ActivityConfiguration(for: DynamicActivityAttributes.self) { context in
+      // Render Lock Screen
+      let payload = parsePayload(json: context.state.payloadJson)
+      if let lockScreen = payload?.lockScreen {
+        DynamicNodeView(node: lockScreen)
+          .activityBackgroundTint(.black.opacity(0.8))
+          .activitySystemActionForegroundColor(.white)
+      } else {
+        Text("Live Activity")
+      }
+    } dynamicIsland: { context in
+      let payload = parsePayload(json: context.state.payloadJson)
+      let island = payload?.dynamicIsland
+
+      return DynamicIsland {
+        // Expanded Regions
+        DynamicIslandExpandedRegion(.leading) {
+          if let leading = island?.expanded?.leading {
+            DynamicNodeView(node: leading)
+          }
+        }
+        DynamicIslandExpandedRegion(.trailing) {
+          if let trailing = island?.expanded?.trailing {
+            DynamicNodeView(node: trailing)
+          }
+        }
+        DynamicIslandExpandedRegion(.bottom) {
+          if let bottom = island?.expanded?.bottom {
+            DynamicNodeView(node: bottom)
+          }
+        }
+        DynamicIslandExpandedRegion(.center) {
+          if let center = island?.expanded?.center {
+            DynamicNodeView(node: center)
+          }
+        }
+      } compactLeading: {
+        if let leading = island?.compactLeading {
+          DynamicNodeView(node: leading)
+        }
+      } compactTrailing: {
+        if let trailing = island?.compactTrailing {
+          DynamicNodeView(node: trailing)
+        }
+      } minimal: {
+        if let minimal = island?.minimal ?? island?.compactLeading {
+          DynamicNodeView(node: minimal)
+        }
+      }
+    }
+  }
+
+  private func parsePayload(json: String) -> DynamicPayloadDTO? {
+    guard let data = json.data(using: .utf8) else { return nil }
+    return try? JSONDecoder().decode(DynamicPayloadDTO.self, from: data)
+  }
+}
+

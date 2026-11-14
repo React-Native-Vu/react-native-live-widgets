@@ -1,0 +1,31 @@
+{
+  "name": "react-native-live-widgets",
+  "version": "0.2.0",
+  "description": "All-in-One Live Activities (iOS 16.1+ WidgetKit / Dynamic Island), Live Updates (Android 16+ ProgressStyle) and Home Screen Widgets for React Native with Declarative Dynamic UI Engine",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "bin": {
+    "react-native-live-widgets": "cli/setup.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vu-tran/react-native-live-widgets.git"
+  },
+  "keywords": [
+    "react-native",
+    "live-activity",
+    "dynamic-island",
+    "widgetkit",
+    "home-screen-widgets",
+    "android-live-update",
+    "progress-style",
+    "shared-storage",
+    "app-groups"
+  ],
+  "author": "vu-tran",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  }
+}
