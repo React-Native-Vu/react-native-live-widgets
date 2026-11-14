@@ -3,38 +3,84 @@ import WidgetKit
 
 // MARK: - Decodable Models
 
-struct LayoutNodeDTO: Codable {
-  let type: String
-  let props: [String: AnyCodable]?
-  let children: [LayoutNodeDTO]?
+public struct LayoutNodeDTO: Codable {
+  public let type: String
+  public let props: [String: AnyCodable]?
+  public let children: [LayoutNodeDTO]?
+
+  public init(type: String, props: [String: AnyCodable]? = nil, children: [LayoutNodeDTO]? = nil) {
+    self.type = type
+    self.props = props
+    self.children = children
+  }
 }
 
-struct DynamicPayloadDTO: Codable {
-  let activityId: String?
-  let lockScreen: LayoutNodeDTO?
-  let dynamicIsland: DynamicIslandDTO?
-  let staleTimestamp: Double?
+public struct DynamicPayloadDTO: Codable {
+  public let activityId: String?
+  public let lockScreen: LayoutNodeDTO?
+  public let dynamicIsland: DynamicIslandDTO?
+  public let staleTimestamp: Double?
+
+  public init(
+    activityId: String? = nil,
+    lockScreen: LayoutNodeDTO? = nil,
+    dynamicIsland: DynamicIslandDTO? = nil,
+    staleTimestamp: Double? = nil
+  ) {
+    self.activityId = activityId
+    self.lockScreen = lockScreen
+    self.dynamicIsland = dynamicIsland
+    self.staleTimestamp = staleTimestamp
+  }
 }
 
-struct DynamicIslandDTO: Codable {
-  let compactLeading: LayoutNodeDTO?
-  let compactTrailing: LayoutNodeDTO?
-  let minimal: LayoutNodeDTO?
-  let expanded: ExpandedIslandDTO?
+public struct DynamicIslandDTO: Codable {
+  public let compactLeading: LayoutNodeDTO?
+  public let compactTrailing: LayoutNodeDTO?
+  public let minimal: LayoutNodeDTO?
+  public let expanded: ExpandedIslandDTO?
+
+  public init(
+    compactLeading: LayoutNodeDTO? = nil,
+    compactTrailing: LayoutNodeDTO? = nil,
+    minimal: LayoutNodeDTO? = nil,
+    expanded: ExpandedIslandDTO? = nil
+  ) {
+    self.compactLeading = compactLeading
+    self.compactTrailing = compactTrailing
+    self.minimal = minimal
+    self.expanded = expanded
+  }
 }
 
-struct ExpandedIslandDTO: Codable {
-  let leading: LayoutNodeDTO?
-  let trailing: LayoutNodeDTO?
-  let bottom: LayoutNodeDTO?
-  let center: LayoutNodeDTO?
+public struct ExpandedIslandDTO: Codable {
+  public let leading: LayoutNodeDTO?
+  public let trailing: LayoutNodeDTO?
+  public let bottom: LayoutNodeDTO?
+  public let center: LayoutNodeDTO?
+
+  public init(
+    leading: LayoutNodeDTO? = nil,
+    trailing: LayoutNodeDTO? = nil,
+    bottom: LayoutNodeDTO? = nil,
+    center: LayoutNodeDTO? = nil
+  ) {
+    self.leading = leading
+    self.trailing = trailing
+    self.bottom = bottom
+    self.center = center
+  }
 }
 
 // AnyCodable helper để decode props linh hoạt
-struct AnyCodable: Codable {
-  let value: Any
+public struct AnyCodable: Codable {
+  public let value: Any
 
-  init(from decoder: Decoder) throws {
+  public init(_ value: Any) {
+    self.value = value
+  }
+
+  public init(from decoder: Decoder) throws {
     let container = try decoder.singleValueContainer()
     if let string = try? container.decode(String.self) {
       value = string
@@ -51,18 +97,18 @@ struct AnyCodable: Codable {
     }
   }
 
-  func encode(to encoder: Encoder) throws {}
+  public func encode(to encoder: Encoder) throws {}
   
-  var stringValue: String? { value as? String }
-  var doubleValue: Double? { value as? Double }
-  var boolValue: Bool? { value as? Bool }
-  var arrayValue: [Any]? { value as? [Any] }
+  public var stringValue: String? { value as? String }
+  public var doubleValue: Double? { value as? Double }
+  public var boolValue: Bool? { value as? Bool }
+  public var arrayValue: [Any]? { value as? [Any] }
 }
 
 // MARK: - SwiftUI Recursive Dynamic Node View
 
 public struct DynamicNodeView: View {
-  let node: LayoutNodeDTO
+  public let node: LayoutNodeDTO
 
   public init(node: LayoutNodeDTO) {
     self.node = node
