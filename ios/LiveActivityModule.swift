@@ -34,7 +34,7 @@ public class LiveActivityModule: RCTEventEmitter {
     resolve: @escaping RCTPromiseResolveBlock,
     reject: @escaping RCTPromiseRejectBlock
   ) {
-    guard #available(iOS 16.1, *) else {
+    guard #available(iOS 16.2, *) else {
       resolve(false)
       return
     }
@@ -74,7 +74,7 @@ public class LiveActivityModule: RCTEventEmitter {
     resolve: @escaping RCTPromiseResolveBlock,
     reject: @escaping RCTPromiseRejectBlock
   ) {
-    guard #available(iOS 16.1, *) else {
+    guard #available(iOS 16.2, *) else {
       resolve(false)
       return
     }
@@ -97,7 +97,7 @@ public class LiveActivityModule: RCTEventEmitter {
     resolve: @escaping RCTPromiseResolveBlock,
     reject: @escaping RCTPromiseRejectBlock
   ) {
-    guard #available(iOS 16.1, *) else {
+    guard #available(iOS 16.2, *) else {
       resolve(false)
       return
     }
@@ -117,7 +117,7 @@ public class LiveActivityModule: RCTEventEmitter {
     resolve: @escaping RCTPromiseResolveBlock,
     reject: @escaping RCTPromiseRejectBlock
   ) {
-    guard #available(iOS 16.1, *) else {
+    guard #available(iOS 16.2, *) else {
       resolve(false)
       return
     }
@@ -228,10 +228,9 @@ public class LiveActivityModule: RCTEventEmitter {
     reject: @escaping RCTPromiseRejectBlock
   ) {
     let defaults = getDefaults(appGroup: appGroup)
-    if let dict = defaults.dictionaryRepresentation() as? [String: Any] {
-      for key in dict.keys {
-        defaults.removeObject(forKey: key)
-      }
+    let dict = defaults.dictionaryRepresentation()
+    for key in dict.keys {
+      defaults.removeObject(forKey: key)
     }
     resolve(true)
   }
