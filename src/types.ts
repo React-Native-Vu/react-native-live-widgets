@@ -151,10 +151,30 @@ export interface ButtonNode extends BaseNode {
   type: 'Button';
   props: {
     title: string;
-    actionId: string;
+    /**
+     * Mã hành động chạy ngầm ngay trên Widget (iOS 17+ AppIntent, không mở App):
+     * - 'page:<pageId>': Chuyển sang trang/tab cụ thể (vd 'page:todo', 'page:okr')
+     * - 'page:next' | 'page:prev': Lật sang trang kế tiếp / trang trước
+     * - 'toggle:<itemKey>': Tick / bỏ tick hoàn thành 1 mục ngay trên mặt Widget
+     */
+    actionId?: string;
+    /** Mở App và điều hướng tới URL Deep Link cụ thể */
+    deepLink?: string;
     backgroundColor?: string;
     textColor?: string;
+    fontSize?: number;
+    fontWeight?: 'regular' | 'medium' | 'semibold' | 'bold';
+    padding?: number;
+    paddingHorizontal?: number;
+    paddingVertical?: number;
     borderRadius?: number;
+    fullWidth?: boolean;
+    /** Tiêu đề hiển thị khi nút ở trạng thái đã tick (dùng với actionId 'toggle:<key>') */
+    checkedTitle?: string;
+    /** Màu nền khi nút đã được tick */
+    checkedBackgroundColor?: string;
+    /** Màu chữ khi nút đã được tick */
+    checkedTextColor?: string;
   };
 }
 
@@ -206,8 +226,20 @@ export interface UpdateActivityOptions {
   alertBody?: string;
 }
 
-export interface WidgetLayoutConfig {
+export interface WidgetSinglePageConfig {
   small?: LayoutNode;
   medium?: LayoutNode;
   large?: LayoutNode;
+}
+
+export interface WidgetLayoutConfig extends WidgetSinglePageConfig {
+  /**
+   * Danh sách các trang/tab của Widget để chuyển qua lại ngay trên mặt Widget (không mở App).
+   * Ví dụ: { shift: { small, medium, large }, todo: { small, medium, large } }
+   */
+  pages?: Record<string, WidgetSinglePageConfig>;
+  /** Thứ tự các trang khi bấm nút 'page:next' hoặc 'page:prev' */
+  pageOrder?: string[];
+  /** Trang hiển thị mặc định ban đầu */
+  initialPage?: string;
 }

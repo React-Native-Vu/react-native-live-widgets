@@ -1,4 +1,5 @@
 import {
+  ButtonNode,
   ContainerProps,
   HStackNode,
   ImageNode,
@@ -128,5 +129,16 @@ export const UI = {
   Spacer: (minLength?: number): SpacerNode => ({
     type: 'Spacer',
     props: { minLength },
+  }),
+
+  Button: (
+    title: string,
+    options?: Omit<ButtonNode['props'], 'title'>
+  ): ButtonNode => ({
+    type: 'Button',
+    props: {
+      title,
+      ...options,
+    },
   }),
 };

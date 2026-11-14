@@ -1,5 +1,164 @@
+import AppIntents
 import SwiftUI
 import WidgetKit
+
+// MARK: - Interactive Widget State Store & AppIntent (iOS 17+ / iOS 27)
+
+public struct WidgetSinglePageDTO: Codable {
+  public let small: LayoutNodeDTO?
+  public let medium: LayoutNodeDTO?
+  public let large: LayoutNodeDTO?
+}
+
+public struct WidgetMultiPagePayloadDTO: Codable {
+  public let small: LayoutNodeDTO?
+  public let medium: LayoutNodeDTO?
+  public let large: LayoutNodeDTO?
+  public let pages: [String: WidgetSinglePageDTO]?
+  public let pageOrder: [String]?
+  public let initialPage: String?
+}
+
+public struct InteractiveWidgetState: Codable {
+  public var activePage: String?
+  public var pageOrder: [String]?
+  public var toggledItems: [String: Bool]
+  public var lastActionId: String?
+  public var updatedAt: Double
+
+  public init(
+    activePage: String? = nil,
+    pageOrder: [String]? = nil,
+    toggledItems: [String: Bool] = [:],
+    lastActionId: String? = nil,
+    updatedAt: Double = Date().timeIntervalSince1970
+  ) {
+    self.activePage = activePage
+    self.pageOrder = pageOrder
+    self.toggledItems = toggledItems
+    self.lastActionId = lastActionId
+    self.updatedAt = updatedAt
+  }
+}
+
+public enum DynamicWidgetStateStore {
+  private static let stateKey = "interactive_state"
+  private static var memoryCache: InteractiveWidgetState?
+
+  public static func loadState() -> InteractiveWidgetState {
+    if let fileURL = DynamicWidgetProvider.sharedFileURL(key: stateKey, appGroup: ""),
+       let data = try? Data(contentsOf: fileURL),
+       let state = try? JSONDecoder().decode(InteractiveWidgetState.self, from: data) {
+      memoryCache = state
+      return state
+    }
+
+    #if targetEnvironment(simulator)
+    let simPath = "/tmp/rn_live_widgets_\(stateKey).json"
+    if let data = try? Data(contentsOf: URL(fileURLWithPath: simPath)),
+       let state = try? JSONDecoder().decode(InteractiveWidgetState.self, from: data) {
+      memoryCache = state
+      return state
+    }
+    #endif
+
+    let resolvedGroup = DynamicWidgetProvider.resolveAppGroup("")
+    if !resolvedGroup.isEmpty,
+       let defaults = UserDefaults(suiteName: resolvedGroup),
+       let jsonStr = defaults.string(forKey: stateKey),
+       let data = jsonStr.data(using: .utf8),
+       let state = try? JSONDecoder().decode(InteractiveWidgetState.self, from: data) {
+      memoryCache = state
+      return state
+    }
+
+    return memoryCache ?? InteractiveWidgetState()
+  }
+
+  public static func saveState(_ state: InteractiveWidgetState) {
+    memoryCache = state
+    guard let data = try? JSONEncoder().encode(state),
+          let jsonStr = String(data: data, encoding: .utf8) else {
+      return
+    }
+
+    if let fileURL = DynamicWidgetProvider.sharedFileURL(key: stateKey, appGroup: "") {
+      try? jsonStr.write(to: fileURL, atomically: true, encoding: .utf8)
+    }
+
+    #if targetEnvironment(simulator)
+    let simPath = "/tmp/rn_live_widgets_\(stateKey).json"
+    try? jsonStr.write(toFile: simPath, atomically: true, encoding: .utf8)
+    #endif
+
+    let resolvedGroup = DynamicWidgetProvider.resolveAppGroup("")
+    if !resolvedGroup.isEmpty, let defaults = UserDefaults(suiteName: resolvedGroup) {
+      defaults.set(jsonStr, forKey: stateKey)
+      defaults.synchronize()
+    }
+  }
+
+  public static func handleAction(_ actionId: String) {
+    var state = loadState()
+    state.lastActionId = actionId
+    state.updatedAt = Date().timeIntervalSince1970
+
+    if actionId.hasPrefix("page:") {
+      let target = String(actionId.dropFirst(5))
+      let order = state.pageOrder ?? []
+      if target == "next", !order.isEmpty {
+        let current = state.activePage ?? order[0]
+        if let idx = order.firstIndex(of: current) {
+          state.activePage = order[(idx + 1) % order.count]
+        } else {
+          state.activePage = order[0]
+        }
+      } else if target == "prev", !order.isEmpty {
+        let current = state.activePage ?? order[0]
+        if let idx = order.firstIndex(of: current) {
+          state.activePage = order[(idx - 1 + order.count) % order.count]
+        } else {
+          state.activePage = order[0]
+        }
+      } else {
+        state.activePage = target
+      }
+    } else if actionId.hasPrefix("toggle:") {
+      let key = String(actionId.dropFirst(7))
+      let current = state.toggledItems[key] ?? false
+      state.toggledItems[key] = !current
+    }
+
+    saveState(state)
+  }
+
+  public static func isToggled(_ key: String) -> Bool {
+    return loadState().toggledItems[key] ?? false
+  }
+}
+
+@available(iOS 17.0, *)
+public struct DynamicWidgetActionIntent: AppIntent {
+  public static var title: LocalizedStringResource = "Interactive Widget Action"
+  public static var description = IntentDescription("Perform interactive tab/page switching or toggling right on the widget.")
+
+  @Parameter(title: "Action ID")
+  public var actionId: String
+
+  public init() {
+    self.actionId = ""
+  }
+
+  public init(actionId: String) {
+    self.actionId = actionId
+  }
+
+  public func perform() async throws -> some IntentResult {
+    DynamicWidgetStateStore.handleAction(actionId)
+    WidgetCenter.shared.reloadAllTimelines()
+    return .result()
+  }
+}
 
 // MARK: - Decodable Models
 
@@ -128,6 +287,8 @@ public struct DynamicNodeView: View {
       renderProgress()
     case "Image":
       renderImage()
+    case "Button":
+      renderButton()
     case "Spacer":
       if let minLength = node.props?["minLength"]?.doubleValue {
         Spacer(minLength: CGFloat(minLength))
@@ -363,6 +524,81 @@ public struct DynamicNodeView: View {
         .frame(width: width, height: height)
     } else {
       EmptyView()
+    }
+  }
+
+  @ViewBuilder
+  private func renderButton() -> some View {
+    let rawTitle = node.props?["title"]?.stringValue ?? "Button"
+    let actionId = node.props?["actionId"]?.stringValue ?? ""
+    let deepLink = node.props?["deepLink"]?.stringValue
+
+    let isToggled: Bool = {
+      if actionId.hasPrefix("toggle:") {
+        let key = String(actionId.dropFirst(7))
+        return DynamicWidgetStateStore.isToggled(key)
+      }
+      return false
+    }()
+
+    let displayTitle: String = {
+      if isToggled, let checkedTitle = node.props?["checkedTitle"]?.stringValue {
+        return checkedTitle
+      }
+      return rawTitle
+    }()
+
+    let bgHex: String? = {
+      if isToggled, let checkedBg = node.props?["checkedBackgroundColor"]?.stringValue {
+        return checkedBg
+      }
+      return node.props?["backgroundColor"]?.stringValue
+    }()
+
+    let textHex: String? = {
+      if isToggled, let checkedText = node.props?["checkedTextColor"]?.stringValue {
+        return checkedText
+      }
+      return node.props?["textColor"]?.stringValue
+    }()
+
+    let fontSize = node.props?["fontSize"]?.doubleValue ?? 12
+    let fontWeightStr = node.props?["fontWeight"]?.stringValue ?? "bold"
+    let cornerRadius = node.props?["borderRadius"]?.doubleValue.map { CGFloat($0) } ?? 8
+    let padH = node.props?["paddingHorizontal"]?.doubleValue.map { CGFloat($0) }
+      ?? node.props?["padding"]?.doubleValue.map { CGFloat($0) } ?? 10
+    let padV = node.props?["paddingVertical"]?.doubleValue.map { CGFloat($0) }
+      ?? node.props?["padding"]?.doubleValue.map { CGFloat($0) } ?? 6
+    let fullWidth = node.props?["fullWidth"]?.boolValue ?? false
+
+    let labelView = HStack(spacing: 4) {
+      Text(displayTitle)
+        .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
+        .foregroundColor(textHex.flatMap { Color(hex: $0) } ?? .white)
+        .lineLimit(1)
+      if fullWidth {
+        Spacer(minLength: 0)
+      }
+    }
+    .padding(.horizontal, padH)
+    .padding(.vertical, padV)
+    .frame(maxWidth: fullWidth ? .infinity : nil, alignment: .leading)
+    .background(
+      RoundedRectangle(cornerRadius: cornerRadius)
+        .fill(bgHex.flatMap { Color(hex: $0) } ?? Color.blue)
+    )
+
+    if let deepLink = deepLink, let url = URL(string: deepLink) {
+      Link(destination: url) {
+        labelView
+      }
+    } else if #available(iOS 17.0, *), !actionId.isEmpty {
+      Button(intent: DynamicWidgetActionIntent(actionId: actionId)) {
+        labelView
+      }
+      .buttonStyle(.plain)
+    } else {
+      labelView
     }
   }
 

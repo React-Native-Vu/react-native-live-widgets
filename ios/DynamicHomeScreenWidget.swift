@@ -96,18 +96,53 @@ public struct DynamicHomeScreenWidgetView: View {
   private var activeNode: LayoutNodeDTO? {
     guard let json = entry.layoutJson,
           let data = json.data(using: .utf8),
-          let layoutConfig = try? JSONDecoder().decode([String: LayoutNodeDTO].self, from: data) else {
+          let payload = try? JSONDecoder().decode(WidgetMultiPagePayloadDTO.self, from: data) else {
       return nil
     }
+
+    if let pages = payload.pages, !pages.isEmpty {
+      let state = DynamicWidgetStateStore.loadState()
+      let defaultOrder = payload.pageOrder ?? Array(pages.keys).sorted()
+      let activePageId: String = {
+        if let saved = state.activePage, pages[saved] != nil {
+          return saved
+        }
+        if let initial = payload.initialPage, pages[initial] != nil {
+          return initial
+        }
+        return defaultOrder.first ?? ""
+      }()
+
+      if let pageConfig = pages[activePageId] {
+        return selectFamilyNode(
+          small: pageConfig.small,
+          medium: pageConfig.medium,
+          large: pageConfig.large
+        )
+      }
+    }
+
+    return selectFamilyNode(
+      small: payload.small,
+      medium: payload.medium,
+      large: payload.large
+    )
+  }
+
+  private func selectFamilyNode(
+    small: LayoutNodeDTO?,
+    medium: LayoutNodeDTO?,
+    large: LayoutNodeDTO?
+  ) -> LayoutNodeDTO? {
     switch family {
     case .systemSmall:
-      return layoutConfig["small"] ?? layoutConfig["medium"] ?? layoutConfig["large"]
+      return small ?? medium ?? large
     case .systemMedium:
-      return layoutConfig["medium"] ?? layoutConfig["small"] ?? layoutConfig["large"]
+      return medium ?? small ?? large
     case .systemLarge, .systemExtraLarge:
-      return layoutConfig["large"] ?? layoutConfig["medium"] ?? layoutConfig["small"]
+      return large ?? medium ?? small
     default:
-      return layoutConfig["small"]
+      return small ?? medium ?? large
     }
   }
 

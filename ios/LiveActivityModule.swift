@@ -205,6 +205,21 @@ public class LiveActivityModule: RCTEventEmitter {
       try? value.write(to: fileURL, atomically: true, encoding: .utf8)
     }
 
+    if key.hasPrefix("widget_layout_"),
+       let data = value.data(using: .utf8),
+       let dto = try? JSONDecoder().decode(WidgetMultiPagePayloadDTO.self, from: data) {
+      var state = DynamicWidgetStateStore.loadState()
+      if let initial = dto.initialPage {
+        state.activePage = initial
+      }
+      if let order = dto.pageOrder {
+        state.pageOrder = order
+      } else if let pages = dto.pages {
+        state.pageOrder = Array(pages.keys).sorted()
+      }
+      DynamicWidgetStateStore.saveState(state)
+    }
+
     let defaults = getDefaults(appGroup: appGroup)
     defaults.set(value, forKey: key)
     defaults.synchronize()
