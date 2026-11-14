@@ -194,6 +194,13 @@ public class LiveActivityModule: RCTEventEmitter {
   ) {
     let defaults = getDefaults(appGroup: appGroup)
     defaults.set(value, forKey: key)
+    defaults.synchronize()
+
+    #if targetEnvironment(simulator)
+    let simPath = "/tmp/rn_live_widgets_\(key).json"
+    try? value.write(toFile: simPath, atomically: true, encoding: .utf8)
+    #endif
+
     resolve(true)
   }
 
@@ -205,8 +212,20 @@ public class LiveActivityModule: RCTEventEmitter {
     reject: @escaping RCTPromiseRejectBlock
   ) {
     let defaults = getDefaults(appGroup: appGroup)
-    let value = defaults.string(forKey: key)
-    resolve(value)
+    if let value = defaults.string(forKey: key) {
+      resolve(value)
+      return
+    }
+
+    #if targetEnvironment(simulator)
+    let simPath = "/tmp/rn_live_widgets_\(key).json"
+    if let simVal = try? String(contentsOfFile: simPath, encoding: .utf8) {
+      resolve(simVal)
+      return
+    }
+    #endif
+
+    resolve(nil)
   }
 
   @objc(removeSharedItem:appGroup:resolver:rejecter:)
@@ -218,6 +237,12 @@ public class LiveActivityModule: RCTEventEmitter {
   ) {
     let defaults = getDefaults(appGroup: appGroup)
     defaults.removeObject(forKey: key)
+
+    #if targetEnvironment(simulator)
+    let simPath = "/tmp/rn_live_widgets_\(key).json"
+    try? FileManager.default.removeItem(atPath: simPath)
+    #endif
+
     resolve(true)
   }
 
@@ -236,7 +261,8 @@ public class LiveActivityModule: RCTEventEmitter {
   }
 
   private func getDefaults(appGroup: String) -> UserDefaults {
-    if !appGroup.isEmpty, let groupDefaults = UserDefaults(suiteName: appGroup) {
+    let resolvedGroup = DynamicWidgetProvider.resolveAppGroup(appGroup)
+    if !resolvedGroup.isEmpty, let groupDefaults = UserDefaults(suiteName: resolvedGroup) {
       return groupDefaults
     }
     return UserDefaults.standard

@@ -32,15 +32,40 @@ public struct DynamicWidgetProvider: TimelineProvider {
   public func getTimeline(in context: Context, completion: @escaping (Timeline<DynamicWidgetEntry>) -> Void) {
     let json = readLayoutJson()
     let entry = DynamicWidgetEntry(date: Date(), layoutJson: json)
-    // Cập nhật sau 15 phút
     let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
     let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
     completion(timeline)
   }
 
   private func readLayoutJson() -> String? {
-    let defaults = !appGroup.isEmpty ? UserDefaults(suiteName: appGroup) : UserDefaults.standard
-    return defaults?.string(forKey: "widget_layout_\(widgetKey)")
+    let key = "widget_layout_\(widgetKey)"
+    let resolvedGroup = Self.resolveAppGroup(appGroup)
+
+    if !resolvedGroup.isEmpty,
+       let groupDefaults = UserDefaults(suiteName: resolvedGroup),
+       let val = groupDefaults.string(forKey: key) {
+      return val
+    }
+
+    #if targetEnvironment(simulator)
+    let simPath = "/tmp/rn_live_widgets_\(key).json"
+    if let simVal = try? String(contentsOfFile: simPath, encoding: .utf8), !simVal.isEmpty {
+      return simVal
+    }
+    #endif
+
+    return UserDefaults.standard.string(forKey: key)
+  }
+
+  public static func resolveAppGroup(_ explicit: String) -> String {
+    if !explicit.isEmpty { return explicit }
+    guard let bundleId = Bundle.main.bundleIdentifier else { return "" }
+    if Bundle.main.bundlePath.hasSuffix(".appex"),
+       let dotIndex = bundleId.lastIndex(of: ".") {
+      let hostBundleId = String(bundleId[..<dotIndex])
+      return "group.\(hostBundleId)"
+    }
+    return "group.\(bundleId)"
   }
 }
 
@@ -52,66 +77,68 @@ public struct DynamicHomeScreenWidgetView: View {
     self.entry = entry
   }
 
+  private var activeNode: LayoutNodeDTO? {
+    guard let json = entry.layoutJson,
+          let data = json.data(using: .utf8),
+          let layoutConfig = try? JSONDecoder().decode([String: LayoutNodeDTO].self, from: data) else {
+      return nil
+    }
+    switch family {
+    case .systemSmall:
+      return layoutConfig["small"] ?? layoutConfig["medium"] ?? layoutConfig["large"]
+    case .systemMedium:
+      return layoutConfig["medium"] ?? layoutConfig["small"] ?? layoutConfig["large"]
+    case .systemLarge, .systemExtraLarge:
+      return layoutConfig["large"] ?? layoutConfig["medium"] ?? layoutConfig["small"]
+    default:
+      return layoutConfig["small"]
+    }
+  }
+
+  private var rootBackgroundColor: Color {
+    if let bgHex = activeNode?.props?["backgroundColor"]?.stringValue,
+       let color = Color(hex: bgHex) {
+      return color
+    }
+    return Color(.systemBackground)
+  }
+
   public var body: some View {
     Group {
-      if let json = entry.layoutJson,
-         let data = json.data(using: .utf8),
-         let layoutConfig = try? JSONDecoder().decode([String: LayoutNodeDTO].self, from: data) {
-        
-        switch family {
-        case .systemSmall:
-          if let small = layoutConfig["small"] {
-            DynamicNodeView(node: small)
-          } else {
-            fallbackView()
-          }
-        case .systemMedium:
-          if let medium = layoutConfig["medium"] ?? layoutConfig["small"] {
-            DynamicNodeView(node: medium)
-          } else {
-            fallbackView()
-          }
-        case .systemLarge, .systemExtraLarge:
-          if let large = layoutConfig["large"] ?? layoutConfig["medium"] ?? layoutConfig["small"] {
-            DynamicNodeView(node: large)
-          } else {
-            fallbackView()
-          }
-        default:
-          fallbackView()
-        }
+      if let node = activeNode {
+        DynamicNodeView(node: node)
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       } else {
         fallbackView()
       }
     }
-    .applyWidgetBackground()
+    .applyWidgetBackground(rootBackgroundColor)
   }
 
   @ViewBuilder
   private func fallbackView() -> some View {
-    VStack {
+    VStack(spacing: 6) {
       Text("Live Widgets")
         .font(.headline)
-      Text("Mở app để đồng bộ dữ liệu")
+      Text("Chọn 1 mẫu UI trong app để hiển thị")
         .font(.caption)
         .foregroundColor(.secondary)
+        .multilineTextAlignment(.center)
     }
     .padding()
   }
 }
 
 extension View {
-  /// Tương thích iOS 17+: Bắt buộc dùng `containerBackground(for: .widget)`
-  /// Fallback cho iOS 16: Dùng background thông thường
+  /// Tương thích iOS 17+ / iOS 27: Bắt buộc dùng `containerBackground(for: .widget)`
   @ViewBuilder
-  func applyWidgetBackground() -> some View {
+  func applyWidgetBackground(_ color: Color) -> some View {
     if #available(iOS 17.0, *) {
       self.containerBackground(for: .widget) {
-        Color(.systemBackground)
+        color
       }
     } else {
-      self.padding().background(Color(.systemBackground))
+      self.padding().background(color)
     }
   }
 }
-

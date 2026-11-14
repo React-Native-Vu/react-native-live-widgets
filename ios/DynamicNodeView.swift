@@ -262,19 +262,34 @@ public struct DynamicNodeView: View {
 
   @ViewBuilder
   private func renderSegmentedProgress() -> some View {
-    let segments = Int(node.props?["segments"]?.doubleValue ?? 4)
-    let currentSegment = Int(node.props?["currentSegment"]?.doubleValue ?? 1)
+    let segments = max(1, Int(node.props?["segments"]?.doubleValue ?? 4))
+    let value = max(0.0, min(1.0, node.props?["value"]?.doubleValue ?? 0.5))
+    let currentSegment: Int = {
+      if let explicit = node.props?["currentSegment"]?.doubleValue {
+        return Int(explicit)
+      }
+      return Int(round(value * Double(segments)))
+    }()
     let height = node.props?["height"]?.doubleValue.map { CGFloat($0) } ?? 6
     let spacing = node.props?["segmentSpacing"]?.doubleValue.map { CGFloat($0) } ?? 4
     let tint = resolveProgressTintColor()
     let trackHex = node.props?["trackColor"]?.stringValue
     let trackColor = trackHex.flatMap { Color(hex: $0) } ?? Color.gray.opacity(0.3)
 
-    HStack(spacing: spacing) {
-      ForEach(1...max(1, segments), id: \.self) { index in
-        RoundedRectangle(cornerRadius: height / 2)
-          .fill(index <= currentSegment ? tint : trackColor)
-          .frame(height: height)
+    HStack(spacing: 6) {
+      HStack(spacing: spacing) {
+        ForEach(1...segments, id: \.self) { index in
+          RoundedRectangle(cornerRadius: height / 2)
+            .fill(index <= currentSegment ? tint : trackColor)
+            .frame(height: height)
+        }
+      }
+
+      if node.props?["showPercentage"]?.boolValue == true {
+        let pctColorHex = node.props?["percentageColor"]?.stringValue
+        Text("\(Int(round(Double(currentSegment) / Double(segments) * 100)))%")
+          .font(.system(size: 11, weight: .bold))
+          .foregroundColor(pctColorHex.flatMap { Color(hex: $0) } ?? tint)
       }
     }
   }
@@ -283,23 +298,28 @@ public struct DynamicNodeView: View {
   private func renderCircularProgress() -> some View {
     let value = node.props?["value"]?.doubleValue ?? 0.0
     let clampedValue = max(0.0, min(1.0, value))
+    let size = node.props?["height"]?.doubleValue.map { CGFloat($0) } ?? 44
+    let lineWidth = max(3, size * 0.11)
     let tint = resolveProgressTintColor()
+    let trackHex = node.props?["trackColor"]?.stringValue
+    let trackColor = trackHex.flatMap { Color(hex: $0) } ?? Color.gray.opacity(0.25)
 
     ZStack {
       Circle()
-        .stroke(Color.gray.opacity(0.3), lineWidth: 4)
+        .stroke(trackColor, lineWidth: lineWidth)
       Circle()
         .trim(from: 0.0, to: CGFloat(clampedValue))
-        .stroke(tint, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+        .stroke(tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
         .rotationEffect(.degrees(-90))
 
       if node.props?["showPercentage"]?.boolValue == true {
+        let pctColorHex = node.props?["percentageColor"]?.stringValue
         Text("\(Int(clampedValue * 100))%")
-          .font(.system(size: 10, weight: .bold))
-          .foregroundColor(tint)
+          .font(.system(size: max(9, size * 0.25), weight: .bold))
+          .foregroundColor(pctColorHex.flatMap { Color(hex: $0) } ?? tint)
       }
     }
-    .frame(width: 32, height: 32)
+    .frame(width: size, height: size)
   }
 
   private func resolveProgressTintColor() -> Color {
