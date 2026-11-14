@@ -418,10 +418,13 @@ public struct DynamicNodeView: View {
     let colorHex = node.props?["color"]?.stringValue
     let fontSize = node.props?["fontSize"]?.doubleValue ?? 14
     let fontWeightStr = node.props?["fontWeight"]?.stringValue ?? "regular"
+    let numberOfLines = node.props?["numberOfLines"]?.doubleValue.map { Int($0) }
 
     Text(text)
       .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
       .foregroundColor(colorHex.flatMap { Color(hex: $0) } ?? .primary)
+      .lineLimit(numberOfLines)
+      .minimumScaleFactor(0.85)
   }
 
   @ViewBuilder
@@ -431,16 +434,33 @@ public struct DynamicNodeView: View {
     let colorHex = node.props?["color"]?.stringValue
     let fontSize = node.props?["fontSize"]?.doubleValue ?? 14
     let fontWeightStr = node.props?["fontWeight"]?.stringValue ?? "semibold"
+    let mode = node.props?["mode"]?.stringValue ?? "countdown"
+    let isCountdown = mode != "countup"
+
+    // Giới hạn frame width cho Text(timerInterval:) để không bị giãn tràn toàn bộ Dynamic Island
+    let remaining = abs(targetTimestamp - Date().timeIntervalSince1970)
+    let showsHours = remaining >= 3600
+    let compactWidth = CGFloat(fontSize) * (showsHours ? 4.4 : 3.2)
 
     if #available(iOS 16.0, *) {
-      Text(timerInterval: min(Date(), targetDate)...max(Date(), targetDate))
-        .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
-        .foregroundColor(colorHex.flatMap { Color(hex: $0) } ?? .orange)
-        .monospacedDigit()
+      Text(
+        timerInterval: min(Date(), targetDate)...max(Date(), targetDate),
+        pauseTime: nil,
+        countsDown: isCountdown,
+        showsHours: showsHours
+      )
+      .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
+      .foregroundColor(colorHex.flatMap { Color(hex: $0) } ?? .orange)
+      .monospacedDigit()
+      .multilineTextAlignment(.trailing)
+      .frame(width: compactWidth, alignment: .trailing)
+      .minimumScaleFactor(0.8)
     } else {
       Text(targetDate, style: .timer)
         .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
         .foregroundColor(colorHex.flatMap { Color(hex: $0) } ?? .orange)
+        .multilineTextAlignment(.trailing)
+        .frame(width: compactWidth, alignment: .trailing)
     }
   }
 

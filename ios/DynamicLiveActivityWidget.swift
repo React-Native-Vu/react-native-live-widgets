@@ -46,14 +46,19 @@ public struct DynamicLiveActivityWidget: Widget {
       } compactLeading: {
         if let leading = island?.compactLeading {
           DynamicNodeView(node: leading)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.leading, 2)
         }
       } compactTrailing: {
         if let trailing = island?.compactTrailing {
           DynamicNodeView(node: trailing)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.trailing, 2)
         }
       } minimal: {
         if let minimal = island?.minimal ?? island?.compactLeading {
           DynamicNodeView(node: minimal)
+            .fixedSize(horizontal: true, vertical: false)
         }
       }
     }
