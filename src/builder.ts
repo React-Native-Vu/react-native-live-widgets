@@ -113,18 +113,30 @@ export const UI = {
     };
   },
 
-  Image: (options: {
-    assetName?: string;
-    systemName?: string;
-    filePath?: string;
-    width?: number;
-    height?: number;
-    tintColor?: string;
-    borderRadius?: number;
-  }): ImageNode => ({
-    type: 'Image',
-    props: options,
-  }),
+  Image: (
+    urlOrOptions: string | ImageNode['props'],
+    options?: Omit<ImageNode['props'], 'url'>
+  ): ImageNode => {
+    if (typeof urlOrOptions === 'string') {
+      const isHttp = urlOrOptions.startsWith('http://') || urlOrOptions.startsWith('https://');
+      const isBase64 = urlOrOptions.startsWith('data:image/');
+      return {
+        type: 'Image',
+        props: {
+          ...(isHttp
+            ? { url: urlOrOptions }
+            : isBase64
+            ? { base64: urlOrOptions }
+            : { systemName: urlOrOptions }),
+          ...options,
+        },
+      };
+    }
+    return {
+      type: 'Image',
+      props: urlOrOptions,
+    };
+  },
 
   Spacer: (minLength?: number): SpacerNode => ({
     type: 'Spacer',

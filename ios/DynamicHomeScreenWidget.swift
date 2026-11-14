@@ -41,6 +41,9 @@ public struct DynamicWidgetProvider: TimelineProvider {
       }
 
       let json = readLayoutJson()
+      if let json = json {
+        await DynamicWidgetImageCache.prefetchUrls(in: json)
+      }
       let entry = DynamicWidgetEntry(date: Date(), layoutJson: json)
       let intervalMins = readRefreshIntervalMinutes()
       let nextUpdate = Calendar.current.date(byAdding: .minute, value: intervalMins, to: Date())!

@@ -1,6 +1,116 @@
 import AppIntents
 import SwiftUI
+import UIKit
 import WidgetKit
+
+// MARK: - Image Cache & Prefetcher for WidgetKit & ActivityKit
+
+public enum DynamicWidgetImageCache {
+  private static let memCache = NSCache<NSString, UIImage>()
+
+  public static func cacheKey(for urlStr: String) -> String {
+    var hash: UInt64 = 5381
+    for byte in urlStr.utf8 {
+      hash = ((hash << 5) &+ hash) &+ UInt64(byte)
+    }
+    return String(format: "img_%016llx", hash)
+  }
+
+  public static func cachedImage(for urlStr: String) -> UIImage? {
+    let key = cacheKey(for: urlStr)
+    if let mem = memCache.object(forKey: key as NSString) {
+      return mem
+    }
+
+    if let fileURL = DynamicWidgetProvider.sharedFileURL(key: key, appGroup: ""),
+       let data = try? Data(contentsOf: fileURL),
+       let img = UIImage(data: data) {
+      memCache.setObject(img, forKey: key as NSString)
+      return img
+    }
+
+    #if targetEnvironment(simulator)
+    let simPath = "/tmp/rn_live_widgets_\(key).dat"
+    if let data = try? Data(contentsOf: URL(fileURLWithPath: simPath)),
+       let img = UIImage(data: data) {
+      memCache.setObject(img, forKey: key as NSString)
+      return img
+    }
+    #endif
+
+    return nil
+  }
+
+  public static func saveImageData(_ rawData: Data, for urlStr: String) {
+    guard UIImage(data: rawData) != nil else { return }
+    let key = cacheKey(for: urlStr)
+    let optimizedData = downscaleImageData(rawData, maxDimension: 360) ?? rawData
+
+    if let img = UIImage(data: optimizedData) {
+      memCache.setObject(img, forKey: key as NSString)
+    }
+
+    if let fileURL = DynamicWidgetProvider.sharedFileURL(key: key, appGroup: "") {
+      try? optimizedData.write(to: fileURL, options: .atomic)
+    }
+
+    #if targetEnvironment(simulator)
+    let simPath = "/tmp/rn_live_widgets_\(key).dat"
+    try? optimizedData.write(to: URL(fileURLWithPath: simPath), options: .atomic)
+    #endif
+  }
+
+  public static func prefetchUrls(in jsonString: String) async {
+    guard jsonString.contains("http") else { return }
+    let pattern = #""url"\s*:\s*"(https?://[^"]+)""#
+    guard let regex = try? NSRegularExpression(pattern: pattern) else { return }
+    let nsRange = NSRange(jsonString.startIndex..<jsonString.endIndex, in: jsonString)
+    let matches = regex.matches(in: jsonString, range: nsRange)
+
+    var urls = Set<String>()
+    for match in matches {
+      if match.numberOfRanges > 1,
+         let r = Range(match.range(at: 1), in: jsonString) {
+        urls.insert(String(jsonString[r]))
+      }
+    }
+
+    guard !urls.isEmpty else { return }
+
+    await withTaskGroup(of: Void.self) { group in
+      for urlStr in urls {
+        if cachedImage(for: urlStr) != nil { continue }
+        guard let url = URL(string: urlStr) else { continue }
+        group.addTask {
+          var req = URLRequest(url: url)
+          req.timeoutInterval = 6
+          if let (data, _) = try? await URLSession.shared.data(for: req), !data.isEmpty {
+            saveImageData(data, for: urlStr)
+          }
+        }
+      }
+    }
+  }
+
+  private static func downscaleImageData(_ data: Data, maxDimension: CGFloat) -> Data? {
+    guard let image = UIImage(data: data) else { return nil }
+    let size = image.size
+    guard size.width > 0, size.height > 0 else { return data }
+    let maxSide = max(size.width, size.height)
+    if maxSide <= maxDimension {
+      return image.pngData() ?? image.jpegData(compressionQuality: 0.85) ?? data
+    }
+    let scale = maxDimension / maxSide
+    let newSize = CGSize(width: max(1, round(size.width * scale)), height: max(1, round(size.height * scale)))
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1.0
+    let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
+    let resized = renderer.image { _ in
+      image.draw(in: CGRect(origin: .zero, size: newSize))
+    }
+    return resized.jpegData(compressionQuality: 0.85) ?? data
+  }
+}
 
 // MARK: - Interactive Widget State Store & AppIntent (iOS 17+ / iOS 27)
 
@@ -606,31 +716,105 @@ public struct DynamicNodeView: View {
 
   @ViewBuilder
   private func renderImage() -> some View {
-    let width = node.props?["width"]?.doubleValue.map { CGFloat($0) } ?? 24
-    let height = node.props?["height"]?.doubleValue.map { CGFloat($0) } ?? 24
+    let width = node.props?["width"]?.doubleValue.map { CGFloat($0) } ?? 28
+    let height = node.props?["height"]?.doubleValue.map { CGFloat($0) } ?? 28
     let tintHex = node.props?["tintColor"]?.stringValue
     let tint = tintHex.flatMap { Color(hex: $0) }
+    let bgHex = node.props?["backgroundColor"]?.stringValue
+    let bgColor = bgHex.flatMap { Color(hex: $0) }
+    let pad = node.props?["padding"]?.doubleValue.map { CGFloat($0) } ?? 0
+    let cornerRadius = node.props?["borderRadius"]?.doubleValue.map { CGFloat($0) } ?? 0
+    let borderWidth = node.props?["borderWidth"]?.doubleValue.map { CGFloat($0) } ?? 0
+    let borderColorHex = node.props?["borderColor"]?.stringValue
+    let borderColor = borderColorHex.flatMap { Color(hex: $0) } ?? .white
+    let contentModeStr = node.props?["contentMode"]?.stringValue ?? "fill"
+    let isFill = contentModeStr == "fill"
 
-    if let systemName = node.props?["systemName"]?.stringValue {
-      Image(systemName: systemName)
-        .resizable()
-        .aspectRatio(contentMode: .fit)
-        .frame(width: width, height: height)
-        .foregroundColor(tint ?? .primary)
-    } else if let assetName = node.props?["assetName"]?.stringValue {
-      Image(assetName)
-        .resizable()
-        .aspectRatio(contentMode: .fit)
-        .frame(width: width, height: height)
-    } else if let filePath = node.props?["filePath"]?.stringValue,
-              let uiImage = UIImage(contentsOfFile: filePath) {
+    if let uiImage = resolveBitmapImage() {
       Image(uiImage: uiImage)
         .resizable()
-        .aspectRatio(contentMode: .fit)
+        .aspectRatio(contentMode: isFill ? .fill : .fit)
         .frame(width: width, height: height)
+        .background(bgColor ?? Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .overlay(
+          Group {
+            if borderWidth > 0 {
+              RoundedRectangle(cornerRadius: cornerRadius)
+                .stroke(borderColor, lineWidth: borderWidth)
+            }
+          }
+        )
+    } else if let symbolName = node.props?["systemName"]?.stringValue
+                ?? node.props?["fallbackSystemName"]?.stringValue {
+      Image(systemName: symbolName)
+        .resizable()
+        .aspectRatio(contentMode: .fit)
+        .padding(pad)
+        .frame(width: width, height: height)
+        .foregroundColor(tint ?? .primary)
+        .background(
+          Group {
+            if let bgColor = bgColor {
+              RoundedRectangle(cornerRadius: cornerRadius).fill(bgColor)
+            }
+          }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .overlay(
+          Group {
+            if borderWidth > 0 {
+              RoundedRectangle(cornerRadius: cornerRadius)
+                .stroke(borderColor, lineWidth: borderWidth)
+            }
+          }
+        )
     } else {
-      EmptyView()
+      RoundedRectangle(cornerRadius: cornerRadius)
+        .fill(bgColor ?? Color.gray.opacity(0.2))
+        .frame(width: width, height: height)
+        .overlay(
+          Image(systemName: "photo")
+            .font(.system(size: min(width, height) * 0.45))
+            .foregroundColor(tint ?? .secondary)
+        )
     }
+  }
+
+  private func resolveBitmapImage() -> UIImage? {
+    // 1. Ảnh từ URL mạng (đã được DynamicWidgetImageCache tải và nén vào App Group / /tmp)
+    if let urlStr = node.props?["url"]?.stringValue,
+       let cached = DynamicWidgetImageCache.cachedImage(for: urlStr) {
+      return cached
+    }
+
+    // 2. Ảnh từ chuỗi Base64
+    if let base64Str = node.props?["base64"]?.stringValue {
+      let cleanBase64: String = {
+        if let commaRange = base64Str.range(of: ",") {
+          return String(base64Str[commaRange.upperBound...])
+        }
+        return base64Str
+      }()
+      if let data = Data(base64Encoded: cleanBase64, options: .ignoreUnknownCharacters),
+         let img = UIImage(data: data) {
+        return img
+      }
+    }
+
+    // 3. Ảnh từ đường dẫn file cục bộ
+    if let filePath = node.props?["filePath"]?.stringValue,
+       let img = UIImage(contentsOfFile: filePath) {
+      return img
+    }
+
+    // 4. Ảnh từ Xcode Assets.xcassets
+    if let assetName = node.props?["assetName"]?.stringValue,
+       let img = UIImage(named: assetName) {
+      return img
+    }
+
+    return nil
   }
 
   @ViewBuilder

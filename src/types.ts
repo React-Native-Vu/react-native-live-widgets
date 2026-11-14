@@ -130,13 +130,31 @@ export interface ProgressNode extends BaseNode {
 export interface ImageNode extends BaseNode {
   type: 'Image';
   props: {
+    /** URL ảnh từ mạng (https://...) - Tự động tải, nén tối ưu RAM và cache vào App Group cho Widget & Live Activity */
+    url?: string;
+    /** Chuỗi ảnh Base64 (có thể kèm tiền tố data:image/png;base64,... hoặc chuỗi raw base64) */
+    base64?: string;
+    /** Tên ảnh trong Xcode Assets.xcassets hoặc Android drawable */
     assetName?: string;
+    /** Tên icon hệ thống SF Symbols trên iOS (ví dụ 'person.crop.circle.fill', 'flame.fill', 'cart.fill') */
     systemName?: string;
+    /** Đường dẫn file cục bộ trong máy */
     filePath?: string;
+    /** Icon SF Symbol dự phòng khi ảnh mạng chưa tải xong hoặc lỗi */
+    fallbackSystemName?: string;
     width?: number;
     height?: number;
+    /** 'fill': phủ kín khung ảnh (crop) | 'fit': vừa khung ảnh */
+    contentMode?: 'fit' | 'fill';
     tintColor?: string;
+    backgroundColor?: string;
+    padding?: number;
+    /** Bo góc ảnh (đặt bằng width / 2 để tạo ảnh Avatar tròn) */
     borderRadius?: number;
+    /** Độ dày viền quanh ảnh (ví dụ viền Avatar) */
+    borderWidth?: number;
+    /** Màu viền quanh ảnh */
+    borderColor?: string;
   };
 }
 

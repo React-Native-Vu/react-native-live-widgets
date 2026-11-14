@@ -92,40 +92,44 @@ public class LiveActivityModule: RCTEventEmitter {
     let attributes = DynamicActivityAttributes(activityId: activityId)
     let initialContentState = DynamicActivityAttributes.ContentState(payloadJson: payloadJson)
 
-    do {
+    Task {
+      await DynamicWidgetImageCache.prefetchUrls(in: payloadJson)
+
       do {
-        let activity = try Activity.request(
-          attributes: attributes,
-          content: .init(state: initialContentState, staleDate: nil),
-          pushType: .token
-        )
-        observePushToken(for: activity)
-      } catch {
-        // Fallback sang local Live Activity (pushType: nil) khi chạy môi trường chưa cấu hình APNs
-        let activity = try Activity.request(
-          attributes: attributes,
-          content: .init(state: initialContentState, staleDate: nil),
-          pushType: nil
-        )
-        observePushToken(for: activity)
-      }
-
-      #if targetEnvironment(simulator)
-      if Self.activityUpdateTokens[activityId] == nil {
-        let simUpdateToken = Self.generateSimulatorHexToken(seed: "apns_update_\(activityId)", byteLength: 64)
-        Self.activityUpdateTokens[activityId] = simUpdateToken
-        if hasListeners {
-          sendEvent(
-            withName: "LiveActivityUpdateTokenChanged",
-            body: ["activityId": activityId, "token": simUpdateToken]
+        do {
+          let activity = try Activity.request(
+            attributes: attributes,
+            content: .init(state: initialContentState, staleDate: nil),
+            pushType: .token
           )
+          self.observePushToken(for: activity)
+        } catch {
+          // Fallback sang local Live Activity (pushType: nil) khi chạy môi trường chưa cấu hình APNs
+          let activity = try Activity.request(
+            attributes: attributes,
+            content: .init(state: initialContentState, staleDate: nil),
+            pushType: nil
+          )
+          self.observePushToken(for: activity)
         }
-      }
-      #endif
 
-      resolve(true)
-    } catch {
-      reject("E_START_FAILED", error.localizedDescription, error)
+        #if targetEnvironment(simulator)
+        if Self.activityUpdateTokens[activityId] == nil {
+          let simUpdateToken = Self.generateSimulatorHexToken(seed: "apns_update_\(activityId)", byteLength: 64)
+          Self.activityUpdateTokens[activityId] = simUpdateToken
+          if self.hasListeners {
+            self.sendEvent(
+              withName: "LiveActivityUpdateTokenChanged",
+              body: ["activityId": activityId, "token": simUpdateToken]
+            )
+          }
+        }
+        #endif
+
+        resolve(true)
+      } catch {
+        reject("E_START_FAILED", error.localizedDescription, error)
+      }
     }
   }
 
@@ -173,6 +177,7 @@ public class LiveActivityModule: RCTEventEmitter {
     let updatedState = DynamicActivityAttributes.ContentState(payloadJson: payloadJson)
 
     Task {
+      await DynamicWidgetImageCache.prefetchUrls(in: payloadJson)
       for activity in Activity<DynamicActivityAttributes>.activities {
         if activity.attributes.activityId == activityId {
           await activity.update(.init(state: updatedState, staleDate: nil))
@@ -415,8 +420,11 @@ public class LiveActivityModule: RCTEventEmitter {
     try? value.write(toFile: simPath, atomically: true, encoding: .utf8)
     #endif
 
-    WidgetCenter.shared.reloadAllTimelines()
-    resolve(true)
+    Task {
+      await DynamicWidgetImageCache.prefetchUrls(in: value)
+      WidgetCenter.shared.reloadAllTimelines()
+      resolve(true)
+    }
   }
 
   @objc(getSharedItem:appGroup:resolver:rejecter:)
