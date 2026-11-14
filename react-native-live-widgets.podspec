@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
   s.homepage     = "https://github.com/vu-tran/react-native-live-widgets"
   s.license      = package["license"]
   s.authors      = "vu-tran"
-  s.platforms    = { :ios => "14.0" }
+  s.platforms    = { :ios => "16.1" }
   s.source       = { :git => "https://github.com/vu-tran/react-native-live-widgets.git", :tag => "#{s.version}" }
 
   s.source_files = "ios/**/*.{h,m,mm,swift}"

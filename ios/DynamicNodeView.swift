@@ -185,10 +185,16 @@ public struct DynamicNodeView: View {
     let fontSize = node.props?["fontSize"]?.doubleValue ?? 14
     let fontWeightStr = node.props?["fontWeight"]?.stringValue ?? "semibold"
 
-    Text(timerInterval: min(Date(), targetDate)...max(Date(), targetDate))
-      .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
-      .foregroundColor(colorHex.flatMap { Color(hex: $0) } ?? .orange)
-      .monospacedDigit()
+    if #available(iOS 16.0, *) {
+      Text(timerInterval: min(Date(), targetDate)...max(Date(), targetDate))
+        .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
+        .foregroundColor(colorHex.flatMap { Color(hex: $0) } ?? .orange)
+        .monospacedDigit()
+    } else {
+      Text(targetDate, style: .timer)
+        .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
+        .foregroundColor(colorHex.flatMap { Color(hex: $0) } ?? .orange)
+    }
   }
 
   @ViewBuilder
@@ -220,10 +226,19 @@ public struct DynamicNodeView: View {
         let startDate = Date(timeIntervalSince1970: startTimestamp)
         let targetDate = Date(timeIntervalSince1970: targetTimestamp)
 
-        ProgressView(timerInterval: startDate...targetDate, countsDown: countsDown)
-          .tint(tint)
-          .frame(height: height)
-          .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        if #available(iOS 16.0, *) {
+          ProgressView(timerInterval: startDate...targetDate, countsDown: countsDown)
+            .tint(tint)
+            .frame(height: height)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        } else {
+          let elapsed = max(0.0, min(1.0, (Date().timeIntervalSince1970 - startTimestamp) / (targetTimestamp - startTimestamp)))
+          let progressVal = countsDown ? (1.0 - elapsed) : elapsed
+          ProgressView(value: progressVal)
+            .tint(tint)
+            .frame(height: height)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        }
       } else {
         let value = node.props?["value"]?.doubleValue ?? 0.0
         let clampedValue = max(0.0, min(1.0, value))
