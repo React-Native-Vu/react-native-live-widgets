@@ -41,9 +41,16 @@ public struct DynamicWidgetProvider: TimelineProvider {
     let key = "widget_layout_\(widgetKey)"
     let resolvedGroup = Self.resolveAppGroup(appGroup)
 
+    if let fileURL = Self.sharedFileURL(key: key, appGroup: appGroup),
+       let fileVal = try? String(contentsOf: fileURL, encoding: .utf8),
+       !fileVal.isEmpty {
+      return fileVal
+    }
+
     if !resolvedGroup.isEmpty,
        let groupDefaults = UserDefaults(suiteName: resolvedGroup),
-       let val = groupDefaults.string(forKey: key) {
+       let val = groupDefaults.string(forKey: key),
+       !val.isEmpty {
       return val
     }
 
@@ -55,6 +62,15 @@ public struct DynamicWidgetProvider: TimelineProvider {
     #endif
 
     return UserDefaults.standard.string(forKey: key)
+  }
+
+  public static func sharedFileURL(key: String, appGroup: String) -> URL? {
+    let resolvedGroup = resolveAppGroup(appGroup)
+    guard !resolvedGroup.isEmpty,
+          let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: resolvedGroup) else {
+      return nil
+    }
+    return containerURL.appendingPathComponent("rn_live_widgets_\(key).json")
   }
 
   public static func resolveAppGroup(_ explicit: String) -> String {

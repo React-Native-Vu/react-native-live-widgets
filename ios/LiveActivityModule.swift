@@ -48,17 +48,26 @@ public class LiveActivityModule: RCTEventEmitter {
     let initialContentState = DynamicActivityAttributes.ContentState(payloadJson: payloadJson)
 
     do {
-      let activity = try Activity.request(
-        attributes: attributes,
-        content: .init(state: initialContentState, staleDate: nil),
-        pushType: .token
-      )
+      do {
+        let activity = try Activity.request(
+          attributes: attributes,
+          content: .init(state: initialContentState, staleDate: nil),
+          pushType: .token
+        )
 
-      Task {
-        for await pushToken in activity.pushTokenUpdates {
-          let tokenStr = pushToken.map { String(format: "%02x", $0) }.joined()
-          NSLog("🔔 [LiveActivityModule] Activity Push Token: \(tokenStr)")
+        Task {
+          for await pushToken in activity.pushTokenUpdates {
+            let tokenStr = pushToken.map { String(format: "%02x", $0) }.joined()
+            NSLog("🔔 [LiveActivityModule] Activity Push Token: \(tokenStr)")
+          }
         }
+      } catch {
+        // Fallback sang local Live Activity (pushType: nil) khi app chưa cấu hình Push Notifications (aps-environment)
+        _ = try Activity.request(
+          attributes: attributes,
+          content: .init(state: initialContentState, staleDate: nil),
+          pushType: nil
+        )
       }
 
       resolve(true)
@@ -192,6 +201,10 @@ public class LiveActivityModule: RCTEventEmitter {
     resolve: @escaping RCTPromiseResolveBlock,
     reject: @escaping RCTPromiseRejectBlock
   ) {
+    if let fileURL = DynamicWidgetProvider.sharedFileURL(key: key, appGroup: appGroup) {
+      try? value.write(to: fileURL, atomically: true, encoding: .utf8)
+    }
+
     let defaults = getDefaults(appGroup: appGroup)
     defaults.set(value, forKey: key)
     defaults.synchronize()
@@ -201,6 +214,7 @@ public class LiveActivityModule: RCTEventEmitter {
     try? value.write(toFile: simPath, atomically: true, encoding: .utf8)
     #endif
 
+    WidgetCenter.shared.reloadAllTimelines()
     resolve(true)
   }
 
@@ -211,6 +225,13 @@ public class LiveActivityModule: RCTEventEmitter {
     resolve: @escaping RCTPromiseResolveBlock,
     reject: @escaping RCTPromiseRejectBlock
   ) {
+    if let fileURL = DynamicWidgetProvider.sharedFileURL(key: key, appGroup: appGroup),
+       let fileVal = try? String(contentsOf: fileURL, encoding: .utf8),
+       !fileVal.isEmpty {
+      resolve(fileVal)
+      return
+    }
+
     let defaults = getDefaults(appGroup: appGroup)
     if let value = defaults.string(forKey: key) {
       resolve(value)
@@ -235,6 +256,10 @@ public class LiveActivityModule: RCTEventEmitter {
     resolve: @escaping RCTPromiseResolveBlock,
     reject: @escaping RCTPromiseRejectBlock
   ) {
+    if let fileURL = DynamicWidgetProvider.sharedFileURL(key: key, appGroup: appGroup) {
+      try? FileManager.default.removeItem(at: fileURL)
+    }
+
     let defaults = getDefaults(appGroup: appGroup)
     defaults.removeObject(forKey: key)
 
@@ -243,6 +268,7 @@ public class LiveActivityModule: RCTEventEmitter {
     try? FileManager.default.removeItem(atPath: simPath)
     #endif
 
+    WidgetCenter.shared.reloadAllTimelines()
     resolve(true)
   }
 

@@ -23,5 +23,32 @@ RCT_EXTERN_METHOD(endAll:(RCTPromiseResolveBlock)resolve
 RCT_EXTERN_METHOD(getPushToStartToken:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(reloadAllWidgets:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(reloadWidget:(NSString *)kind
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(setSharedItem:(NSString *)key
+                  value:(NSString *)value
+                  appGroup:(NSString *)appGroup
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(getSharedItem:(NSString *)key
+                  appGroup:(NSString *)appGroup
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(removeSharedItem:(NSString *)key
+                  appGroup:(NSString *)appGroup
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(clearSharedItems:(NSString *)appGroup
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end
 

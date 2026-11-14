@@ -163,7 +163,8 @@ export const Widget = {
     appGroup?: string
   ): Promise<boolean> => {
     try {
-      await SharedStorage.set(`widget_layout_${widgetKey}`, layoutConfig, appGroup);
+      const saved = await SharedStorage.set(`widget_layout_${widgetKey}`, layoutConfig, appGroup);
+      if (!saved) return false;
       return await Widget.reloadAll();
     } catch (error) {
       console.warn('[react-native-live-widgets] setLayout error:', error);
