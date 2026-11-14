@@ -86,9 +86,9 @@ struct DynamicHomeScreenWidget: Widget {
 console.log('\n🎉 Thiết lập ban đầu hoàn tất!');
 console.log('👉 Tiếp theo:');
 console.log('1. Mở Xcode, chọn File -> New -> Target -> Widget Extension (đặt tên LiveWidgetsExtension, bỏ tích "Include Configuration App Intent").');
-console.log('2. Trong Podfile, thêm vào target mới:');
+console.log('2. Trong Podfile, thêm vào bên trong target chính:');
 console.log(`   target 'LiveWidgetsExtension' do
      inherit! :search_paths
-     pod 'react-native-live-widgets', :path => '../node_modules/react-native-live-widgets'
+     pod 'react-native-live-widgets/Widget', :path => '../node_modules/react-native-live-widgets'
    end`);
 console.log('3. Chạy "cd ios && pod install" là sẵn sàng sử dụng!\n');
