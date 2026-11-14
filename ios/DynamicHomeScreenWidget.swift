@@ -30,18 +30,63 @@ public struct DynamicWidgetProvider: TimelineProvider {
   }
 
   public func getTimeline(in context: Context, completion: @escaping (Timeline<DynamicWidgetEntry>) -> Void) {
-    let json = readLayoutJson()
-    let entry = DynamicWidgetEntry(date: Date(), layoutJson: json)
-    let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
-    let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-    completion(timeline)
+    let wKey = widgetKey
+    let group = appGroup
+
+    Task {
+      // Nếu có cấu hình Remote API Config, Widget Extension tự gọi API cập nhật dữ liệu
+      // kể cả khi Main App đã bị người dùng đóng (kill app) hoàn toàn!
+      if Self.readSharedString(forKey: "widget_remote_config_\(wKey)", appGroup: group) != nil {
+        await DynamicWidgetStateStore.performRemoteSync(widgetKey: wKey)
+      }
+
+      let json = readLayoutJson()
+      let entry = DynamicWidgetEntry(date: Date(), layoutJson: json)
+      let intervalMins = readRefreshIntervalMinutes()
+      let nextUpdate = Calendar.current.date(byAdding: .minute, value: intervalMins, to: Date())!
+      let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
+      completion(timeline)
+    }
+  }
+
+  private func readRefreshIntervalMinutes() -> Int {
+    let configKey = "widget_remote_config_\(widgetKey)"
+    if let json = Self.readSharedString(forKey: configKey, appGroup: appGroup),
+       let data = json.data(using: .utf8),
+       let config = try? JSONDecoder().decode(WidgetRemoteConfigDTO.self, from: data),
+       let mins = config.refreshIntervalMinutes, mins >= 1 {
+      return mins
+    }
+    return 15
   }
 
   private func readLayoutJson() -> String? {
     let key = "widget_layout_\(widgetKey)"
-    let resolvedGroup = Self.resolveAppGroup(appGroup)
+    guard var raw = Self.readSharedString(forKey: key, appGroup: appGroup) else {
+      return nil
+    }
 
-    if let fileURL = Self.sharedFileURL(key: key, appGroup: appGroup),
+    let state = DynamicWidgetStateStore.loadState()
+    let syncTime = state.lastSyncTime ?? {
+      let f = DateFormatter()
+      f.dateFormat = "HH:mm:ss"
+      return f.string(from: Date())
+    }()
+    raw = raw.replacingOccurrences(of: "{{_lastSyncTime}}", with: syncTime)
+
+    if let vars = state.remoteVariables {
+      for (k, v) in vars {
+        let escaped = v.replacingOccurrences(of: "\"", with: "\\\"")
+        raw = raw.replacingOccurrences(of: "{{\(k)}}", with: escaped)
+      }
+    }
+    return raw
+  }
+
+  public static func readSharedString(forKey key: String, appGroup: String) -> String? {
+    let resolvedGroup = resolveAppGroup(appGroup)
+
+    if let fileURL = sharedFileURL(key: key, appGroup: appGroup),
        let fileVal = try? String(contentsOf: fileURL, encoding: .utf8),
        !fileVal.isEmpty {
       return fileVal
@@ -62,6 +107,21 @@ public struct DynamicWidgetProvider: TimelineProvider {
     #endif
 
     return UserDefaults.standard.string(forKey: key)
+  }
+
+  public static func writeSharedString(_ value: String, forKey key: String, appGroup: String) {
+    let resolvedGroup = resolveAppGroup(appGroup)
+    if let fileURL = sharedFileURL(key: key, appGroup: appGroup) {
+      try? value.write(to: fileURL, atomically: true, encoding: .utf8)
+    }
+    if !resolvedGroup.isEmpty, let groupDefaults = UserDefaults(suiteName: resolvedGroup) {
+      groupDefaults.set(value, forKey: key)
+      groupDefaults.synchronize()
+    }
+    #if targetEnvironment(simulator)
+    let simPath = "/tmp/rn_live_widgets_\(key).json"
+    try? value.write(toFile: simPath, atomically: true, encoding: .utf8)
+    #endif
   }
 
   public static func sharedFileURL(key: String, appGroup: String) -> URL? {

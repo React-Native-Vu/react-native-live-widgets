@@ -19,11 +19,20 @@ public struct WidgetMultiPagePayloadDTO: Codable {
   public let initialPage: String?
 }
 
+public struct WidgetRemoteConfigDTO: Codable {
+  public let url: String
+  public let method: String?
+  public let headers: [String: String]?
+  public let refreshIntervalMinutes: Int?
+}
+
 public struct InteractiveWidgetState: Codable {
   public var activePage: String?
   public var pageOrder: [String]?
   public var toggledItems: [String: Bool]
   public var lastActionId: String?
+  public var lastSyncTime: String?
+  public var remoteVariables: [String: String]?
   public var updatedAt: Double
 
   public init(
@@ -31,12 +40,16 @@ public struct InteractiveWidgetState: Codable {
     pageOrder: [String]? = nil,
     toggledItems: [String: Bool] = [:],
     lastActionId: String? = nil,
+    lastSyncTime: String? = nil,
+    remoteVariables: [String: String]? = nil,
     updatedAt: Double = Date().timeIntervalSince1970
   ) {
     self.activePage = activePage
     self.pageOrder = pageOrder
     self.toggledItems = toggledItems
     self.lastActionId = lastActionId
+    self.lastSyncTime = lastSyncTime
+    self.remoteVariables = remoteVariables
     self.updatedAt = updatedAt
   }
 }
@@ -135,12 +148,80 @@ public enum DynamicWidgetStateStore {
   public static func isToggled(_ key: String) -> Bool {
     return loadState().toggledItems[key] ?? false
   }
+
+  /// Chạy ngầm độc lập bên trong Widget Extension (kể cả khi Main App đã bị kill hoàn toàn)
+  public static func performRemoteSync(widgetKey: String = "main") async {
+    let configKey = "widget_remote_config_\(widgetKey)"
+    guard let configJson = DynamicWidgetProvider.readSharedString(forKey: configKey, appGroup: ""),
+          let configData = configJson.data(using: .utf8),
+          let config = try? JSONDecoder().decode(WidgetRemoteConfigDTO.self, from: configData) else {
+      stampSyncTimeOnly()
+      return
+    }
+
+    // Hỗ trợ URL có biến động {{_randomId}} để test đổi dữ liệu mỗi lần gọi
+    let randomId = Int.random(in: 1...20)
+    let resolvedUrlStr = config.url.replacingOccurrences(of: "{{_randomId}}", with: "\(randomId)")
+    guard let url = URL(string: resolvedUrlStr) else {
+      stampSyncTimeOnly()
+      return
+    }
+
+    var request = URLRequest(url: url)
+    request.httpMethod = config.method ?? "GET"
+    request.timeoutInterval = 8
+    if let headers = config.headers {
+      for (k, v) in headers {
+        request.setValue(v, forHTTPHeaderField: k)
+      }
+    }
+
+    do {
+      let (data, _) = try await URLSession.shared.data(for: request)
+      var state = loadState()
+      let formatter = DateFormatter()
+      formatter.dateFormat = "HH:mm:ss"
+      state.lastSyncTime = formatter.string(from: Date())
+      state.updatedAt = Date().timeIntervalSince1970
+
+      if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+        // Nếu Backend trả về trực tiếp cấu trúc Widget Layout (small / medium / large / pages)
+        if jsonObj["small"] != nil || jsonObj["medium"] != nil || jsonObj["large"] != nil || jsonObj["pages"] != nil,
+           let rawStr = String(data: data, encoding: .utf8) {
+          DynamicWidgetProvider.writeSharedString(rawStr, forKey: "widget_layout_\(widgetKey)", appGroup: "")
+        }
+
+        // Đồng thời trích xuất các trường dữ liệu phẳng để điền vào biến {{field}} trên template
+        var vars = state.remoteVariables ?? [:]
+        for (k, v) in jsonObj {
+          if let s = v as? String {
+            vars[k] = s
+          } else if let n = v as? NSNumber {
+            vars[k] = n.stringValue
+          }
+        }
+        state.remoteVariables = vars
+      }
+      saveState(state)
+    } catch {
+      stampSyncTimeOnly()
+    }
+  }
+
+  private static func stampSyncTimeOnly() {
+    var state = loadState()
+    let formatter = DateFormatter()
+    formatter.dateFormat = "HH:mm:ss"
+    state.lastSyncTime = formatter.string(from: Date())
+    state.updatedAt = Date().timeIntervalSince1970
+    saveState(state)
+  }
 }
 
 @available(iOS 17.0, *)
 public struct DynamicWidgetActionIntent: AppIntent {
   public static var title: LocalizedStringResource = "Interactive Widget Action"
-  public static var description = IntentDescription("Perform interactive tab/page switching or toggling right on the widget.")
+  public static var description = IntentDescription("Perform interactive tab/page switching, toggling, or background API sync right on the widget.")
 
   @Parameter(title: "Action ID")
   public var actionId: String
@@ -154,7 +235,12 @@ public struct DynamicWidgetActionIntent: AppIntent {
   }
 
   public func perform() async throws -> some IntentResult {
-    DynamicWidgetStateStore.handleAction(actionId)
+    if actionId == "refresh" || actionId.hasPrefix("refresh:") {
+      let key = actionId.hasPrefix("refresh:") ? String(actionId.dropFirst(8)) : "main"
+      await DynamicWidgetStateStore.performRemoteSync(widgetKey: key)
+    } else {
+      DynamicWidgetStateStore.handleAction(actionId)
+    }
     WidgetCenter.shared.reloadAllTimelines()
     return .result()
   }

@@ -4,6 +4,7 @@ import {
   StartActivityOptions,
   UpdateActivityOptions,
   WidgetLayoutConfig,
+  WidgetRemoteConfig,
 } from './types';
 
 const { LiveActivityModule } = NativeModules;
@@ -252,6 +253,30 @@ export const Widget = {
       return await Widget.reloadAll();
     } catch (error) {
       console.warn('[react-native-live-widgets] setLayout error:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Cấu hình Endpoint API để bản thân Widget Extension tự chạy ngầm lấy dữ liệu mới
+   * theo chu kỳ (`getTimeline`) hoặc khi bấm nút `actionId: 'refresh'` trên mặt Widget,
+   * kể cả khi người dùng đã vuốt tắt (Kill) hoàn toàn ứng dụng chính!
+   */
+  setRemoteConfig: async (
+    widgetKey: string,
+    remoteConfig: WidgetRemoteConfig,
+    appGroup?: string
+  ): Promise<boolean> => {
+    try {
+      const saved = await SharedStorage.set(
+        `widget_remote_config_${widgetKey}`,
+        remoteConfig,
+        appGroup
+      );
+      if (!saved) return false;
+      return await Widget.reloadAll();
+    } catch (error) {
+      console.warn('[react-native-live-widgets] setRemoteConfig error:', error);
       return false;
     }
   },

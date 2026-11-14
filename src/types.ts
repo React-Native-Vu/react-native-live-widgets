@@ -244,6 +244,17 @@ export interface WidgetLayoutConfig extends WidgetSinglePageConfig {
   initialPage?: string;
 }
 
+export interface WidgetRemoteConfig {
+  /** URL API mà Widget Extension sẽ tự gọi ngầm (kể cả khi người dùng đã kill App chính) */
+  url: string;
+  /** HTTP Method (mặc định 'GET') */
+  method?: 'GET' | 'POST';
+  /** Headers xác thực (ví dụ { Authorization: 'Bearer ...' }) */
+  headers?: Record<string, string>;
+  /** Chu kỳ tự động gọi lại API tính bằng phút (mặc định 15 phút) */
+  refreshIntervalMinutes?: number;
+}
+
 export interface LiveActivityPushTokens {
   /** Token APNs của thiết bị (Device Token 64-hex chars) dùng cho Push Notification / Silent Push */
   devicePushToken: string | null;
