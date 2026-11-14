@@ -1,5 +1,6 @@
 import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import {
+  LiveActivityPushTokens,
   StartActivityOptions,
   UpdateActivityOptions,
   WidgetLayoutConfig,
@@ -18,7 +19,9 @@ const liveActivityEmitter = LiveActivityModule
   ? new NativeEventEmitter(LiveActivityModule)
   : null;
 
+const DEVICE_TOKEN_CHANGED_EVENT = 'DevicePushTokenChanged';
 const TOKEN_CHANGED_EVENT = 'LiveActivityTokenChanged';
+const UPDATE_TOKEN_CHANGED_EVENT = 'LiveActivityUpdateTokenChanged';
 const ACTION_CLICKED_EVENT = 'LiveActivityActionClicked';
 
 // ─── 1. LIVE ACTIVITY & LIVE UPDATE ──────────────────────────────────────────
@@ -79,7 +82,22 @@ export const LiveActivity = {
   },
 
   /**
-   * Lấy APNs Push-to-Start token (iOS 17.2+) để backend kích hoạt từ xa.
+   * Đăng ký và lấy APNs Device Token của thiết bị (64-hex chars trên iOS).
+   */
+  getDevicePushToken: async (): Promise<string | undefined> => {
+    if (Platform.OS !== 'ios' || !LiveActivityModule?.getDevicePushToken) {
+      return undefined;
+    }
+    try {
+      const token = await LiveActivityModule.getDevicePushToken();
+      return token || undefined;
+    } catch {
+      return undefined;
+    }
+  },
+
+  /**
+   * Lấy APNs Push-to-Start token (iOS 17.2+) để backend kích hoạt mở mới Live Activity từ xa.
    */
   getPushToStartToken: async (): Promise<string | undefined> => {
     if (Platform.OS !== 'ios' || !LiveActivityModule?.getPushToStartToken) {
@@ -94,11 +112,77 @@ export const LiveActivity = {
   },
 
   /**
+   * Lấy APNs Update Token của một phiên Live Activity đang chạy (theo activityId)
+   * để backend gửi APNs cập nhật ("event": "update") hoặc kết thúc ("event": "end").
+   */
+  getActivityPushToken: async (activityId: string): Promise<string | undefined> => {
+    if (Platform.OS !== 'ios' || !LiveActivityModule?.getActivityPushToken) {
+      return undefined;
+    }
+    try {
+      const token = await LiveActivityModule.getActivityPushToken(activityId);
+      return token || undefined;
+    } catch {
+      return undefined;
+    }
+  },
+
+  /**
+   * Lấy trọn bộ cả 3 loại APNs Token trong 1 lần gọi:
+   * - `devicePushToken`: Token APNs của máy
+   * - `pushToStartToken`: Token APNs mở mới Live Activity từ xa (iOS 17.2+)
+   * - `activityUpdateToken`: Token APNs cập nhật phiên Live Activity đang chạy
+   */
+  getAllPushTokens: async (activityId?: string): Promise<LiveActivityPushTokens> => {
+    const empty: LiveActivityPushTokens = {
+      devicePushToken: null,
+      pushToStartToken: null,
+      activityUpdateToken: null,
+      allActivityUpdateTokens: {},
+    };
+    if (Platform.OS !== 'ios' || !LiveActivityModule?.getAllPushTokens) {
+      return empty;
+    }
+    try {
+      const res = await LiveActivityModule.getAllPushTokens(activityId || '');
+      return {
+        devicePushToken: res?.devicePushToken || null,
+        pushToStartToken: res?.pushToStartToken || null,
+        activityUpdateToken: res?.activityUpdateToken || null,
+        allActivityUpdateTokens: res?.allActivityUpdateTokens || {},
+      };
+    } catch {
+      return empty;
+    }
+  },
+
+  /**
+   * Lắng nghe khi iOS cấp mới hoặc thay đổi Device APNs Token của máy.
+   */
+  onDevicePushTokenChange: (listener: (token: string) => void): (() => void) => {
+    if (Platform.OS !== 'ios' || !liveActivityEmitter) return () => {};
+    const sub = liveActivityEmitter.addListener(DEVICE_TOKEN_CHANGED_EVENT, listener);
+    return () => sub.remove();
+  },
+
+  /**
    * Lắng nghe khi iOS cấp hoặc xoay Push-to-Start Token mới.
    */
   onPushToStartTokenChange: (listener: (token: string) => void): (() => void) => {
     if (Platform.OS !== 'ios' || !liveActivityEmitter) return () => {};
     const sub = liveActivityEmitter.addListener(TOKEN_CHANGED_EVENT, listener);
+    return () => sub.remove();
+  },
+
+  /**
+   * Lắng nghe khi iOS cấp hoặc xoay APNs Update Token cho một Live Activity cụ thể.
+   * Trả về `{ activityId, token }` để gửi ngay lên Backend.
+   */
+  onActivityUpdateTokenChange: (
+    listener: (event: { activityId: string; token: string }) => void
+  ): (() => void) => {
+    if (Platform.OS !== 'ios' || !liveActivityEmitter) return () => {};
+    const sub = liveActivityEmitter.addListener(UPDATE_TOKEN_CHANGED_EVENT, listener);
     return () => sub.remove();
   },
 

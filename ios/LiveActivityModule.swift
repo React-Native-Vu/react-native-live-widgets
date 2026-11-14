@@ -1,20 +1,65 @@
 import ActivityKit
 import Foundation
 import React
+import UIKit
+import UserNotifications
 import WidgetKit
 
 @objc(LiveActivityModule)
 public class LiveActivityModule: RCTEventEmitter {
+  private static var currentDevicePushToken: String?
   private static var currentPushToStartToken: String?
+  private static var activityUpdateTokens: [String: String] = [:]
   private static var isObservingTokens = false
+  private static var isObservingActivities = false
   private var hasListeners = false
+
+  public override init() {
+    super.init()
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleDeviceTokenNotification(_:)),
+      name: Notification.Name("RNLiveWidgetsDidRegisterDeviceToken"),
+      object: nil
+    )
+    startObservingPushToStartTokenIfNeeded()
+    startObservingActivityUpdatesIfNeeded()
+  }
+
+  deinit {
+    NotificationCenter.default.removeObserver(self)
+  }
+
+  @objc private func handleDeviceTokenNotification(_ notification: Notification) {
+    guard let token = notification.userInfo?["token"] as? String, !token.isEmpty else { return }
+    Self.currentDevicePushToken = token
+    if hasListeners {
+      sendEvent(withName: "DevicePushTokenChanged", body: token)
+    }
+  }
+
+  /// Hàm tĩnh để AppDelegate có thể gọi trực tiếp nếu muốn truyền Data
+  @objc public static func didRegisterDeviceToken(_ deviceToken: Data) {
+    let tokenHex = deviceToken.map { String(format: "%02x", $0) }.joined()
+    currentDevicePushToken = tokenHex
+    NotificationCenter.default.post(
+      name: Notification.Name("RNLiveWidgetsDidRegisterDeviceToken"),
+      object: nil,
+      userInfo: ["token": tokenHex]
+    )
+  }
 
   public override static func requiresMainQueueSetup() -> Bool {
     return false
   }
 
   public override func supportedEvents() -> [String]! {
-    return ["LiveActivityTokenChanged", "LiveActivityActionClicked"]
+    return [
+      "DevicePushTokenChanged",
+      "LiveActivityTokenChanged",
+      "LiveActivityUpdateTokenChanged",
+      "LiveActivityActionClicked",
+    ]
   }
 
   public override func startObserving() {
@@ -54,25 +99,62 @@ public class LiveActivityModule: RCTEventEmitter {
           content: .init(state: initialContentState, staleDate: nil),
           pushType: .token
         )
-
-        Task {
-          for await pushToken in activity.pushTokenUpdates {
-            let tokenStr = pushToken.map { String(format: "%02x", $0) }.joined()
-            NSLog("🔔 [LiveActivityModule] Activity Push Token: \(tokenStr)")
-          }
-        }
+        observePushToken(for: activity)
       } catch {
-        // Fallback sang local Live Activity (pushType: nil) khi app chưa cấu hình Push Notifications (aps-environment)
-        _ = try Activity.request(
+        // Fallback sang local Live Activity (pushType: nil) khi chạy môi trường chưa cấu hình APNs
+        let activity = try Activity.request(
           attributes: attributes,
           content: .init(state: initialContentState, staleDate: nil),
           pushType: nil
         )
+        observePushToken(for: activity)
       }
+
+      #if targetEnvironment(simulator)
+      if Self.activityUpdateTokens[activityId] == nil {
+        let simUpdateToken = Self.generateSimulatorHexToken(seed: "apns_update_\(activityId)", byteLength: 64)
+        Self.activityUpdateTokens[activityId] = simUpdateToken
+        if hasListeners {
+          sendEvent(
+            withName: "LiveActivityUpdateTokenChanged",
+            body: ["activityId": activityId, "token": simUpdateToken]
+          )
+        }
+      }
+      #endif
 
       resolve(true)
     } catch {
       reject("E_START_FAILED", error.localizedDescription, error)
+    }
+  }
+
+  @available(iOS 16.2, *)
+  private func observePushToken(for activity: Activity<DynamicActivityAttributes>) {
+    let actId = activity.attributes.activityId
+    Task {
+      for await pushToken in activity.pushTokenUpdates {
+        let tokenStr = pushToken.map { String(format: "%02x", $0) }.joined()
+        Self.activityUpdateTokens[actId] = tokenStr
+        NSLog("🔔 [LiveActivityModule] Activity (\(actId)) Update APNs Token: \(tokenStr)")
+        if self.hasListeners {
+          self.sendEvent(
+            withName: "LiveActivityUpdateTokenChanged",
+            body: ["activityId": actId, "token": tokenStr]
+          )
+        }
+      }
+    }
+  }
+
+  private func startObservingActivityUpdatesIfNeeded() {
+    guard #available(iOS 16.2, *), !Self.isObservingActivities else { return }
+    Self.isObservingActivities = true
+
+    Task {
+      for await activity in Activity<DynamicActivityAttributes>.activityUpdates {
+        self.observePushToken(for: activity)
+      }
     }
   }
 
@@ -139,7 +221,45 @@ public class LiveActivityModule: RCTEventEmitter {
     }
   }
 
-  // MARK: - Push to Start Token (iOS 17.2+)
+  // MARK: - APNs Tokens (Device Token, Push-to-Start Token, Activity Update Token)
+
+  @objc(registerForPushNotifications:rejecter:)
+  public func registerForPushNotifications(
+    resolve: @escaping RCTPromiseResolveBlock,
+    reject: @escaping RCTPromiseRejectBlock
+  ) {
+    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
+      DispatchQueue.main.async {
+        UIApplication.shared.registerForRemoteNotifications()
+      }
+
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+        #if targetEnvironment(simulator)
+        if Self.currentDevicePushToken == nil {
+          let vendorId = UIDevice.current.identifierForVendor?.uuidString ?? "simulator_device"
+          let simDeviceToken = Self.generateSimulatorHexToken(seed: "apns_device_\(vendorId)", byteLength: 32)
+          Self.currentDevicePushToken = simDeviceToken
+          if self.hasListeners {
+            self.sendEvent(withName: "DevicePushTokenChanged", body: simDeviceToken)
+          }
+        }
+        #endif
+        resolve(Self.currentDevicePushToken)
+      }
+    }
+  }
+
+  @objc(getDevicePushToken:rejecter:)
+  public func getDevicePushToken(
+    resolve: @escaping RCTPromiseResolveBlock,
+    reject: @escaping RCTPromiseRejectBlock
+  ) {
+    if let existing = Self.currentDevicePushToken {
+      resolve(existing)
+      return
+    }
+    registerForPushNotifications(resolve: resolve, reject: reject)
+  }
 
   @objc(getPushToStartToken:rejecter:)
   public func getPushToStartToken(
@@ -148,10 +268,64 @@ public class LiveActivityModule: RCTEventEmitter {
   ) {
     if #available(iOS 17.2, *) {
       startObservingPushToStartTokenIfNeeded()
+      #if targetEnvironment(simulator)
+      if Self.currentPushToStartToken == nil {
+        let vendorId = UIDevice.current.identifierForVendor?.uuidString ?? "simulator_device"
+        Self.currentPushToStartToken = Self.generateSimulatorHexToken(
+          seed: "apns_push_to_start_\(vendorId)",
+          byteLength: 64
+        )
+      }
+      #endif
       resolve(Self.currentPushToStartToken)
     } else {
       resolve(nil)
     }
+  }
+
+  @objc(getActivityPushToken:resolver:rejecter:)
+  public func getActivityPushToken(
+    activityId: String,
+    resolve: @escaping RCTPromiseResolveBlock,
+    reject: @escaping RCTPromiseRejectBlock
+  ) {
+    if let token = Self.activityUpdateTokens[activityId] {
+      resolve(token)
+      return
+    }
+    resolve(nil)
+  }
+
+  @objc(getAllPushTokens:resolver:rejecter:)
+  public func getAllPushTokens(
+    activityId: String,
+    resolve: @escaping RCTPromiseResolveBlock,
+    reject: @escaping RCTPromiseRejectBlock
+  ) {
+    #if targetEnvironment(simulator)
+    let vendorId = UIDevice.current.identifierForVendor?.uuidString ?? "simulator_device"
+    if Self.currentDevicePushToken == nil {
+      Self.currentDevicePushToken = Self.generateSimulatorHexToken(seed: "apns_device_\(vendorId)", byteLength: 32)
+    }
+    if #available(iOS 17.2, *), Self.currentPushToStartToken == nil {
+      Self.currentPushToStartToken = Self.generateSimulatorHexToken(seed: "apns_push_to_start_\(vendorId)", byteLength: 64)
+    }
+    #endif
+
+    let specificUpdateToken: String? = {
+      if !activityId.isEmpty, let tok = Self.activityUpdateTokens[activityId] {
+        return tok
+      }
+      return Self.activityUpdateTokens.values.first
+    }()
+
+    let result: [String: Any] = [
+      "devicePushToken": Self.currentDevicePushToken as Any,
+      "pushToStartToken": Self.currentPushToStartToken as Any,
+      "activityUpdateToken": specificUpdateToken as Any,
+      "allActivityUpdateTokens": Self.activityUpdateTokens,
+    ]
+    resolve(result)
   }
 
   private func startObservingPushToStartTokenIfNeeded() {
@@ -168,6 +342,18 @@ public class LiveActivityModule: RCTEventEmitter {
         }
       }
     }
+  }
+
+  private static func generateSimulatorHexToken(seed: String, byteLength: Int) -> String {
+    var bytes = [UInt8]()
+    bytes.reserveCapacity(byteLength)
+    let seedBytes = Array(seed.utf8)
+    for i in 0..<byteLength {
+      let b = seedBytes[i % seedBytes.count]
+      let mixed = UInt8((Int(b) &* 31 &+ i &* 17) & 0xFF)
+      bytes.append(mixed)
+    }
+    return bytes.map { String(format: "%02x", $0) }.joined()
   }
 
   // MARK: - Home Screen Widgets

@@ -243,3 +243,14 @@ export interface WidgetLayoutConfig extends WidgetSinglePageConfig {
   /** Trang hiển thị mặc định ban đầu */
   initialPage?: string;
 }
+
+export interface LiveActivityPushTokens {
+  /** Token APNs của thiết bị (Device Token 64-hex chars) dùng cho Push Notification / Silent Push */
+  devicePushToken: string | null;
+  /** Token APNs Push-to-Start (iOS 17.2+) để Backend kích hoạt mở mới Live Activity từ xa */
+  pushToStartToken: string | null;
+  /** Token APNs Update của phiên Live Activity hiện tại để Backend đẩy bản cập nhật / kết thúc */
+  activityUpdateToken: string | null;
+  /** Map toàn bộ { [activityId]: updateToken } đang hoạt động */
+  allActivityUpdateTokens: Record<string, string>;
+}
