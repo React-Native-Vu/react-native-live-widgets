@@ -75,25 +75,39 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             options: Bundle?
         ) {
             val views = RemoteViews(context.packageName, R.layout.rn_live_widget_host)
-            val density = context.resources.displayMetrics.density.coerceAtLeast(1.5f)
+            val baseDensity = context.resources.displayMetrics.density.coerceAtLeast(2.0f)
 
-            val minW = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 320)?.takeIf { it > 0 } ?: 320
-            val minH = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 280)?.takeIf { it > 0 } ?: 280
+            // Trên Android Launcher ở chế độ dọc (Portrait):
+            // Chiều rộng thực tế là OPTION_APPWIDGET_MIN_WIDTH, chiều cao thực tế là OPTION_APPWIDGET_MAX_HEIGHT
+            val minW = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)?.takeIf { it > 0 } ?: 320
+            val maxW = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0)?.takeIf { it > 0 } ?: minW
+            val minH = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)?.takeIf { it > 0 } ?: 240
+            val maxH = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)?.takeIf { it > 0 } ?: minH
+
+            val widgetWidthDp = minW.coerceIn(150, 440)
+            val widgetHeightDp = max(minH, maxH).coerceIn(130, 460)
 
             val family = when {
-                minW < 180 && minH < 180 -> "small"
-                minH < 190 -> "medium"
+                widgetWidthDp < 200 && widgetHeightDp < 200 -> "small"
+                widgetHeightDp < 215 -> "medium"
                 else -> "large"
             }
 
             val rawJson = DynamicWidgetStateStore.resolveLayoutJsonWithVariables(context, "main")
             val activeNode = selectActiveNode(context, rawJson, family)
 
-            val widthPx = (minW.coerceIn(160, 420) * density).roundToInt()
-            val heightPx = (minH.coerceIn(150, 420) * density).roundToInt()
+            // Khung vẽ chuẩn theo đúng tỷ lệ thực của Widget trên màn hình để chữ KHÔNG BAO GIỜ bị kéo giãn (fitXY)
+            // Nếu người dùng để widget hơi vuông, ta đảm bảo bề ngang tối thiểu đủ rộng (tương đương 320dp chuẩn iOS)
+            // và nhân tỷ lệ đồng nhất cho cả chiều rộng lẫn chiều cao.
+            val targetLogicalWidthDp = max(widgetWidthDp.toFloat(), 310f)
+            val aspectRatio = widgetHeightDp.toFloat() / widgetWidthDp.toFloat()
+            val targetLogicalHeightDp = (targetLogicalWidthDp * aspectRatio).coerceIn(150f, 460f)
+
+            val widthPx = (targetLogicalWidthDp * baseDensity).roundToInt()
+            val heightPx = (targetLogicalHeightDp * baseDensity).roundToInt()
 
             val bindings = mutableListOf<ButtonActionBinding>()
-            val bmp = renderWidgetBitmap(context, activeNode, widthPx, heightPx, density, bindings)
+            val bmp = renderWidgetBitmap(context, activeNode, widthPx, heightPx, baseDensity, bindings)
             views.setImageViewBitmap(R.id.rn_widget_canvas, bmp)
 
             bindHitZones(context, views, appWidgetId, bindings)
@@ -204,31 +218,44 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             rootNode: JSONObject?,
             widthPx: Int,
             heightPx: Int,
-            density: Float,
+            baseDensity: Float,
             bindings: MutableList<ButtonActionBinding>
         ): Bitmap {
             val bmp = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bmp)
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG)
 
-            val rootBgHex = rootNode?.optJSONObject("props")?.optString("backgroundColor", "#FFFFFF") ?: "#FFFFFF"
+            val rootBgHex = rootNode?.optJSONObject("props")?.optString("backgroundColor", "#FFFFFF")
+                ?.ifEmpty { "#FFFFFF" } ?: "#FFFFFF"
             paint.color = parseHexColor(rootBgHex, Color.WHITE)
             val cardRect = RectF(0f, 0f, widthPx.toFloat(), heightPx.toFloat())
-            canvas.drawRoundRect(cardRect, 22f * density, 22f * density, paint)
+            val outerRadius = 24f * baseDensity
+            canvas.drawRoundRect(cardRect, outerRadius, outerRadius, paint)
 
             if (rootNode == null) {
                 paint.color = Color.parseColor("#0F172A")
-                paint.textSize = 16f * density
+                paint.textSize = 16f * baseDensity
                 paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 paint.textAlign = Paint.Align.CENTER
-                canvas.drawText("Live Widgets", widthPx / 2f, heightPx / 2f - 6f * density, paint)
+                canvas.drawText("Live Widgets", widthPx / 2f, heightPx / 2f - 6f * baseDensity, paint)
 
                 paint.color = Color.parseColor("#64748B")
-                paint.textSize = 12f * density
+                paint.textSize = 12f * baseDensity
                 paint.typeface = Typeface.DEFAULT
-                canvas.drawText("Chọn 1 mẫu UI trong app để hiển thị", widthPx / 2f, heightPx / 2f + 16f * density, paint)
+                canvas.drawText("Chọn 1 mẫu UI trong app để hiển thị", widthPx / 2f, heightPx / 2f + 16f * baseDensity, paint)
                 return bmp
             }
+
+            // Tự động đo chiều cao tự nhiên của toàn bộ cây giao diện.
+            // Nếu nội dung cao hơn chiều cao khung Widget hiện tại, tự động thu nhỏ tỷ lệ đồng nhất (fitScale)
+            // để 100% nội dung (bao gồm card trắng và dòng dưới cùng) luôn nằm gọn bên trong mà KHÔNG BỊ CẮT!
+            val naturalH = measureNodeHeight(context, rootNode, widthPx.toFloat(), baseDensity)
+            val fitScale = if (naturalH > heightPx * 0.96f && naturalH > 0f) {
+                ((heightPx * 0.95f) / naturalH).coerceIn(0.62f, 1.0f)
+            } else {
+                1.0f
+            }
+            val effectiveDensity = baseDensity * fitScale
 
             drawNode(
                 context = context,
@@ -239,7 +266,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                 availWidth = widthPx.toFloat(),
                 availHeight = heightPx.toFloat(),
                 totalHeight = heightPx.toFloat(),
-                density = density,
+                density = effectiveDensity,
                 isRoot = true,
                 bindings = bindings
             )
@@ -261,67 +288,94 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
         ): Float {
             val type = node.optString("type", "")
             val props = node.optJSONObject("props")
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG)
 
             return when (type) {
                 "VStack" -> {
                     val pad = (props?.optDouble("padding", 0.0) ?: 0.0).toFloat() * density
                     val spacing = (props?.optDouble("spacing", 6.0) ?: 6.0).toFloat() * density
                     val bgHex = props?.optString("backgroundColor", "") ?: ""
-                    val radius = (props?.optDouble("borderRadius", 0.0) ?: 0.0).toFloat() * density
+                    val borderHex = props?.optString("borderColor", "") ?: ""
+                    val borderW = (props?.optDouble("borderWidth", 0.0) ?: 0.0).toFloat() * density
+                    val radius = (props?.optDouble("borderRadius", 10.0) ?: 10.0).toFloat() * density
 
                     val children = node.optJSONArray("children")
+                    val innerW = (availWidth - pad * 2).coerceAtLeast(10f)
                     val measuredH = measureNodeHeight(context, node, availWidth, density)
-                    val boxH = if (isRoot) availHeight else min(availHeight, measuredH)
+                    // Không bao giờ cắt cụt chiều cao của card con bên trong (boxH = measuredH)
+                    val boxH = if (isRoot) max(availHeight, measuredH) else measuredH
 
                     if (!isRoot && bgHex.isNotEmpty()) {
+                        val rect = RectF(left, top, left + availWidth, top + boxH)
+                        paint.style = Paint.Style.FILL
                         paint.color = parseHexColor(bgHex, Color.TRANSPARENT)
-                        canvas.drawRoundRect(
-                            RectF(left, top, left + availWidth, top + boxH),
-                            radius,
-                            radius,
-                            paint
-                        )
+                        canvas.drawRoundRect(rect, radius, radius, paint)
+
+                        if (borderW > 0f && borderHex.isNotEmpty()) {
+                            paint.style = Paint.Style.STROKE
+                            paint.strokeWidth = borderW
+                            paint.color = parseHexColor(borderHex, Color.LTGRAY)
+                            canvas.drawRoundRect(rect, radius, radius, paint)
+                        }
                     }
 
-                    var curY = top + pad
-                    val innerW = (availWidth - pad * 2).coerceAtLeast(10f)
-                    if (children != null) {
+                    // Tính toán khoảng trống dư (extraSpace) cho các Spacer() co giãn ở cấp Root (giống SwiftUI)
+                    var flexSpacerCount = 0
+                    if (isRoot && children != null && availHeight > measuredH) {
                         for (i in 0 until children.length()) {
-                            val child = children.optJSONObject(i) ?: continue
-                            val childType = child.optString("type")
-                            if (childType == "Spacer") {
-                                val minLen = (child.optJSONObject("props")?.optDouble("minLength", 6.0) ?: 6.0).toFloat() * density
-                                curY += minLen
-                            } else {
-                                val usedH = drawNode(
-                                    context,
-                                    canvas,
-                                    child,
-                                    left + pad,
-                                    curY,
-                                    innerW,
-                                    (top + boxH - pad - curY).coerceAtLeast(16f),
-                                    totalHeight,
-                                    density,
-                                    false,
-                                    bindings
-                                )
-                                curY += usedH + spacing
+                            val c = children.optJSONObject(i) ?: continue
+                            if (c.optString("type") == "Spacer" && c.optJSONObject("props")?.has("minLength") != true) {
+                                flexSpacerCount++
                             }
                         }
                     }
-                    if (isRoot) availHeight else max(boxH, curY - top + pad - spacing)
+                    val extraPerSpacer = if (flexSpacerCount > 0) {
+                        ((availHeight - measuredH) / flexSpacerCount).coerceAtLeast(0f)
+                    } else 0f
+
+                    var curY = top + pad
+                    if (children != null) {
+                        val count = children.length()
+                        for (i in 0 until count) {
+                            val child = children.optJSONObject(i) ?: continue
+                            val childType = child.optString("type")
+                            if (childType == "Spacer") {
+                                val cProps = child.optJSONObject("props")
+                                val minLen = (cProps?.optDouble("minLength", 4.0) ?: 4.0).toFloat() * density
+                                val isFlex = isRoot && cProps?.has("minLength") != true
+                                curY += minLen + (if (isFlex) extraPerSpacer else 0f)
+                                if (i < count - 1) curY += spacing
+                            } else {
+                                val usedH = drawNode(
+                                    context = context,
+                                    canvas = canvas,
+                                    node = child,
+                                    left = left + pad,
+                                    top = curY,
+                                    availWidth = innerW,
+                                    availHeight = measuredH,
+                                    totalHeight = totalHeight,
+                                    density = density,
+                                    isRoot = false,
+                                    bindings = bindings
+                                )
+                                curY += usedH
+                                if (i < count - 1) curY += spacing
+                            }
+                        }
+                    }
+                    if (isRoot) availHeight else boxH
                 }
 
                 "HStack" -> {
                     val pad = (props?.optDouble("padding", 0.0) ?: 0.0).toFloat() * density
                     val spacing = (props?.optDouble("spacing", 6.0) ?: 6.0).toFloat() * density
                     val bgHex = props?.optString("backgroundColor", "") ?: ""
-                    val radius = (props?.optDouble("borderRadius", 0.0) ?: 0.0).toFloat() * density
+                    val radius = (props?.optDouble("borderRadius", 8.0) ?: 8.0).toFloat() * density
                     val rowH = measureNodeHeight(context, node, availWidth, density)
 
                     if (!isRoot && bgHex.isNotEmpty()) {
+                        paint.style = Paint.Style.FILL
                         paint.color = parseHexColor(bgHex, Color.TRANSPARENT)
                         canvas.drawRoundRect(
                             RectF(left, top, left + availWidth, top + rowH),
@@ -334,6 +388,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                     val children = node.optJSONArray("children")
                     if (children != null && children.length() > 0) {
                         val innerW = (availWidth - pad * 2).coerceAtLeast(10f)
+                        val innerH = (rowH - pad * 2).coerceAtLeast(10f)
                         var spacerIndex = -1
                         for (i in 0 until children.length()) {
                             if (children.optJSONObject(i)?.optString("type") == "Spacer") {
@@ -343,32 +398,59 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                         }
 
                         if (spacerIndex >= 0 && children.length() >= 2) {
-                            var curLeft = left + pad
-                            for (i in 0 until spacerIndex) {
+                            // 1. Đo trước tổng chiều rộng của nhóm bên phải Spacer
+                            var rightTotalW = 0f
+                            val rightWidths = mutableMapOf<Int, Float>()
+                            for (i in children.length() - 1 downTo spacerIndex + 1) {
                                 val c = children.optJSONObject(i) ?: continue
-                                val w = measureNodeWidth(c, innerW, density)
-                                drawNode(context, canvas, c, curLeft, top + pad, w, rowH, totalHeight, density, false, bindings)
-                                curLeft += w + spacing
+                                val w = measureNodeWidth(context, c, innerW, density)
+                                rightWidths[i] = w
+                                rightTotalW += w
+                                if (i > spacerIndex + 1) rightTotalW += spacing
                             }
 
+                            // 2. Vẽ nhóm bên phải từ sát mép phải sang trái (căn giữa theo chiều dọc)
                             var curRight = left + availWidth - pad
                             for (i in children.length() - 1 downTo spacerIndex + 1) {
                                 val c = children.optJSONObject(i) ?: continue
-                                val w = measureNodeWidth(c, innerW, density)
+                                val w = rightWidths[i] ?: 0f
+                                val childH = measureNodeHeight(context, c, w, density)
+                                val childTop = top + pad + ((innerH - childH) / 2f).coerceAtLeast(0f)
                                 curRight -= w
-                                drawNode(context, canvas, c, curRight, top + pad, w, rowH, totalHeight, density, false, bindings)
+                                drawNode(context, canvas, c, curRight, childTop, w, childH, totalHeight, density, false, bindings)
                                 curRight -= spacing
                             }
+
+                            // 3. Vẽ nhóm bên trái Spacer (cho phép VStack ở sát trước Spacer co giãn chiếm phần còn lại)
+                            val maxLeftAreaW = (curRight - (left + pad)).coerceAtLeast(30f)
+                            var curLeft = left + pad
+                            for (i in 0 until spacerIndex) {
+                                val c = children.optJSONObject(i) ?: continue
+                                val remainingForLeft = (left + pad + maxLeftAreaW - curLeft).coerceAtLeast(20f)
+                                val w = if (i == spacerIndex - 1 && c.optString("type") == "VStack") {
+                                    remainingForLeft
+                                } else {
+                                    min(remainingForLeft, measureNodeWidth(context, c, maxLeftAreaW, density))
+                                }
+                                val childH = measureNodeHeight(context, c, w, density)
+                                val childTop = top + pad + ((innerH - childH) / 2f).coerceAtLeast(0f)
+                                drawNode(context, canvas, c, curLeft, childTop, w, childH, totalHeight, density, false, bindings)
+                                curLeft += w + spacing
+                            }
                         } else {
+                            // HStack không có Spacer (ví dụ: [Image, VStack] hoặc hàng nút bấm)
                             var curLeft = left + pad
                             for (i in 0 until children.length()) {
                                 val c = children.optJSONObject(i) ?: continue
-                                val w = if (i == children.length() - 1) {
-                                    (left + availWidth - pad - curLeft).coerceAtLeast(20f)
+                                val remainingW = (left + availWidth - pad - curLeft).coerceAtLeast(20f)
+                                val w = if (i == children.length() - 1 && c.optString("type") in listOf("VStack", "Progress", "Text")) {
+                                    remainingW
                                 } else {
-                                    measureNodeWidth(c, innerW, density)
+                                    min(remainingW, measureNodeWidth(context, c, innerW, density))
                                 }
-                                drawNode(context, canvas, c, curLeft, top + pad, w, rowH, totalHeight, density, false, bindings)
+                                val childH = measureNodeHeight(context, c, w, density)
+                                val childTop = top + pad + ((innerH - childH) / 2f).coerceAtLeast(0f)
+                                drawNode(context, canvas, c, curLeft, childTop, w, childH, totalHeight, density, false, bindings)
                                 curLeft += w + spacing
                             }
                         }
@@ -381,42 +463,36 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                     val fontSize = (props?.optDouble("fontSize", 13.0) ?: 13.0).toFloat() * density
                     val weight = props?.optString("fontWeight", "regular") ?: "regular"
                     val colorHex = props?.optString("color", "#0F172A") ?: "#0F172A"
+                    val toggleKey = props?.optString("strikethroughWhenToggled", "") ?: ""
+                    val isStruck = toggleKey.isNotEmpty() && DynamicWidgetStateStore.isToggled(context, toggleKey)
 
-                    paint.color = parseHexColor(colorHex, Color.BLACK)
+                    paint.color = if (isStruck) Color.parseColor("#94A3B8") else parseHexColor(colorHex, Color.BLACK)
                     paint.textSize = fontSize
-                    paint.typeface = if (weight == "bold" || weight == "semibold") {
-                        Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    } else {
-                        Typeface.DEFAULT
+                    paint.isStrikeThruText = isStruck
+                    paint.typeface = when (weight) {
+                        "bold", "heavy" -> Typeface.create("sans-serif", Typeface.BOLD)
+                        "semibold", "medium" -> Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                        else -> Typeface.create("sans-serif", Typeface.NORMAL)
                     }
 
                     val display = ellipsizeText(text, paint, availWidth)
                     val fm = paint.fontMetrics
                     val textH = fm.descent - fm.ascent
                     canvas.drawText(display, left, top - fm.ascent, paint)
-                    textH + 2f * density
+                    textH + 1.5f * density
                 }
 
                 "Timer" -> {
-                    val targetTs = props?.optDouble("targetTimestamp", 0.0) ?: 0.0
+                    val formatted = formatTimerString(props)
                     val fontSize = (props?.optDouble("fontSize", 13.0) ?: 13.0).toFloat() * density
                     val colorHex = props?.optString("color", "#2563EB") ?: "#2563EB"
-                    val diffSec = abs(targetTs - System.currentTimeMillis() / 1000.0).toLong()
-                    val hrs = diffSec / 3600
-                    val mins = (diffSec % 3600) / 60
-                    val secs = diffSec % 60
-                    val formatted = if (hrs > 0) {
-                        String.format(Locale.US, "%d:%02d:%02d", hrs, mins, secs)
-                    } else {
-                        String.format(Locale.US, "%02d:%02d", mins, secs)
-                    }
 
                     paint.color = parseHexColor(colorHex, Color.BLUE)
                     paint.textSize = fontSize
                     paint.typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
                     val fm = paint.fontMetrics
                     canvas.drawText(formatted, left, top - fm.ascent, paint)
-                    (fm.descent - fm.ascent) + 2f * density
+                    (fm.descent - fm.ascent) + 1.5f * density
                 }
 
                 "Progress" -> {
@@ -450,7 +526,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                             if (showPct) {
                                 paint.style = Paint.Style.FILL
                                 paint.textSize = size * 0.24f
-                                paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                                paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
                                 paint.textAlign = Paint.Align.CENTER
                                 val fm = paint.fontMetrics
                                 val centerY = top + size / 2f - (fm.ascent + fm.descent) / 2f
@@ -466,17 +542,23 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                                 (value * segments).roundToInt()
                             }
                             val h = ((props?.optDouble("height", 8.0) ?: 8.0).toFloat() * density)
-                            val gap = ((props?.optDouble("segmentSpacing", 4.0) ?: 4.0).toFloat() * density)
-                            val pctReserve = if (showPct) 36f * density else 0f
+                            val gap = ((props?.optDouble("segmentSpacing", 5.0) ?: 5.0).toFloat() * density)
+
+                            val pctStr = "${(value * 100).roundToInt()}%"
+                            paint.textSize = 11f * density
+                            paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                            val pctReserve = if (showPct) paint.measureText(pctStr) + 8f * density else 0f
+
                             val barTotalW = (availWidth - pctReserve).coerceAtLeast(40f)
                             val segW = (barTotalW - gap * (segments - 1)) / segments
+                            val barTop = top + 2f * density
 
                             for (i in 0 until segments) {
                                 val segLeft = left + i * (segW + gap)
                                 paint.style = Paint.Style.FILL
                                 paint.color = if (i + 1 <= currentSeg) tintColor else trackColor
                                 canvas.drawRoundRect(
-                                    RectF(segLeft, top + 2f * density, segLeft + segW, top + 2f * density + h),
+                                    RectF(segLeft, barTop, segLeft + segW, barTop + h),
                                     h / 2f,
                                     h / 2f,
                                     paint
@@ -484,47 +566,45 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                             }
                             if (showPct) {
                                 paint.color = tintColor
-                                paint.textSize = 11f * density
-                                paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                                canvas.drawText(
-                                    "${(currentSeg * 100f / segments).roundToInt()}%",
-                                    left + barTotalW + 6f * density,
-                                    top + h + 2f * density,
-                                    paint
-                                )
+                                paint.textAlign = Paint.Align.RIGHT
+                                val fm = paint.fontMetrics
+                                val centerY = barTop + h / 2f - (fm.ascent + fm.descent) / 2f
+                                canvas.drawText(pctStr, left + availWidth, centerY, paint)
                             }
-                            h + 6f * density
+                            max(h + 4f * density, if (showPct) 13f * density else 0f)
                         }
                         else -> {
                             val h = ((props?.optDouble("height", 8.0) ?: 8.0).toFloat() * density)
-                            val pctReserve = if (showPct) 36f * density else 0f
+                            val pctStr = "${(value * 100).roundToInt()}%"
+                            paint.textSize = 11f * density
+                            paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                            val pctReserve = if (showPct) paint.measureText(pctStr) + 8f * density else 0f
+
                             val barW = (availWidth - pctReserve).coerceAtLeast(40f)
+                            val barTop = top + 2f * density
                             paint.style = Paint.Style.FILL
                             paint.color = trackColor
                             canvas.drawRoundRect(
-                                RectF(left, top + 2f * density, left + barW, top + 2f * density + h),
+                                RectF(left, barTop, left + barW, barTop + h),
                                 h / 2f,
                                 h / 2f,
                                 paint
                             )
                             paint.color = tintColor
                             canvas.drawRoundRect(
-                                RectF(left, top + 2f * density, left + barW * value, top + 2f * density + h),
+                                RectF(left, barTop, left + barW * value, barTop + h),
                                 h / 2f,
                                 h / 2f,
                                 paint
                             )
                             if (showPct) {
-                                paint.textSize = 11f * density
-                                paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                                canvas.drawText(
-                                    "${(value * 100).roundToInt()}%",
-                                    left + barW + 6f * density,
-                                    top + h + 2f * density,
-                                    paint
-                                )
+                                paint.color = tintColor
+                                paint.textAlign = Paint.Align.RIGHT
+                                val fm = paint.fontMetrics
+                                val centerY = barTop + h / 2f - (fm.ascent + fm.descent) / 2f
+                                canvas.drawText(pctStr, left + availWidth, centerY, paint)
                             }
-                            h + 6f * density
+                            max(h + 4f * density, if (showPct) 13f * density else 0f)
                         }
                     }
                 }
@@ -532,7 +612,9 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                 "Image" -> {
                     val w = ((props?.optDouble("width", 32.0) ?: 32.0).toFloat() * density)
                     val h = ((props?.optDouble("height", 32.0) ?: 32.0).toFloat() * density)
-                    val radius = ((props?.optDouble("borderRadius", 8.0) ?: 8.0).toFloat() * density)
+                    val rawRadius = props?.optDouble("cornerRadius", -1.0)?.takeIf { it >= 0 }
+                        ?: props?.optDouble("borderRadius", 8.0) ?: 8.0
+                    val radius = min(w / 2f, (rawRadius.toFloat() * density))
                     val borderW = ((props?.optDouble("borderWidth", 0.0) ?: 0.0).toFloat() * density)
                     val borderHex = props?.optString("borderColor", "#2563EB") ?: "#2563EB"
                     val bgHex = props?.optString("backgroundColor", "") ?: ""
@@ -581,7 +663,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                         paint.color = parseHexColor(borderHex, Color.BLUE)
                         canvas.drawRoundRect(rect, radius, radius, paint)
                     }
-                    h + 2f * density
+                    h + 1.5f * density
                 }
 
                 "Button" -> {
@@ -597,29 +679,34 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                     } else rawTitle
 
                     val bgHex = if (isToggled) {
-                        props?.optString("checkedBackgroundColor", "")?.ifEmpty {
-                            props.optString("backgroundColor", "#2563EB")
-                        } ?: "#DCFCE7"
+                        props?.optString("checkedBackgroundColor", "")
+                            ?.ifEmpty { props.optString("activeBackgroundColor", "") }
+                            ?.ifEmpty { props.optString("backgroundColor", "#2563EB") }
+                            ?: "#DCFCE7"
                     } else {
                         props?.optString("backgroundColor", "#2563EB") ?: "#2563EB"
                     }
 
                     val textHex = if (isToggled) {
-                        props?.optString("checkedTextColor", "")?.ifEmpty {
-                            props.optString("textColor", "#FFFFFF")
-                        } ?: "#15803D"
+                        props?.optString("checkedTextColor", "")
+                            ?.ifEmpty { props.optString("activeColor", "") }
+                            ?.ifEmpty { props.optString("textColor", "") }
+                            ?.ifEmpty { props.optString("color", "#FFFFFF") }
+                            ?: "#15803D"
                     } else {
-                        props?.optString("textColor", "#FFFFFF") ?: "#FFFFFF"
+                        props?.optString("textColor", "")
+                            ?.ifEmpty { props.optString("color", "#FFFFFF") }
+                            ?: "#FFFFFF"
                     }
 
                     val fontSize = ((props?.optDouble("fontSize", 11.0) ?: 11.0).toFloat() * density)
                     val padH = ((props?.optDouble("paddingHorizontal", 10.0) ?: 10.0).toFloat() * density)
-                    val padV = ((props?.optDouble("paddingVertical", 6.0) ?: 6.0).toFloat() * density)
+                    val padV = ((props?.optDouble("paddingVertical", 5.5) ?: 5.5).toFloat() * density)
                     val radius = ((props?.optDouble("borderRadius", 8.0) ?: 8.0).toFloat() * density)
                     val fullWidth = props?.optBoolean("fullWidth", false) ?: false
 
                     paint.textSize = fontSize
-                    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                    paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
                     val textW = paint.measureText(displayTitle)
                     val btnW = if (fullWidth) availWidth else min(availWidth, textW + padH * 2)
                     val btnH = fontSize + padV * 2
@@ -633,7 +720,13 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                     val fm = paint.fontMetrics
                     val textY = top + btnH / 2f - (fm.ascent + fm.descent) / 2f
                     val display = ellipsizeText(displayTitle, paint, (btnW - padH * 1.5f).coerceAtLeast(20f))
-                    canvas.drawText(display, left + padH, textY, paint)
+                    if (fullWidth && !actionId.startsWith("toggle:")) {
+                        paint.textAlign = Paint.Align.CENTER
+                        canvas.drawText(display, left + btnW / 2f, textY, paint)
+                    } else {
+                        paint.textAlign = Paint.Align.LEFT
+                        canvas.drawText(display, left + padH, textY, paint)
+                    }
 
                     if (actionId.isNotEmpty() || !deepLink.isNullOrEmpty()) {
                         val zone = when {
@@ -643,10 +736,24 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                         }
                         bindings.add(ButtonActionBinding(actionId = actionId, deepLink = deepLink, zone = zone))
                     }
-                    btnH + 2f * density
+                    btnH + 1.5f * density
                 }
 
                 else -> 0f
+            }
+        }
+
+        private fun formatTimerString(props: JSONObject?): String {
+            val targetTs = props?.optDouble("targetTimestamp", 0.0) ?: 0.0
+            val showsHours = props?.optBoolean("showsHours", true) ?: true
+            val diffSec = abs(targetTs - System.currentTimeMillis() / 1000.0).toLong()
+            val hrs = diffSec / 3600
+            val mins = (diffSec % 3600) / 60
+            val secs = diffSec % 60
+            return if (showsHours && hrs > 0) {
+                String.format(Locale.US, "%d:%02d:%02d", hrs, mins, secs)
+            } else {
+                String.format(Locale.US, "%02d:%02d", mins, secs)
             }
         }
 
@@ -660,10 +767,11 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                     val children = node.optJSONArray("children")
                     var h = pad * 2
                     if (children != null) {
-                        for (i in 0 until children.length()) {
+                        val count = children.length()
+                        for (i in 0 until count) {
                             val c = children.optJSONObject(i) ?: continue
-                            h += measureNodeHeight(context, c, availWidth - pad * 2, density)
-                            if (i < children.length() - 1) h += spacing
+                            h += measureNodeHeight(context, c, (availWidth - pad * 2).coerceAtLeast(10f), density)
+                            if (i < count - 1) h += spacing
                         }
                     }
                     h
@@ -671,7 +779,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                 "HStack" -> {
                     val pad = ((props?.optDouble("padding", 0.0) ?: 0.0).toFloat() * density)
                     val children = node.optJSONArray("children")
-                    var maxChildH = 20f * density
+                    var maxChildH = 16f * density
                     if (children != null) {
                         for (i in 0 until children.length()) {
                             val c = children.optJSONObject(i) ?: continue
@@ -682,59 +790,90 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                 }
                 "Text", "Timer" -> {
                     val fs = ((props?.optDouble("fontSize", 13.0) ?: 13.0).toFloat() * density)
-                    fs * 1.35f
+                    fs * 1.32f + 1.5f * density
                 }
                 "Progress" -> {
                     val style = props?.optString("style", "bar") ?: "bar"
+                    val showPct = props?.optBoolean("showPercentage", false) ?: false
                     if (style == "circular") {
-                        ((props?.optDouble("height", 52.0) ?: 52.0).toFloat() * density) + 4f * density
+                        ((props?.optDouble("height", 52.0) ?: 52.0).toFloat() * density) + 2f * density
                     } else {
-                        ((props?.optDouble("height", 8.0) ?: 8.0).toFloat() * density) + 6f * density
+                        val barH = ((props?.optDouble("height", 8.0) ?: 8.0).toFloat() * density) + 4f * density
+                        max(barH, if (showPct) 13f * density else 0f)
                     }
                 }
-                "Image" -> ((props?.optDouble("height", 32.0) ?: 32.0).toFloat() * density) + 2f * density
+                "Image" -> ((props?.optDouble("height", 32.0) ?: 32.0).toFloat() * density) + 1.5f * density
                 "Button" -> {
                     val fs = ((props?.optDouble("fontSize", 11.0) ?: 11.0).toFloat() * density)
-                    val padV = ((props?.optDouble("paddingVertical", 6.0) ?: 6.0).toFloat() * density)
-                    fs + padV * 2 + 2f * density
+                    val padV = ((props?.optDouble("paddingVertical", 5.5) ?: 5.5).toFloat() * density)
+                    fs + padV * 2 + 1.5f * density
                 }
-                "Spacer" -> ((props?.optDouble("minLength", 6.0) ?: 6.0).toFloat() * density)
+                "Spacer" -> ((props?.optDouble("minLength", 4.0) ?: 4.0).toFloat() * density)
                 else -> 0f
             }
         }
 
-        private fun measureNodeWidth(node: JSONObject, availWidth: Float, density: Float): Float {
+        private fun measureNodeWidth(context: Context, node: JSONObject, availWidth: Float, density: Float): Float {
             val type = node.optString("type", "")
             val props = node.optJSONObject("props")
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG)
             return when (type) {
                 "Text" -> {
                     val text = props?.optString("text", "") ?: ""
                     val fs = ((props?.optDouble("fontSize", 13.0) ?: 13.0).toFloat() * density)
                     paint.textSize = fs
-                    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    min(availWidth * 0.72f, paint.measureText(text) + 4f * density)
+                    paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                    min(availWidth * 0.78f, paint.measureText(text) + 2f * density)
                 }
                 "Timer" -> {
+                    val formatted = formatTimerString(props)
                     val fs = ((props?.optDouble("fontSize", 13.0) ?: 13.0).toFloat() * density)
-                    fs * 4.5f
+                    paint.textSize = fs
+                    paint.typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+                    paint.measureText(formatted) + 2f * density
                 }
                 "Image" -> ((props?.optDouble("width", 32.0) ?: 32.0).toFloat() * density)
                 "Progress" -> {
                     val style = props?.optString("style", "bar") ?: "bar"
                     if (style == "circular") {
                         ((props?.optDouble("height", 52.0) ?: 52.0).toFloat() * density)
-                    } else availWidth * 0.5f
+                    } else availWidth * 0.55f
                 }
                 "Button" -> {
                     val title = props?.optString("title", "Button") ?: "Button"
                     val fs = ((props?.optDouble("fontSize", 11.0) ?: 11.0).toFloat() * density)
                     val padH = ((props?.optDouble("paddingHorizontal", 10.0) ?: 10.0).toFloat() * density)
                     paint.textSize = fs
-                    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                    paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
                     paint.measureText(title) + padH * 2
                 }
-                else -> availWidth * 0.65f
+                "VStack" -> {
+                    val pad = ((props?.optDouble("padding", 0.0) ?: 0.0).toFloat() * density)
+                    val children = node.optJSONArray("children")
+                    var maxW = 40f * density
+                    if (children != null) {
+                        for (i in 0 until children.length()) {
+                            val c = children.optJSONObject(i) ?: continue
+                            maxW = max(maxW, measureNodeWidth(context, c, availWidth - pad * 2, density))
+                        }
+                    }
+                    min(availWidth * 0.78f, maxW + pad * 2)
+                }
+                "HStack" -> {
+                    val pad = ((props?.optDouble("padding", 0.0) ?: 0.0).toFloat() * density)
+                    val spacing = ((props?.optDouble("spacing", 6.0) ?: 6.0).toFloat() * density)
+                    val children = node.optJSONArray("children")
+                    var totalW = pad * 2
+                    if (children != null) {
+                        for (i in 0 until children.length()) {
+                            val c = children.optJSONObject(i) ?: continue
+                            totalW += measureNodeWidth(context, c, availWidth, density)
+                            if (i < children.length() - 1) totalW += spacing
+                        }
+                    }
+                    min(availWidth, totalW)
+                }
+                else -> availWidth * 0.5f
             }
         }
 
@@ -756,4 +895,3 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
         }
     }
 }
-
