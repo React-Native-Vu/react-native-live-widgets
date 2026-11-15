@@ -641,9 +641,10 @@ public class LiveActivityModule: RCTEventEmitter {
     visualizerTimer = nil
   }
 
-  @objc(playAudio:resolver:rejecter:)
+  @objc(playAudio:metadata:resolver:rejecter:)
   public func playAudio(
     _ urlString: String,
+    metadata: [String: Any]?,
     resolve: @escaping RCTPromiseResolveBlock,
     reject: @escaping RCTPromiseRejectBlock
   ) {
@@ -654,7 +655,7 @@ public class LiveActivityModule: RCTEventEmitter {
 
     DispatchQueue.main.async {
       do {
-        // Không dùng .mixWithOthers: để iOS coi app là "Now Playing" (hiện trên Control Center / Lock Screen)
+        // Cho phép audio phát nền và trở thành Now Playing chính của hệ thống (như Spotify / Apple Music)
         try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
         try AVAudioSession.sharedInstance().setActive(true)
       } catch {
@@ -664,34 +665,95 @@ public class LiveActivityModule: RCTEventEmitter {
       let playerItem = AVPlayerItem(url: url)
       Self.audioPlayer = AVPlayer(playerItem: playerItem)
       Self.audioPlayer?.play()
-      Self.setupNowPlaying(title: url.deletingPathExtension().lastPathComponent)
-      Self.startNativeVisualizerTimer()
+
+      let title = metadata?["title"] as? String ?? url.deletingPathExtension().lastPathComponent
+      let artist = metadata?["artist"] as? String ?? "LiveWidgets"
+      let artworkUrl = metadata?["artworkUrl"] as? String
+      let duration = metadata?["duration"] as? Double
+
+      Self.setupNowPlaying(title: title, artist: artist, artworkUrl: artworkUrl, duration: duration)
       resolve(true)
     }
   }
 
   private static var remoteCommandsConfigured = false
 
-  private static func setupNowPlaying(title: String) {
+  private static func setupNowPlaying(
+    title: String,
+    artist: String,
+    artworkUrl: String? = nil,
+    duration: Double? = nil
+  ) {
+    UIApplication.shared.beginReceivingRemoteControlEvents()
+
     var info: [String: Any] = [
       MPMediaItemPropertyTitle: title,
-      MPMediaItemPropertyArtist: "LiveWidgets",
+      MPMediaItemPropertyArtist: artist,
       MPNowPlayingInfoPropertyPlaybackRate: 1.0,
       MPNowPlayingInfoPropertyElapsedPlaybackTime: 0.0,
     ]
-    if let d = audioPlayer?.currentItem?.asset.duration, d.isNumeric {
-      info[MPMediaItemPropertyPlaybackDuration] = CMTimeGetSeconds(d)
+    if let d = duration ?? (audioPlayer?.currentItem?.asset.duration.seconds), !d.isNaN, d > 0 {
+      info[MPMediaItemPropertyPlaybackDuration] = d
     }
+
+    let artworkSize = CGSize(width: 300, height: 300)
+    let renderer = UIGraphicsImageRenderer(size: artworkSize)
+    let defaultArtworkImage = renderer.image { ctx in
+      let cgCtx = ctx.cgContext
+      let colors = [
+        UIColor(red: 0.08, green: 0.12, blue: 0.22, alpha: 1.0).cgColor,
+        UIColor(red: 0.03, green: 0.05, blue: 0.1, alpha: 1.0).cgColor
+      ]
+      let colorSpace = CGColorSpaceCreateDeviceRGB()
+      if let grad = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: [0, 1]) {
+        cgCtx.drawLinearGradient(grad, start: .zero, end: CGPoint(x: 300, y: 300), options: [])
+      }
+      if let note = UIImage(systemName: "music.note")?.withTintColor(.white, renderingMode: .alwaysOriginal) {
+        note.draw(in: CGRect(x: 75, y: 75, width: 150, height: 150))
+      }
+    }
+    info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: artworkSize) { _ in defaultArtworkImage }
+
     MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+
+    if let artworkUrl = artworkUrl, let url = URL(string: artworkUrl) {
+      Task {
+        if let (data, _) = try? await URLSession.shared.data(from: url), let img = UIImage(data: data) {
+          let customArtwork = MPMediaItemArtwork(boundsSize: img.size) { _ in img }
+          DispatchQueue.main.async {
+            guard var currentInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo else { return }
+            currentInfo[MPMediaItemPropertyArtwork] = customArtwork
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = currentInfo
+          }
+        }
+      }
+    }
 
     guard !remoteCommandsConfigured else { return }
     remoteCommandsConfigured = true
     let center = MPRemoteCommandCenter.shared()
+    center.playCommand.isEnabled = true
     center.playCommand.addTarget { _ in
-      audioPlayer?.play(); updateNowPlayingRate(1.0); return .success
+      audioPlayer?.play()
+      updateNowPlayingRate(1.0)
+      return .success
     }
+    center.pauseCommand.isEnabled = true
     center.pauseCommand.addTarget { _ in
-      audioPlayer?.pause(); updateNowPlayingRate(0.0); return .success
+      audioPlayer?.pause()
+      updateNowPlayingRate(0.0)
+      return .success
+    }
+    center.togglePlayPauseCommand.isEnabled = true
+    center.togglePlayPauseCommand.addTarget { _ in
+      if audioPlayer?.timeControlStatus == .playing {
+        audioPlayer?.pause()
+        updateNowPlayingRate(0.0)
+      } else {
+        audioPlayer?.play()
+        updateNowPlayingRate(1.0)
+      }
+      return .success
     }
   }
 

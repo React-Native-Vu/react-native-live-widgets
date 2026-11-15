@@ -279,7 +279,7 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
     // ─── 4. AUDIO PLAYER (MUSIC PLAYBACK FOR TESTING EQUALIZER ANIMATIONS) ────
 
     @ReactMethod
-    fun playAudio(urlString: String, promise: Promise) {
+    fun playAudio(urlString: String, metadata: ReadableMap?, promise: Promise) {
         try {
             mediaPlayer?.release()
             mediaPlayer = MediaPlayer().apply {

@@ -71,6 +71,7 @@ RCT_EXTERN_METHOD(clearSharedItems:(NSString *)appGroup
                   rejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(playAudio:(NSString *)urlString
+                  metadata:(nullable NSDictionary *)metadata
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 

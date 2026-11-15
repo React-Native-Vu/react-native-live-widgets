@@ -379,14 +379,22 @@ export interface AudioPlayerStatus {
   duration: number;
 }
 
+export interface AudioTrackMetadata {
+  title?: string;
+  artist?: string;
+  artworkUrl?: string;
+  duration?: number;
+}
+
 export const AudioPlayer = {
   /**
    * Phát nhạc trực tiếp từ URL (hỗ trợ stream mp3, m4a, aac, wav...)
+   * và đăng ký hệ thống Now Playing của iOS (hiện trên Dynamic Island & Lock Screen như Spotify).
    */
-  play: async (url: string): Promise<boolean> => {
+  play: async (url: string, metadata?: AudioTrackMetadata): Promise<boolean> => {
     if (!LiveActivityModule?.playAudio) return false;
     try {
-      return await LiveActivityModule.playAudio(url);
+      return await LiveActivityModule.playAudio(url, metadata || null);
     } catch (error) {
       console.warn('[react-native-live-widgets] AudioPlayer.play error:', error);
       return false;
