@@ -221,7 +221,7 @@ export interface GridNode extends BaseNode {
 export interface DividerNode extends BaseNode {
     type: 'Divider';
     props?: {
-        color?: string;
+        color?: DynamicColor;
         thickness?: number;
         direction?: 'horizontal' | 'vertical';
         dashed?: boolean;
@@ -433,7 +433,7 @@ export interface WidgetLayoutConfig extends WidgetSinglePageConfig {
      * Cấu hình màu nền container hoặc gradient (chuẩn iOS 17 StandBy Mode & macOS Desktop).
      */
     containerBackground?: {
-        backgroundColor?: string;
+        backgroundColor?: DynamicColor;
         gradientColors?: string[];
     };
 }
