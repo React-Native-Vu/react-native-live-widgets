@@ -99,7 +99,7 @@ public enum DynamicWidgetImageCache {
         guard let url = URL(string: urlStr) else { continue }
         group.addTask {
           var req = URLRequest(url: url)
-          req.timeoutInterval = 6
+          req.timeoutInterval = 2.0
           if let (data, _) = try? await URLSession.shared.data(for: req), !data.isEmpty {
             saveImageData(data, for: urlStr)
           }

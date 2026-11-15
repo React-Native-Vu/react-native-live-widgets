@@ -40,31 +40,23 @@ public struct DynamicWidgetProvider: TimelineProvider {
     let needsRemoteSync = hasRemoteConfig && hasTemplateVars && (state.lastSyncTime == nil || secondsSinceLastUpdate >= 20)
     let needsImagePrefetch = rawLayout.map { DynamicWidgetImageCache.hasUncachedUrls(in: $0) } ?? false
 
-    // Đường dẫn nhanh (Fast-path): Nếu dữ liệu đã sẵn sàng và không cần tải mạng, trả kết quả ngay lập tức
-    // để khi chuyển sang Widget cỡ lớn (Large) hoặc thêm Widget mới không bao giờ bị treo màn hình chờ (skeleton).
-    if !needsRemoteSync && !needsImagePrefetch {
-      let json = readLayoutJson()
-      let entry = DynamicWidgetEntry(date: Date(), layoutJson: json)
-      let intervalMins = readRefreshIntervalMinutes()
-      let nextUpdate = Calendar.current.date(byAdding: .minute, value: intervalMins, to: Date())!
-      completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
-      return
-    }
+    // Trả Timeline ngay lập tức để chuyển đổi giữa các mẫu Widget mượt mà tức thì
+    let json = readLayoutJson()
+    let entry = DynamicWidgetEntry(date: Date(), layoutJson: json)
+    let intervalMins = readRefreshIntervalMinutes()
+    let nextUpdate = Calendar.current.date(byAdding: .minute, value: intervalMins, to: Date())!
+    completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
 
-    Task {
-      if needsRemoteSync {
-        await DynamicWidgetStateStore.performRemoteSync(widgetKey: wKey)
+    // Tác vụ đồng bộ ngầm và tải trước ảnh URL nếu cần
+    if needsRemoteSync || needsImagePrefetch {
+      Task {
+        if needsRemoteSync {
+          await DynamicWidgetStateStore.performRemoteSync(widgetKey: wKey)
+        }
+        if let json = json, needsImagePrefetch {
+          await DynamicWidgetImageCache.prefetchUrls(in: json)
+        }
       }
-
-      let json = readLayoutJson()
-      if let json = json, needsImagePrefetch {
-        await DynamicWidgetImageCache.prefetchUrls(in: json)
-      }
-      let entry = DynamicWidgetEntry(date: Date(), layoutJson: json)
-      let intervalMins = readRefreshIntervalMinutes()
-      let nextUpdate = Calendar.current.date(byAdding: .minute, value: intervalMins, to: Date())!
-      let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-      completion(timeline)
     }
   }
 
