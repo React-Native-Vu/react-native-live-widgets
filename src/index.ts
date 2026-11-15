@@ -371,6 +371,82 @@ export const SharedStorage = {
   },
 };
 
+// ─── 4. AUDIO PLAYER (MUSIC PLAYBACK & EQUALIZER TESTING) ────────────────────
+
+export interface AudioPlayerStatus {
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+}
+
+export const AudioPlayer = {
+  /**
+   * Phát nhạc trực tiếp từ URL (hỗ trợ stream mp3, m4a, aac, wav...)
+   */
+  play: async (url: string): Promise<boolean> => {
+    if (!LiveActivityModule?.playAudio) return false;
+    try {
+      return await LiveActivityModule.playAudio(url);
+    } catch (error) {
+      console.warn('[react-native-live-widgets] AudioPlayer.play error:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Tạm dừng bài nhạc đang phát.
+   */
+  pause: async (): Promise<boolean> => {
+    if (!LiveActivityModule?.pauseAudio) return false;
+    try {
+      return await LiveActivityModule.pauseAudio();
+    } catch (error) {
+      console.warn('[react-native-live-widgets] AudioPlayer.pause error:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Tiếp tục phát bài nhạc sau khi tạm dừng.
+   */
+  resume: async (): Promise<boolean> => {
+    if (!LiveActivityModule?.resumeAudio) return false;
+    try {
+      return await LiveActivityModule.resumeAudio();
+    } catch (error) {
+      console.warn('[react-native-live-widgets] AudioPlayer.resume error:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Dừng hẳn bài nhạc và giải phóng tài nguyên phát.
+   */
+  stop: async (): Promise<boolean> => {
+    if (!LiveActivityModule?.stopAudio) return false;
+    try {
+      return await LiveActivityModule.stopAudio();
+    } catch (error) {
+      console.warn('[react-native-live-widgets] AudioPlayer.stop error:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Lấy trạng thái hiện tại của trình phát nhạc (đang phát, thời lượng, vị trí phát).
+   */
+  getStatus: async (): Promise<AudioPlayerStatus> => {
+    if (!LiveActivityModule?.getAudioStatus) {
+      return { isPlaying: false, currentTime: 0, duration: 0 };
+    }
+    try {
+      return await LiveActivityModule.getAudioStatus();
+    } catch (error) {
+      return { isPlaying: false, currentTime: 0, duration: 0 };
+    }
+  },
+};
+
 export * from './types';
 export * from './builder';
 export { StyleSheet } from './builder';

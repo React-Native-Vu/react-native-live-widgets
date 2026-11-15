@@ -109,6 +109,33 @@ export declare const SharedStorage: {
      */
     clear: (appGroup?: string) => Promise<boolean>;
 };
+export interface AudioPlayerStatus {
+    isPlaying: boolean;
+    currentTime: number;
+    duration: number;
+}
+export declare const AudioPlayer: {
+    /**
+     * Phát nhạc trực tiếp từ URL (hỗ trợ stream mp3, m4a, aac, wav...)
+     */
+    play: (url: string) => Promise<boolean>;
+    /**
+     * Tạm dừng bài nhạc đang phát.
+     */
+    pause: () => Promise<boolean>;
+    /**
+     * Tiếp tục phát bài nhạc sau khi tạm dừng.
+     */
+    resume: () => Promise<boolean>;
+    /**
+     * Dừng hẳn bài nhạc và giải phóng tài nguyên phát.
+     */
+    stop: () => Promise<boolean>;
+    /**
+     * Lấy trạng thái hiện tại của trình phát nhạc (đang phát, thời lượng, vị trí phát).
+     */
+    getStatus: () => Promise<AudioPlayerStatus>;
+};
 export * from './types';
 export * from './builder';
 export { StyleSheet } from './builder';

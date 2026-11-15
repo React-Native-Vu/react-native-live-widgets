@@ -4,6 +4,7 @@ import android.app.NotificationManager
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import android.media.MediaPlayer
 import android.os.Build
 import android.provider.Settings
 import com.facebook.react.bridge.Arguments
@@ -37,6 +38,7 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
         private var currentPushToStartToken: String? = null
 
         private val activityUpdateTokens = mutableMapOf<String, String>()
+        private var mediaPlayer: MediaPlayer? = null
 
         fun emitActionClicked(actionId: String, activityId: String) {
             val ctx = currentReactContext ?: return
@@ -272,6 +274,74 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
         DynamicWidgetStateStore.getPrefs(reactContext, appGroup).edit().clear().apply()
         DynamicHomeScreenWidgetProvider.updateAllWidgets(reactContext)
         promise.resolve(true)
+    }
+
+    // ─── 4. AUDIO PLAYER (MUSIC PLAYBACK FOR TESTING EQUALIZER ANIMATIONS) ────
+
+    @ReactMethod
+    fun playAudio(urlString: String, promise: Promise) {
+        try {
+            mediaPlayer?.release()
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(urlString)
+                prepareAsync()
+                setOnPreparedListener { start() }
+            }
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.reject("AUDIO_ERROR", e.message, e)
+        }
+    }
+
+    @ReactMethod
+    fun pauseAudio(promise: Promise) {
+        try {
+            if (mediaPlayer?.isPlaying == true) {
+                mediaPlayer?.pause()
+            }
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.resolve(false)
+        }
+    }
+
+    @ReactMethod
+    fun resumeAudio(promise: Promise) {
+        try {
+            mediaPlayer?.start()
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.resolve(false)
+        }
+    }
+
+    @ReactMethod
+    fun stopAudio(promise: Promise) {
+        try {
+            mediaPlayer?.stop()
+            mediaPlayer?.release()
+            mediaPlayer = null
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.resolve(false)
+        }
+    }
+
+    @ReactMethod
+    fun getAudioStatus(promise: Promise) {
+        val map = Arguments.createMap().apply {
+            val player = mediaPlayer
+            if (player != null) {
+                putBoolean("isPlaying", player.isPlaying)
+                putDouble("currentTime", (player.currentPosition / 1000.0))
+                putDouble("duration", (player.duration / 1000.0))
+            } else {
+                putBoolean("isPlaying", false)
+                putDouble("currentTime", 0.0)
+                putDouble("duration", 0.0)
+            }
+        }
+        promise.resolve(map)
     }
 
     // ─── HELPERS ─────────────────────────────────────────────────────────────

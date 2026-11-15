@@ -1,4 +1,5 @@
 import ActivityKit
+import AVFoundation
 import Foundation
 import React
 import UIKit
@@ -533,5 +534,89 @@ public class LiveActivityModule: RCTEventEmitter {
       return groupDefaults
     }
     return UserDefaults.standard
+  }
+
+  // MARK: - Audio Player (Music playback for testing Equalizer animations)
+  private static var audioPlayer: AVPlayer?
+
+  @objc(playAudio:resolver:rejecter:)
+  public func playAudio(
+    _ urlString: String,
+    resolve: @escaping RCTPromiseResolveBlock,
+    reject: @escaping RCTPromiseRejectBlock
+  ) {
+    guard let url = URL(string: urlString) else {
+      reject("INVALID_URL", "URL âm thanh không hợp lệ: \(urlString)", nil)
+      return
+    }
+
+    DispatchQueue.main.async {
+      do {
+        try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        try AVAudioSession.sharedInstance().setActive(true)
+      } catch {
+        print("[LiveActivityModule] AVAudioSession setup error: \(error)")
+      }
+
+      let playerItem = AVPlayerItem(url: url)
+      Self.audioPlayer = AVPlayer(playerItem: playerItem)
+      Self.audioPlayer?.play()
+      resolve(true)
+    }
+  }
+
+  @objc(pauseAudio:rejecter:)
+  public func pauseAudio(
+    resolve: @escaping RCTPromiseResolveBlock,
+    reject: @escaping RCTPromiseRejectBlock
+  ) {
+    DispatchQueue.main.async {
+      Self.audioPlayer?.pause()
+      resolve(true)
+    }
+  }
+
+  @objc(resumeAudio:rejecter:)
+  public func resumeAudio(
+    resolve: @escaping RCTPromiseResolveBlock,
+    reject: @escaping RCTPromiseRejectBlock
+  ) {
+    DispatchQueue.main.async {
+      Self.audioPlayer?.play()
+      resolve(true)
+    }
+  }
+
+  @objc(stopAudio:rejecter:)
+  public func stopAudio(
+    resolve: @escaping RCTPromiseResolveBlock,
+    reject: @escaping RCTPromiseRejectBlock
+  ) {
+    DispatchQueue.main.async {
+      Self.audioPlayer?.pause()
+      Self.audioPlayer = nil
+      resolve(true)
+    }
+  }
+
+  @objc(getAudioStatus:rejecter:)
+  public func getAudioStatus(
+    resolve: @escaping RCTPromiseResolveBlock,
+    reject: @escaping RCTPromiseRejectBlock
+  ) {
+    DispatchQueue.main.async {
+      guard let player = Self.audioPlayer else {
+        resolve(["isPlaying": false, "currentTime": 0, "duration": 0])
+        return
+      }
+      let isPlaying = player.timeControlStatus == .playing
+      let currentTime = CMTimeGetSeconds(player.currentTime())
+      let duration = CMTimeGetSeconds(player.currentItem?.duration ?? .zero)
+      resolve([
+        "isPlaying": isPlaying,
+        "currentTime": currentTime.isNaN ? 0 : currentTime,
+        "duration": duration.isNaN ? 0 : duration
+      ])
+    }
   }
 }
