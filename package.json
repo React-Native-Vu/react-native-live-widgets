@@ -24,7 +24,8 @@
     "assets",
     "react-native-live-widgets.podspec",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "bin": {
     "react-native-live-widgets": "cli/setup.js"
