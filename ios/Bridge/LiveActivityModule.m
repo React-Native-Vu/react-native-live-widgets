@@ -44,6 +44,12 @@ RCT_EXTERN_METHOD(reloadWidget:(NSString *)kind
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(requestPinWidget:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(isRequestPinWidgetSupported:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 RCT_EXTERN_METHOD(setSharedItem:(NSString *)key
                   value:(NSString *)value
                   appGroup:(NSString *)appGroup

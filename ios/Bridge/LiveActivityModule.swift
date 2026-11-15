@@ -382,6 +382,23 @@ public class LiveActivityModule: RCTEventEmitter {
     resolve(true)
   }
 
+  @objc(requestPinWidget:rejecter:)
+  public func requestPinWidget(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    // iOS does not allow programmatically requesting to pin widgets from an app.
+    resolve(false)
+  }
+
+  @objc(isRequestPinWidgetSupported:rejecter:)
+  public func isRequestPinWidgetSupported(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    resolve(false)
+  }
+
   // MARK: - Shared Storage (App Group)
 
   @objc(setSharedItem:value:appGroup:resolver:rejecter:)

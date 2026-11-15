@@ -335,6 +335,12 @@ export interface WidgetSinglePageConfig {
     small?: LayoutNode;
     medium?: LayoutNode;
     large?: LayoutNode;
+    /** Màn hình khóa iOS 16+: Tiện ích hình chữ nhật bo góc dưới đồng hồ */
+    accessoryRectangular?: LayoutNode;
+    /** Màn hình khóa iOS 16+: Tiện ích ô tròn nhỏ dưới đồng hồ (Gauge / Circular Progress / Icon) */
+    accessoryCircular?: LayoutNode;
+    /** Màn hình khóa iOS 16+: Tiện ích 1 dòng chữ nhỏ trên đồng hồ */
+    accessoryInline?: LayoutNode;
 }
 export interface WidgetLayoutConfig extends WidgetSinglePageConfig {
     /**

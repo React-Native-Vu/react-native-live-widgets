@@ -1,6 +1,8 @@
 package com.reactnativeliveactivity
 
 import android.app.NotificationManager
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.os.Build
 import android.provider.Settings
@@ -192,6 +194,33 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun reloadWidget(kind: String, promise: Promise) {
         reloadAllWidgets(promise)
+    }
+
+    @ReactMethod
+    fun requestPinWidget(promise: Promise) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val appWidgetManager = reactContext.getSystemService(AppWidgetManager::class.java)
+            val myProvider = ComponentName(reactContext, DynamicHomeScreenWidgetProvider::class.java)
+
+            if (appWidgetManager != null && appWidgetManager.isRequestPinAppWidgetSupported) {
+                val success = appWidgetManager.requestPinAppWidget(myProvider, null, null)
+                promise.resolve(success)
+            } else {
+                promise.resolve(false)
+            }
+        } else {
+            promise.resolve(false)
+        }
+    }
+
+    @ReactMethod
+    fun isRequestPinWidgetSupported(promise: Promise) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val appWidgetManager = reactContext.getSystemService(AppWidgetManager::class.java)
+            promise.resolve(appWidgetManager?.isRequestPinAppWidgetSupported == true)
+        } else {
+            promise.resolve(false)
+        }
     }
 
     // ─── 4. SHARED STORAGE (SharedPreferences) ───────────────────────────────

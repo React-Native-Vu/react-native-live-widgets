@@ -196,7 +196,10 @@ public struct DynamicHomeScreenWidgetView: View {
         return selectFamilyNode(
           small: pageConfig.small,
           medium: pageConfig.medium,
-          large: pageConfig.large
+          large: pageConfig.large,
+          accessoryRectangular: pageConfig.accessoryRectangular,
+          accessoryCircular: pageConfig.accessoryCircular,
+          accessoryInline: pageConfig.accessoryInline
         )
       }
     }
@@ -204,15 +207,34 @@ public struct DynamicHomeScreenWidgetView: View {
     return selectFamilyNode(
       small: payload.small,
       medium: payload.medium,
-      large: payload.large
+      large: payload.large,
+      accessoryRectangular: payload.accessoryRectangular,
+      accessoryCircular: payload.accessoryCircular,
+      accessoryInline: payload.accessoryInline
     )
   }
 
   private func selectFamilyNode(
     small: LayoutNodeDTO?,
     medium: LayoutNodeDTO?,
-    large: LayoutNodeDTO?
+    large: LayoutNodeDTO?,
+    accessoryRectangular: LayoutNodeDTO? = nil,
+    accessoryCircular: LayoutNodeDTO? = nil,
+    accessoryInline: LayoutNodeDTO? = nil
   ) -> LayoutNodeDTO? {
+    if #available(iOS 16.0, *) {
+      switch family {
+      case .accessoryRectangular:
+        return accessoryRectangular ?? medium ?? small ?? large
+      case .accessoryCircular:
+        return accessoryCircular ?? small ?? medium
+      case .accessoryInline:
+        return accessoryInline ?? small
+      default:
+        break
+      }
+    }
+
     switch family {
     case .systemSmall:
       return small ?? medium ?? large
@@ -225,7 +247,17 @@ public struct DynamicHomeScreenWidgetView: View {
     }
   }
 
+  private var isAccessoryFamily: Bool {
+    if #available(iOS 16.0, *) {
+      return family == .accessoryRectangular || family == .accessoryCircular || family == .accessoryInline
+    }
+    return false
+  }
+
   private var rootBackgroundColor: Color {
+    if isAccessoryFamily {
+      return Color.clear
+    }
     if let bgHex = activeNode?.props?["backgroundColor"]?.stringValue,
        let color = Color(hex: bgHex) {
       return color
@@ -237,38 +269,54 @@ public struct DynamicHomeScreenWidgetView: View {
     Group {
       if let node = activeNode {
         DynamicNodeView(node: node)
-          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+          .frame(
+            maxWidth: .infinity,
+            maxHeight: .infinity,
+            alignment: isAccessoryFamily ? .center : .topLeading
+          )
       } else {
         fallbackView()
       }
     }
-    .applyWidgetBackground(rootBackgroundColor)
+    .applyWidgetBackground(rootBackgroundColor, isAccessory: isAccessoryFamily)
   }
 
   @ViewBuilder
   private func fallbackView() -> some View {
-    VStack(spacing: 6) {
+    VStack(spacing: isAccessoryFamily ? 2 : 6) {
       Text("Live Widgets")
-        .font(.headline)
-      Text("Chọn 1 mẫu UI trong app để hiển thị")
-        .font(.caption)
-        .foregroundColor(.secondary)
-        .multilineTextAlignment(.center)
+        .font(isAccessoryFamily ? .caption2.weight(.bold) : .headline)
+      if !isAccessoryFamily {
+        Text("Chọn 1 mẫu UI trong app để hiển thị")
+          .font(.caption)
+          .foregroundColor(.secondary)
+          .multilineTextAlignment(.center)
+      }
     }
-    .padding()
+    .padding(isAccessoryFamily ? 2 : 12)
   }
 }
 
 extension View {
   /// Tương thích iOS 17+ / iOS 27: Bắt buộc dùng `containerBackground(for: .widget)`
   @ViewBuilder
-  func applyWidgetBackground(_ color: Color) -> some View {
+  func applyWidgetBackground(_ color: Color, isAccessory: Bool = false) -> some View {
     if #available(iOS 17.0, *) {
-      self.containerBackground(for: .widget) {
-        color
+      if isAccessory {
+        self.containerBackground(for: .widget) {
+          Color.clear
+        }
+      } else {
+        self.containerBackground(for: .widget) {
+          color
+        }
       }
     } else {
-      self.padding().background(color)
+      if isAccessory {
+        self
+      } else {
+        self.padding().background(color)
+      }
     }
   }
 }

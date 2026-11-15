@@ -242,10 +242,12 @@ import { LiveActivity, Widget, SharedStorage, UI } from 'react-native-live-widge
 - `LiveActivity.setDevicePushToken(token)`: Stores the Android FCM token into the unified token manager.
 - `LiveActivity.onDevicePushTokenChange(cb)` / `onPushToStartTokenChange(cb)` / `onActivityUpdateTokenChange(cb)`: Real-time listeners for token generation and rotation.
 
-### 2. `Widget` API (Home Screen Widgets)
-- `Widget.setLayout(widgetKey, layoutConfig, appGroup?)`: Updates the dynamic widget layout (`small`, `medium`, `large`, `pages`, `initialPage`) and prefetches/downscales any remote URL images in the layout tree.
+### 2. `Widget` API (Home Screen & Lock Screen Widgets)
+- `Widget.setLayout(widgetKey, layoutConfig, appGroup?)`: Updates the dynamic widget layout (`small`, `medium`, `large` for Home Screen; `accessoryRectangular`, `accessoryCircular`, `accessoryInline` for iOS 16+ Lock Screen; `pages`, `initialPage` for multi-page tabs). Prefetches and downscales all remote URL images automatically.
+- `Widget.requestPin()`: *(Android 8.0+)* Prompts the system dialog allowing the user to pin the widget directly to their home screen with a single tap from within the app!
+- `Widget.isPinSupported()`: Checks if the current Android launcher supports in-app widget pinning.
 - `Widget.setRemoteConfig(config, widgetKey?, appGroup?)`: Configures a remote HTTP endpoint so the Widget automatically fetches fresh JSON data in the background even when the app is killed.
-- `Widget.reloadAll()`: Forces iOS/Android to redraw all Home Screen Widgets immediately.
+- `Widget.reloadAll()`: Forces iOS/Android to redraw all Home Screen and Lock Screen Widgets immediately.
 - `Widget.reload(kind)`: Reloads a specific widget by kind.
 - `Widget.getInteractiveState(widgetKey?, appGroup?)`: Reads the current interactive state (`activePage`, `toggledItems`, `lastSyncTime`, `remoteVariables`).
 - `Widget.onWidgetAction(cb)`: Subscribes to button tap actions triggered from the Widget or Notification.

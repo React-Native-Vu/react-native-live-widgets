@@ -242,8 +242,10 @@ import { LiveActivity, Widget, SharedStorage, UI } from 'react-native-live-widge
 - `LiveActivity.setDevicePushToken(token)`: Lưu FCM Token trên Android vào bộ quản lý chung.
 - `LiveActivity.onDevicePushTokenChange(cb)` / `onPushToStartTokenChange(cb)` / `onActivityUpdateTokenChange(cb)`: Lắng nghe sự kiện xoay token theo thời gian thực.
 
-### 2. `Widget` API (Tiện ích Màn hình chính)
-- `Widget.setLayout(widgetKey, layoutConfig, appGroup?)`: Cập nhật giao diện động (`small`, `medium`, `large`, `pages`, `initialPage`) và tự động tải/nén trước toàn bộ ảnh từ URL mạng.
+### 2. `Widget` API (Tiện ích Màn hình chính & Màn hình khóa)
+- `Widget.setLayout(widgetKey, layoutConfig, appGroup?)`: Cập nhật giao diện động (`small`, `medium`, `large` cho Home Screen; `accessoryRectangular`, `accessoryCircular`, `accessoryInline` cho Lock Screen; `pages`, `initialPage` cho Widget đa trang). Tự động nén và tải trước toàn bộ ảnh từ URL mạng.
+- `Widget.requestPin()`: *(Android 8.0+)* Mở hộp thoại hệ thống cho phép người dùng bấm ghim trực tiếp Tiện ích ra Màn hình chính ngay từ trong ứng dụng mà không cần ra launcher nhấn giữ kéo thả thủ công!
+- `Widget.isPinSupported()`: Kiểm tra xem Launcher của thiết bị hiện tại có hỗ trợ ghim Tiện ích trực tiếp hay không.
 - `Widget.setRemoteConfig(config, widgetKey?, appGroup?)`: Cấu hình URL API để Widget tự động gọi ngầm cập nhật dữ liệu mới kể cả khi người dùng đã vuốt tắt (Kill) App.
 - `Widget.reloadAll()`: Yêu cầu iOS/Android vẽ lại toàn bộ Widget ngay lập tức.
 - `Widget.reload(kind)`: Vẽ lại 1 Widget cụ thể.

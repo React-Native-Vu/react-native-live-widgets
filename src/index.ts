@@ -280,6 +280,32 @@ export const Widget = {
       return false;
     }
   },
+
+  /**
+   * (Android 8.0+) Mở hộp thoại hệ thống cho phép người dùng ghim trực tiếp Tiện ích ra màn hình chính ngay từ trong ứng dụng.
+   * Trên iOS, hàm trả về false vì Apple chỉ cho phép người dùng tự thêm tiện ích từ thư viện Widget của hệ điều hành.
+   */
+  requestPin: async (): Promise<boolean> => {
+    if (!LiveActivityModule?.requestPinWidget) return false;
+    try {
+      return await LiveActivityModule.requestPinWidget();
+    } catch (error) {
+      console.warn('[react-native-live-widgets] Widget.requestPin error:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Kiểm tra xem thiết bị hiện tại có hỗ trợ ghim Tiện ích trực tiếp từ trong ứng dụng hay không (Chỉ Android API 26+).
+   */
+  isPinSupported: async (): Promise<boolean> => {
+    if (!LiveActivityModule?.isRequestPinWidgetSupported) return false;
+    try {
+      return await LiveActivityModule.isRequestPinWidgetSupported();
+    } catch {
+      return false;
+    }
+  },
 };
 
 // ─── 3. SHARED STORAGE (App Groups & SharedPreferences) ─────────────────────

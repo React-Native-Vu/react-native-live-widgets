@@ -77,12 +77,18 @@ public struct WidgetSinglePageDTO: Codable {
   public let small: LayoutNodeDTO?
   public let medium: LayoutNodeDTO?
   public let large: LayoutNodeDTO?
+  public let accessoryRectangular: LayoutNodeDTO?
+  public let accessoryCircular: LayoutNodeDTO?
+  public let accessoryInline: LayoutNodeDTO?
 }
 
 public struct WidgetMultiPagePayloadDTO: Codable {
   public let small: LayoutNodeDTO?
   public let medium: LayoutNodeDTO?
   public let large: LayoutNodeDTO?
+  public let accessoryRectangular: LayoutNodeDTO?
+  public let accessoryCircular: LayoutNodeDTO?
+  public let accessoryInline: LayoutNodeDTO?
   public let pages: [String: WidgetSinglePageDTO]?
   public let pageOrder: [String]?
   public let initialPage: String?
