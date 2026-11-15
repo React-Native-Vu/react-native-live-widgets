@@ -389,6 +389,111 @@ UI.Button({
 })
 ```
 
+### `UI.ZStack`, `UI.Grid` & `UI.Divider` (Bố cục nâng cao)
+```typescript
+// 1. ZStack: Xếp chồng các lớp (Overlay)
+UI.ZStack(
+  { zAlignment: 'bottomTrailing' },
+  UI.Image('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200', { width: 44, height: 44, borderRadius: 22 }),
+  UI.Badge('●', { backgroundColor: '#10B981', textColor: '#FFFFFF', fontSize: 8 })
+)
+
+// 2. Grid: Chia lưới nhiều cột đều nhau (Bảng thống kê 2x2 KPI)
+UI.Grid(
+  { columns: 2, columnSpacing: 8, rowSpacing: 8 },
+  UI.VStack({ padding: 8, backgroundColor: '#1E293B', borderRadius: 8 }, UI.Text('Doanh thu', { fontSize: 10, color: '#94A3B8' }), UI.Text('4.85 Tỷ', { fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' })),
+  UI.VStack({ padding: 8, backgroundColor: '#1E293B', borderRadius: 8 }, UI.Text('Đơn hàng', { fontSize: 10, color: '#94A3B8' }), UI.Text('1,420', { fontSize: 14, fontWeight: 'bold', color: '#34D399' }))
+)
+
+// 3. Divider: Đường kẻ phân cách ngang/dọc
+UI.Divider({ color: '#334155', thickness: 1, marginVertical: 4 })
+```
+
+### `UI.Gauge` & `UI.Chart` (Đồng hồ đo KPI & Biểu đồ Cột / Đường Sparkline)
+```typescript
+// 1. Đồng hồ đo tốc độ / KPI cung tròn 240° (Gauge)
+UI.Gauge(0.86, {
+  size: 66,
+  tintColor: '#38BDF8',
+  trackColor: '#1E293B',
+  textColor: '#F8FAFC',
+  labelColor: '#94A3B8',
+  valueText: '86%',
+  label: 'KPI Quý',
+})
+
+// 2. Biểu đồ Cột ('bar') hoặc Đường xu hướng ('line')
+UI.Chart([42, 58, 51, 74, 68, 92, 108], {
+  style: 'bar', // 'bar' | 'line'
+  labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
+  tintColor: '#38BDF8',
+  secondaryColor: '#1E3A8A',
+  labelColor: '#94A3B8',
+  height: 48,
+})
+```
+
+### `UI.Toggle`, `UI.Badge` & `UI.Link`
+```typescript
+// 1. Toggle: Ô tích Checkbox hoặc Công tắc gạt Switch ngay trên mặt Widget
+UI.Toggle('Duyệt báo cáo doanh thu tuần', {
+  actionId: 'toggle:kpi_approve',
+  style: 'checkbox', // 'checkbox' | 'switch'
+  tintColor: '#38BDF8',
+  textColor: '#F8FAFC',
+})
+
+// 2. Badge: Nhãn trạng thái dạng viên thuốc (Pill / Capsule)
+UI.Badge('+18% Vượt chỉ tiêu', {
+  backgroundColor: '#064E3B',
+  textColor: '#34D399',
+  fontSize: 10,
+})
+
+// 3. Link: Biến cả một khối giao diện thành vùng bấm mở Deep Link hoặc chạy Action
+UI.Link(
+  { deepLink: 'livewidgets://analytics/q4', padding: 10, backgroundColor: '#1E293B', borderRadius: 10 },
+  UI.Text('Xem chi tiết báo cáo →', { fontSize: 12, fontWeight: 'bold', color: '#38BDF8' })
+)
+```
+
+### `UI.Custom` & `DynamicNodeRegistry` (Tự mở rộng Component Native tùy ý bằng Swift / Kotlin)
+Nếu bạn muốn tự viết một Component riêng bằng **SwiftUI** hoặc **Kotlin Canvas** mà không cần sửa code lõi của thư viện:
+
+1. **Đăng ký bên iOS (Swift — trong `LiveWidgetsBundle.swift`):**
+```swift
+import SwiftUI
+import react_native_live_widgets
+
+// Đăng ký Custom View theo tên "WeatherCard"
+DynamicNodeRegistry.shared.registerView("WeatherCard") { node in
+  let city = node.props?["city"]?.stringValue ?? "Hà Nội"
+  let temp = node.props?["temp"]?.stringValue ?? "28°C"
+  HStack {
+    Image(systemName: "sun.max.fill").foregroundColor(.yellow)
+    Text("\(city): \(temp)").font(.headline)
+  }
+}
+```
+
+2. **Đăng ký bên Android (Kotlin — trong `MainApplication.onCreate()`):**
+```kotlin
+import com.reactnativeliveactivity.DynamicNodeRegistry
+
+DynamicNodeRegistry.register(
+  componentName = "WeatherCard",
+  heightDp = { 44f },
+  drawer = { context, canvas, rect, props, density ->
+    // Tự vẽ tự do lên Android Canvas
+  }
+)
+```
+
+3. **Gọi trực tiếp từ React Native (`App.tsx`):**
+```typescript
+UI.Custom('WeatherCard', { city: 'TP.HCM', temp: '31°C' })
+```
+
 ---
 
 ## 5. Cấu hình Dynamic Island (iPhone 14 Pro, 15, 16, 17)

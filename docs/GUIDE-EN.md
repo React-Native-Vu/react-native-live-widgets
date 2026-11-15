@@ -389,6 +389,110 @@ UI.Button({
 })
 ```
 
+### `UI.ZStack`, `UI.Grid` & `UI.Divider` (Advanced Layout Containers)
+```typescript
+// 1. ZStack: Overlay layers on top of each other
+UI.ZStack(
+  { zAlignment: 'bottomTrailing' },
+  UI.Image('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200', { width: 44, height: 44, borderRadius: 22 }),
+  UI.Badge('●', { backgroundColor: '#10B981', textColor: '#FFFFFF', fontSize: 8 })
+)
+
+// 2. Grid: Multi-column grid layout (e.g., 2x2 KPI dashboard cards)
+UI.Grid(
+  { columns: 2, columnSpacing: 8, rowSpacing: 8 },
+  UI.VStack({ padding: 8, backgroundColor: '#1E293B', borderRadius: 8 }, UI.Text('Revenue', { fontSize: 10, color: '#94A3B8' }), UI.Text('$128K', { fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' })),
+  UI.VStack({ padding: 8, backgroundColor: '#1E293B', borderRadius: 8 }, UI.Text('Orders', { fontSize: 10, color: '#94A3B8' }), UI.Text('1,420', { fontSize: 14, fontWeight: 'bold', color: '#34D399' }))
+)
+
+// 3. Divider: Horizontal or vertical separator line
+UI.Divider({ color: '#334155', thickness: 1, marginVertical: 4 })
+```
+
+### `UI.Gauge` & `UI.Chart` (Speedometer KPI Gauge & Bar / Line Sparkline Charts)
+```typescript
+// 1. 240° Arc Speedometer / KPI Gauge
+UI.Gauge(0.86, {
+  size: 66,
+  tintColor: '#38BDF8',
+  trackColor: '#1E293B',
+  textColor: '#F8FAFC',
+  labelColor: '#94A3B8',
+  valueText: '86%',
+  label: 'Q4 KPI',
+})
+
+// 2. Bar Chart ('bar') or Sparkline Area Chart ('line')
+UI.Chart([42, 58, 51, 74, 68, 92, 108], {
+  style: 'bar', // 'bar' | 'line'
+  labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+  tintColor: '#38BDF8',
+  secondaryColor: '#1E3A8A',
+  labelColor: '#94A3B8',
+  height: 48,
+})
+```
+
+### `UI.Toggle`, `UI.Badge` & `UI.Link`
+```typescript
+// 1. Toggle: Interactive Checkbox or Switch directly on the Widget surface
+UI.Toggle('Approve weekly revenue report', {
+  actionId: 'toggle:kpi_approve',
+  style: 'checkbox', // 'checkbox' | 'switch'
+  tintColor: '#38BDF8',
+  textColor: '#F8FAFC',
+})
+
+// 2. Badge: Pill / Capsule status tag
+UI.Badge('+18% Above Target', {
+  backgroundColor: '#064E3B',
+  textColor: '#34D399',
+  fontSize: 10,
+})
+
+// 3. Link: Wrap any container to open a Deep Link or trigger an interactive action
+UI.Link(
+  { deepLink: 'livewidgets://analytics/q4', padding: 10, backgroundColor: '#1E293B', borderRadius: 10 },
+  UI.Text('View full analytics →', { fontSize: 12, fontWeight: 'bold', color: '#38BDF8' })
+)
+```
+
+### `UI.Custom` & `DynamicNodeRegistry` (Register Custom Native SwiftUI / Kotlin Components)
+You can register your own custom **SwiftUI View** or **Kotlin Canvas Drawer** without modifying the library's core code:
+
+1. **Register on iOS (Swift — inside `LiveWidgetsBundle.swift`):**
+```swift
+import SwiftUI
+import react_native_live_widgets
+
+DynamicNodeRegistry.shared.registerView("WeatherCard") { node in
+  let city = node.props?["city"]?.stringValue ?? "Hanoi"
+  let temp = node.props?["temp"]?.stringValue ?? "28°C"
+  HStack {
+    Image(systemName: "sun.max.fill").foregroundColor(.yellow)
+    Text("\(city): \(temp)").font(.headline)
+  }
+}
+```
+
+2. **Register on Android (Kotlin — inside `MainApplication.onCreate()`):**
+```kotlin
+import com.reactnativeliveactivity.DynamicNodeRegistry
+
+DynamicNodeRegistry.register(
+  componentName = "WeatherCard",
+  heightDp = { 44f },
+  drawer = { context, canvas, rect, props, density ->
+    // Draw custom graphics onto the Widget Canvas
+  }
+)
+```
+
+3. **Invoke from React Native (`App.tsx`):**
+```typescript
+UI.Custom('WeatherCard', { city: 'Ho Chi Minh City', temp: '31°C' })
+```
+
 ---
 
 ## 5. Dynamic Island Configuration (iPhone 14 Pro, 15, 16, 17)

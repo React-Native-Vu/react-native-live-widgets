@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
@@ -580,7 +581,379 @@ object DynamicWidgetCanvasRenderer {
                 btnH + 1.5f * density
             }
 
-            else -> 0f
+            "ZStack" -> {
+                val pad = (props?.optDouble("padding", 0.0) ?: 0.0).toFloat() * density
+                val bgHex = props?.optString("backgroundColor", "") ?: ""
+                val radius = (props?.optDouble("borderRadius", 10.0) ?: 10.0).toFloat() * density
+                val boxH = measureNodeHeight(context, node, availWidth, density)
+
+                if (!isRoot && bgHex.isNotEmpty()) {
+                    paint.style = Paint.Style.FILL
+                    paint.color = parseHexColor(bgHex, Color.TRANSPARENT)
+                    canvas.drawRoundRect(RectF(left, top, left + availWidth, top + boxH), radius, radius, paint)
+                }
+
+                val children = node.optJSONArray("children")
+                if (children != null) {
+                    val innerW = (availWidth - pad * 2).coerceAtLeast(10f)
+                    val innerH = (boxH - pad * 2).coerceAtLeast(10f)
+                    for (i in 0 until children.length()) {
+                        val child = children.optJSONObject(i) ?: continue
+                        val childH = measureNodeHeight(context, child, innerW, density)
+                        drawNode(context, canvas, child, left + pad, top + pad, innerW, childH.coerceAtMost(innerH), totalHeight, density, false, bindings)
+                    }
+                }
+                boxH
+            }
+
+            "Grid" -> {
+                val pad = (props?.optDouble("padding", 0.0) ?: 0.0).toFloat() * density
+                val cols = (props?.optInt("columns", 2) ?: 2).coerceAtLeast(1)
+                val colSpacing = ((props?.optDouble("columnSpacing", props.optDouble("spacing", 8.0)) ?: 8.0).toFloat() * density)
+                val rowSpacing = ((props?.optDouble("rowSpacing", props.optDouble("spacing", 8.0)) ?: 8.0).toFloat() * density)
+                val bgHex = props?.optString("backgroundColor", "") ?: ""
+                val radius = (props?.optDouble("borderRadius", 10.0) ?: 10.0).toFloat() * density
+                val gridH = measureNodeHeight(context, node, availWidth, density)
+
+                if (!isRoot && bgHex.isNotEmpty()) {
+                    paint.style = Paint.Style.FILL
+                    paint.color = parseHexColor(bgHex, Color.TRANSPARENT)
+                    canvas.drawRoundRect(RectF(left, top, left + availWidth, top + gridH), radius, radius, paint)
+                }
+
+                val children = node.optJSONArray("children")
+                var curY = top + pad
+                if (children != null && children.length() > 0) {
+                    val innerW = (availWidth - pad * 2).coerceAtLeast(20f)
+                    val cellW = ((innerW - colSpacing * (cols - 1)) / cols).coerceAtLeast(10f)
+                    val rows = (children.length() + cols - 1) / cols
+
+                    for (r in 0 until rows) {
+                        var rowMaxH = 0f
+                        for (c in 0 until cols) {
+                            val idx = r * cols + c
+                            if (idx >= children.length()) break
+                            val child = children.optJSONObject(idx) ?: continue
+                            val cellLeft = left + pad + c * (cellW + colSpacing)
+                            val childH = measureNodeHeight(context, child, cellW, density)
+                            drawNode(context, canvas, child, cellLeft, curY, cellW, childH, totalHeight, density, false, bindings)
+                            rowMaxH = max(rowMaxH, childH)
+                        }
+                        curY += rowMaxH
+                        if (r < rows - 1) curY += rowSpacing
+                    }
+                }
+                gridH
+            }
+
+            "Divider" -> {
+                val colorHex = props?.optString("color", "#CBD5E1") ?: "#CBD5E1"
+                val thickness = ((props?.optDouble("thickness", 1.0) ?: 1.0).toFloat() * density).coerceAtLeast(1f)
+                val marginV = ((props?.optDouble("marginVertical", 3.0) ?: 3.0).toFloat() * density)
+                val marginH = ((props?.optDouble("marginHorizontal", 0.0) ?: 0.0).toFloat() * density)
+                paint.style = Paint.Style.FILL
+                paint.color = parseHexColor(colorHex, Color.LTGRAY)
+                val y = top + marginV
+                canvas.drawRect(left + marginH, y, left + availWidth - marginH, y + thickness, paint)
+                thickness + marginV * 2
+            }
+
+            "Gauge" -> {
+                val value = (props?.optDouble("value", 0.75) ?: 0.75).toFloat().coerceIn(0f, 1f)
+                val size = ((props?.optDouble("size", 64.0) ?: 64.0).toFloat() * density)
+                val strokeW = ((props?.optDouble("strokeWidth", (size / density * 0.11).coerceAtLeast(4.0)) ?: 6.0).toFloat() * density)
+                val tintHex = props?.optString("tintColor", "#2563EB") ?: "#2563EB"
+                val trackHex = props?.optString("trackColor", "#CBD5E1") ?: "#CBD5E1"
+                val textHex = props?.optString("textColor", "")?.ifEmpty { tintHex } ?: tintHex
+                val labelHex = props?.optString("labelColor", "#64748B") ?: "#64748B"
+                val valueText = props?.optString("valueText", "${(value * 100).roundToInt()}%") ?: "${(value * 100).roundToInt()}%"
+                val label = props?.optString("label", "") ?: ""
+
+                val arcRect = RectF(
+                    left + strokeW,
+                    top + strokeW,
+                    left + size - strokeW,
+                    top + size - strokeW
+                )
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = strokeW
+                paint.strokeCap = Paint.Cap.ROUND
+                paint.color = parseHexColor(trackHex, Color.LTGRAY)
+                canvas.drawArc(arcRect, 146f, 248f, false, paint)
+
+                paint.color = parseHexColor(tintHex, Color.BLUE)
+                canvas.drawArc(arcRect, 146f, 248f * value, false, paint)
+
+                paint.style = Paint.Style.FILL
+                paint.color = parseHexColor(textHex, Color.BLACK)
+                paint.textSize = size * 0.23f
+                paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                paint.textAlign = Paint.Align.CENTER
+                val fm = paint.fontMetrics
+                val centerY = top + size * 0.50f - (fm.ascent + fm.descent) / 2f
+                canvas.drawText(valueText, left + size / 2f, centerY, paint)
+
+                if (label.isNotEmpty()) {
+                    paint.color = parseHexColor(labelHex, Color.GRAY)
+                    paint.textSize = size * 0.15f
+                    paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                    canvas.drawText(label, left + size / 2f, top + size * 0.84f, paint)
+                }
+                size + 2f * density
+            }
+
+            "Chart" -> {
+                val style = props?.optString("style", "bar") ?: "bar"
+                val valuesArr = props?.optJSONArray("values")
+                val labelsArr = props?.optJSONArray("labels")
+                val chartH = ((props?.optDouble("height", 52.0) ?: 52.0).toFloat() * density)
+                val tintHex = props?.optString("tintColor", "#2563EB") ?: "#2563EB"
+                val secondaryHex = props?.optString("secondaryColor", "") ?: ""
+                val labelHex = props?.optString("labelColor", "#64748B") ?: "#64748B"
+                val tintColor = parseHexColor(tintHex, Color.BLUE)
+                val secondaryColor = if (secondaryHex.isNotEmpty()) {
+                    parseHexColor(secondaryHex, Color.LTGRAY)
+                } else {
+                    Color.argb(65, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor))
+                }
+
+                val values = mutableListOf<Float>()
+                if (valuesArr != null) {
+                    for (i in 0 until valuesArr.length()) {
+                        values.add(valuesArr.optDouble(i, 0.0).toFloat())
+                    }
+                }
+                val maxVal = (values.maxOrNull() ?: 1f).coerceAtLeast(0.001f)
+
+                if (values.isNotEmpty()) {
+                    if (style == "line" && values.size >= 2) {
+                        val stepX = availWidth / (values.size - 1).coerceAtLeast(1)
+                        val linePath = Path()
+                        val fillPath = Path()
+                        fillPath.moveTo(left, top + chartH)
+
+                        for (i in values.indices) {
+                            val px = left + i * stepX
+                            val py = top + chartH - (values[i].coerceAtLeast(0f) / maxVal) * (chartH - 6f * density) - 3f * density
+                            if (i == 0) linePath.moveTo(px, py) else linePath.lineTo(px, py)
+                            fillPath.lineTo(px, py)
+                        }
+                        fillPath.lineTo(left + availWidth, top + chartH)
+                        fillPath.close()
+
+                        paint.style = Paint.Style.FILL
+                        paint.color = secondaryColor
+                        canvas.drawPath(fillPath, paint)
+
+                        paint.style = Paint.Style.STROKE
+                        paint.strokeWidth = 2.2f * density
+                        paint.strokeCap = Paint.Cap.ROUND
+                        paint.color = tintColor
+                        canvas.drawPath(linePath, paint)
+                    } else {
+                        val gap = 6f * density
+                        val barW = ((availWidth - gap * (values.size - 1)) / values.size).coerceAtLeast(4f)
+                        paint.style = Paint.Style.FILL
+                        for (i in values.indices) {
+                            val ratio = (values[i] / maxVal).coerceIn(0.08f, 1f)
+                            val bH = chartH * ratio
+                            val bLeft = left + i * (barW + gap)
+                            val bTop = top + chartH - bH
+                            paint.color = if (i == values.size - 1) tintColor else secondaryColor
+                            canvas.drawRoundRect(
+                                RectF(bLeft, bTop, bLeft + barW, top + chartH),
+                                4f * density,
+                                4f * density,
+                                paint
+                            )
+                        }
+                    }
+                }
+
+                var labelExtraH = 0f
+                if (labelsArr != null && labelsArr.length() > 0 && values.isNotEmpty()) {
+                    val count = min(labelsArr.length(), values.size)
+                    val colW = availWidth / values.size
+                    paint.style = Paint.Style.FILL
+                    paint.color = parseHexColor(labelHex, Color.GRAY)
+                    paint.textSize = 9f * density
+                    paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                    paint.textAlign = Paint.Align.CENTER
+                    val labelY = top + chartH + 11f * density
+                    for (i in 0 until count) {
+                        val lbl = labelsArr.optString(i, "")
+                        canvas.drawText(lbl, left + colW * i + colW / 2f, labelY, paint)
+                    }
+                    labelExtraH = 14f * density
+                }
+                chartH + labelExtraH + 2f * density
+            }
+
+            "Toggle" -> {
+                val rawActionId = props?.optString("actionId", "toggle:default") ?: "toggle:default"
+                val normalizedActionId = if (rawActionId.startsWith("toggle:")) rawActionId else "toggle:$rawActionId"
+                val key = normalizedActionId.removePrefix("toggle:")
+                val isChecked = DynamicWidgetStateStore.isToggled(context, key) || (props?.optBoolean("checked", false) == true)
+                val label = props?.optString("label", "") ?: ""
+                val style = props?.optString("style", "checkbox") ?: "checkbox"
+                val tintHex = props?.optString("tintColor", "#10B981") ?: "#10B981"
+                val textHex = props?.optString("textColor", "#0F172A") ?: "#0F172A"
+                val checkedTextHex = props?.optString("checkedTextColor", "#64748B") ?: "#64748B"
+                val fontSize = ((props?.optDouble("fontSize", 12.0) ?: 12.0).toFloat() * density)
+                val strike = props?.optBoolean("strikethroughOnCheck", true) ?: true
+                val rowH = fontSize * 1.55f
+
+                val tintColor = parseHexColor(tintHex, Color.GREEN)
+                var textStartLeft = left
+
+                if (style == "switch") {
+                    val swW = 30f * density
+                    val swH = 16f * density
+                    val swTop = top + (rowH - swH) / 2f
+                    paint.style = Paint.Style.FILL
+                    paint.color = if (isChecked) tintColor else Color.parseColor("#CBD5E1")
+                    canvas.drawRoundRect(RectF(left, swTop, left + swW, swTop + swH), swH / 2f, swH / 2f, paint)
+
+                    paint.color = Color.WHITE
+                    val knobR = 6f * density
+                    val knobCx = if (isChecked) left + swW - knobR - 2f * density else left + knobR + 2f * density
+                    canvas.drawCircle(knobCx, swTop + swH / 2f, knobR, paint)
+                    textStartLeft = left + swW + 8f * density
+                } else {
+                    val boxSize = 15f * density
+                    val boxTop = top + (rowH - boxSize) / 2f
+                    val boxRect = RectF(left, boxTop, left + boxSize, boxTop + boxSize)
+                    if (isChecked) {
+                        paint.style = Paint.Style.FILL
+                        paint.color = tintColor
+                        canvas.drawRoundRect(boxRect, boxSize / 2f, boxSize / 2f, paint)
+                        paint.color = Color.WHITE
+                        paint.textSize = 10f * density
+                        paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                        paint.textAlign = Paint.Align.CENTER
+                        canvas.drawText("✓", left + boxSize / 2f, boxTop + boxSize * 0.74f, paint)
+                    } else {
+                        paint.style = Paint.Style.STROKE
+                        paint.strokeWidth = 1.6f * density
+                        paint.color = Color.parseColor("#94A3B8")
+                        canvas.drawRoundRect(boxRect, boxSize / 2f, boxSize / 2f, paint)
+                    }
+                    textStartLeft = left + boxSize + 7f * density
+                }
+
+                paint.style = Paint.Style.FILL
+                paint.textAlign = Paint.Align.LEFT
+                paint.textSize = fontSize
+                paint.typeface = if (isChecked) Typeface.create("sans-serif", Typeface.NORMAL) else Typeface.create("sans-serif", Typeface.BOLD)
+                paint.isStrikeThruText = isChecked && strike
+                paint.color = if (isChecked) parseHexColor(checkedTextHex, Color.GRAY) else parseHexColor(textHex, Color.BLACK)
+                val fm = paint.fontMetrics
+                val ty = top + rowH / 2f - (fm.ascent + fm.descent) / 2f
+                val display = ellipsizeText(label, paint, (left + availWidth - textStartLeft).coerceAtLeast(20f))
+                canvas.drawText(display, textStartLeft, ty, paint)
+                paint.isStrikeThruText = false
+
+                val zone = when {
+                    top < totalHeight * 0.25f -> "top"
+                    top > totalHeight * 0.76f -> "bot"
+                    else -> "mid"
+                }
+                bindings.add(ButtonActionBinding(actionId = normalizedActionId, deepLink = null, zone = zone))
+                rowH + 2f * density
+            }
+
+            "Badge" -> {
+                val text = props?.optString("text", "") ?: ""
+                val bgHex = props?.optString("backgroundColor", "#DBEAFE") ?: "#DBEAFE"
+                val textHex = props?.optString("textColor", "#1D4ED8") ?: "#1D4ED8"
+                val borderHex = props?.optString("borderColor", "") ?: ""
+                val borderW = ((props?.optDouble("borderWidth", if (borderHex.isNotEmpty()) 1.0 else 0.0) ?: 0.0).toFloat() * density)
+                val fontSize = ((props?.optDouble("fontSize", 10.0) ?: 10.0).toFloat() * density)
+                val padH = ((props?.optDouble("paddingHorizontal", 8.0) ?: 8.0).toFloat() * density)
+                val padV = ((props?.optDouble("paddingVertical", 3.5) ?: 3.5).toFloat() * density)
+                val radius = ((props?.optDouble("borderRadius", 999.0) ?: 999.0).toFloat() * density)
+
+                paint.textSize = fontSize
+                paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                val textW = paint.measureText(text)
+                val badgeW = min(availWidth, textW + padH * 2)
+                val badgeH = fontSize + padV * 2
+                val r = min(badgeH / 2f, radius)
+                val rect = RectF(left, top, left + badgeW, top + badgeH)
+
+                paint.style = Paint.Style.FILL
+                paint.color = parseHexColor(bgHex, Color.LTGRAY)
+                canvas.drawRoundRect(rect, r, r, paint)
+
+                if (borderW > 0f && borderHex.isNotEmpty()) {
+                    paint.style = Paint.Style.STROKE
+                    paint.strokeWidth = borderW
+                    paint.color = parseHexColor(borderHex, Color.BLUE)
+                    canvas.drawRoundRect(rect, r, r, paint)
+                }
+
+                paint.style = Paint.Style.FILL
+                paint.color = parseHexColor(textHex, Color.BLUE)
+                paint.textAlign = Paint.Align.CENTER
+                val fm = paint.fontMetrics
+                val ty = top + badgeH / 2f - (fm.ascent + fm.descent) / 2f
+                canvas.drawText(ellipsizeText(text, paint, badgeW - padH), left + badgeW / 2f, ty, paint)
+                badgeH + 1.5f * density
+            }
+
+            "Link" -> {
+                val actionId = props?.optString("actionId", "") ?: ""
+                val deepLink = props?.optString("deepLink", "")?.ifEmpty { null }
+                val asVStack = JSONObject(node.toString()).apply { put("type", "VStack") }
+                val usedH = drawNode(context, canvas, asVStack, left, top, availWidth, availHeight, totalHeight, density, false, bindings)
+                if (actionId.isNotEmpty() || !deepLink.isNullOrEmpty()) {
+                    val zone = when {
+                        top < totalHeight * 0.25f -> "top"
+                        top > totalHeight * 0.76f -> "bot"
+                        else -> "mid"
+                    }
+                    bindings.add(ButtonActionBinding(actionId = actionId, deepLink = deepLink, zone = zone))
+                }
+                usedH
+            }
+
+            "Custom" -> {
+                val customComp = DynamicNodeRegistry.resolve(node)
+                if (customComp != null) {
+                    val h = customComp.heightDpProvider(props) * density
+                    val rect = RectF(left, top, left + availWidth, top + h)
+                    customComp.drawer.draw(context, canvas, rect, props, density)
+                    h + 2f * density
+                } else {
+                    val children = node.optJSONArray("children")
+                    if (children != null && children.length() > 0) {
+                        val asVStack = JSONObject(node.toString()).apply { put("type", "VStack") }
+                        drawNode(context, canvas, asVStack, left, top, availWidth, availHeight, totalHeight, density, false, bindings)
+                    } else {
+                        val title = props?.optString("title", props.optString("componentName", "CustomView")) ?: "CustomView"
+                        val h = 28f * density
+                        paint.style = Paint.Style.FILL
+                        paint.color = parseHexColor(props?.optString("backgroundColor", "#F1F5F9") ?: "#F1F5F9", Color.LTGRAY)
+                        canvas.drawRoundRect(RectF(left, top, left + availWidth, top + h), 8f * density, 8f * density, paint)
+                        paint.color = parseHexColor(props?.optString("textColor", "#0F172A") ?: "#0F172A", Color.BLACK)
+                        paint.textSize = 11f * density
+                        paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                        paint.textAlign = Paint.Align.LEFT
+                        canvas.drawText(title, left + 10f * density, top + h * 0.65f, paint)
+                        h + 2f * density
+                    }
+                }
+            }
+
+            else -> {
+                val customComp = DynamicNodeRegistry.resolve(node)
+                if (customComp != null) {
+                    val h = customComp.heightDpProvider(props) * density
+                    val rect = RectF(left, top, left + availWidth, top + h)
+                    customComp.drawer.draw(context, canvas, rect, props, density)
+                    h + 2f * density
+                } else 0f
+            }
         }
     }
 
@@ -650,6 +1023,73 @@ object DynamicWidgetCanvasRenderer {
                 val padV = ((props?.optDouble("paddingVertical", 5.5) ?: 5.5).toFloat() * density)
                 fs + padV * 2 + 1.5f * density
             }
+            "ZStack" -> {
+                val pad = ((props?.optDouble("padding", 0.0) ?: 0.0).toFloat() * density)
+                val children = node.optJSONArray("children")
+                var maxH = 20f * density
+                if (children != null) {
+                    for (i in 0 until children.length()) {
+                        val c = children.optJSONObject(i) ?: continue
+                        maxH = max(maxH, measureNodeHeight(context, c, (availWidth - pad * 2).coerceAtLeast(10f), density))
+                    }
+                }
+                maxH + pad * 2
+            }
+            "Grid" -> {
+                val pad = ((props?.optDouble("padding", 0.0) ?: 0.0).toFloat() * density)
+                val cols = (props?.optInt("columns", 2) ?: 2).coerceAtLeast(1)
+                val colSpacing = ((props?.optDouble("columnSpacing", props.optDouble("spacing", 8.0)) ?: 8.0).toFloat() * density)
+                val rowSpacing = ((props?.optDouble("rowSpacing", props.optDouble("spacing", 8.0)) ?: 8.0).toFloat() * density)
+                val children = node.optJSONArray("children")
+                var totalH = pad * 2
+                if (children != null && children.length() > 0) {
+                    val innerW = (availWidth - pad * 2).coerceAtLeast(20f)
+                    val cellW = ((innerW - colSpacing * (cols - 1)) / cols).coerceAtLeast(10f)
+                    val rows = (children.length() + cols - 1) / cols
+                    for (r in 0 until rows) {
+                        var rowMax = 0f
+                        for (c in 0 until cols) {
+                            val idx = r * cols + c
+                            if (idx >= children.length()) break
+                            val child = children.optJSONObject(idx) ?: continue
+                            rowMax = max(rowMax, measureNodeHeight(context, child, cellW, density))
+                        }
+                        totalH += rowMax
+                        if (r < rows - 1) totalH += rowSpacing
+                    }
+                }
+                totalH
+            }
+            "Divider" -> {
+                val thickness = ((props?.optDouble("thickness", 1.0) ?: 1.0).toFloat() * density).coerceAtLeast(1f)
+                val marginV = ((props?.optDouble("marginVertical", 3.0) ?: 3.0).toFloat() * density)
+                thickness + marginV * 2
+            }
+            "Gauge" -> ((props?.optDouble("size", 64.0) ?: 64.0).toFloat() * density) + 2f * density
+            "Chart" -> {
+                val h = ((props?.optDouble("height", 52.0) ?: 52.0).toFloat() * density)
+                val hasLabels = (props?.optJSONArray("labels")?.length() ?: 0) > 0
+                h + (if (hasLabels) 14f * density else 0f) + 2f * density
+            }
+            "Toggle" -> {
+                val fs = ((props?.optDouble("fontSize", 12.0) ?: 12.0).toFloat() * density)
+                fs * 1.55f + 2f * density
+            }
+            "Badge" -> {
+                val fs = ((props?.optDouble("fontSize", 10.0) ?: 10.0).toFloat() * density)
+                val padV = ((props?.optDouble("paddingVertical", 3.5) ?: 3.5).toFloat() * density)
+                fs + padV * 2 + 1.5f * density
+            }
+            "Link" -> {
+                val asVStack = JSONObject(node.toString()).apply { put("type", "VStack") }
+                measureNodeHeight(context, asVStack, availWidth, density)
+            }
+            "Custom" -> {
+                val customComp = DynamicNodeRegistry.resolve(node)
+                if (customComp != null) {
+                    customComp.heightDpProvider(props) * density + 2f * density
+                } else 30f * density
+            }
             "Spacer" -> ((props?.optDouble("minLength", 4.0) ?: 4.0).toFloat() * density)
             else -> 0f
         }
@@ -689,6 +1129,15 @@ object DynamicWidgetCanvasRenderer {
                 paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
                 paint.measureText(title) + padH * 2
             }
+            "Badge" -> {
+                val text = props?.optString("text", "") ?: ""
+                val fs = ((props?.optDouble("fontSize", 10.0) ?: 10.0).toFloat() * density)
+                val padH = ((props?.optDouble("paddingHorizontal", 8.0) ?: 8.0).toFloat() * density)
+                paint.textSize = fs
+                paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                paint.measureText(text) + padH * 2
+            }
+            "Gauge" -> ((props?.optDouble("size", 64.0) ?: 64.0).toFloat() * density)
             "Spacer" -> ((props?.optDouble("minLength", 4.0) ?: 4.0).toFloat() * density)
             "VStack" -> {
                 val pad = ((props?.optDouble("padding", 0.0) ?: 0.0).toFloat() * density)

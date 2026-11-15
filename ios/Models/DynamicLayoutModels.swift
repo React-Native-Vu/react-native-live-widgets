@@ -155,5 +155,23 @@ public struct AnyCodable: Codable {
   public var doubleValue: Double? { value as? Double }
   public var boolValue: Bool? { value as? Bool }
   public var arrayValue: [Any]? { value as? [Any] }
+  public var doubleArrayValue: [Double]? {
+    guard let arr = value as? [Any] else { return nil }
+    return arr.compactMap { item in
+      if let d = item as? Double { return d }
+      if let i = item as? Int { return Double(i) }
+      if let n = item as? NSNumber { return n.doubleValue }
+      if let s = item as? String { return Double(s) }
+      return nil
+    }
+  }
+  public var stringArrayValue: [String]? {
+    guard let arr = value as? [Any] else { return nil }
+    return arr.compactMap { item in
+      if let s = item as? String { return s }
+      if let n = item as? NSNumber { return n.stringValue }
+      return nil
+    }
+  }
 }
 

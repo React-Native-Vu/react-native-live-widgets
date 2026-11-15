@@ -5,7 +5,7 @@
  * - Home Screen Widgets (Màn hình chính Small / Medium / Large)
  * - Android Live Update & Ongoing Notification
  */
-export type LayoutNodeType = 'VStack' | 'HStack' | 'Text' | 'Timer' | 'Progress' | 'Image' | 'Spacer' | 'Button';
+export type LayoutNodeType = 'VStack' | 'HStack' | 'ZStack' | 'Grid' | 'Divider' | 'Text' | 'Timer' | 'Progress' | 'Gauge' | 'Chart' | 'Image' | 'Spacer' | 'Button' | 'Toggle' | 'Badge' | 'Link' | 'Custom';
 export interface BaseNode {
     type: LayoutNodeType;
 }
@@ -163,7 +163,132 @@ export interface ButtonNode extends BaseNode {
         checkedTextColor?: string;
     };
 }
-export type LayoutNode = VStackNode | HStackNode | TextNode | TimerNode | ProgressNode | ImageNode | SpacerNode | ButtonNode;
+export interface ZStackProps extends ContainerProps {
+    zAlignment?: 'center' | 'topLeading' | 'top' | 'topTrailing' | 'leading' | 'trailing' | 'bottomLeading' | 'bottom' | 'bottomTrailing';
+}
+export interface ZStackNode extends BaseNode {
+    type: 'ZStack';
+    props?: ZStackProps;
+    children: LayoutNode[];
+}
+export interface GridProps extends ContainerProps {
+    /** Số cột của lưới (mặc định 2) */
+    columns?: number;
+    /** Khoảng cách ngang giữa các cột (mặc định 8) */
+    columnSpacing?: number;
+    /** Khoảng cách dọc giữa các hàng (mặc định 8) */
+    rowSpacing?: number;
+}
+export interface GridNode extends BaseNode {
+    type: 'Grid';
+    props?: GridProps;
+    children: LayoutNode[];
+}
+export interface DividerNode extends BaseNode {
+    type: 'Divider';
+    props?: {
+        color?: string;
+        thickness?: number;
+        direction?: 'horizontal' | 'vertical';
+        dashed?: boolean;
+        marginVertical?: number;
+        marginHorizontal?: number;
+    };
+}
+export interface GaugeNode extends BaseNode {
+    type: 'Gauge';
+    props: {
+        /** Giá trị tiến độ từ 0.0 đến 1.0 */
+        value: number;
+        /** Chuỗi hiển thị chính giữa đồng hồ (vd "85%", "120 km/h", "420") */
+        valueText?: string;
+        /** Nhãn phụ bên dưới đồng hồ (vd "KPI", "Kcal", "AQI") */
+        label?: string;
+        /** Nhãn cực tiểu (góc trái dưới, vd "0") */
+        minLabel?: string;
+        /** Nhãn cực đại (góc phải dưới, vd "100") */
+        maxLabel?: string;
+        tintColor?: string;
+        trackColor?: string;
+        textColor?: string;
+        labelColor?: string;
+        /** Kích thước đường kính đồng hồ (mặc định 64) */
+        size?: number;
+        /** Độ dày nét vẽ cung đồng hồ (mặc định 7) */
+        strokeWidth?: number;
+    };
+}
+export interface ChartNode extends BaseNode {
+    type: 'Chart';
+    props: {
+        /** Kiểu biểu đồ: 'bar' (cột) | 'line' (đường xu hướng Sparkline) */
+        style?: 'bar' | 'line';
+        /** Mảng dữ liệu số (ví dụ [45, 72, 60, 95, 80, 110, 92]) */
+        values: number[];
+        /** Nhãn trục ngang tương ứng (ví dụ ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']) */
+        labels?: string[];
+        tintColor?: string;
+        secondaryColor?: string;
+        labelColor?: string;
+        /** Chiều cao vùng vẽ biểu đồ (mặc định 56) */
+        height?: number;
+        /** Có hiển thị chấm tròn tại các đỉnh của biểu đồ đường không */
+        showDots?: boolean;
+    };
+}
+export interface ToggleNode extends BaseNode {
+    type: 'Toggle';
+    props: {
+        /** Mã định danh toggle (tự động gắn tiền tố 'toggle:' nếu chưa có) */
+        actionId: string;
+        label: string;
+        subtitle?: string;
+        /** 'checkbox' (ô tích) | 'switch' (công tắc gạt) */
+        style?: 'checkbox' | 'switch';
+        checked?: boolean;
+        tintColor?: string;
+        textColor?: string;
+        checkedTextColor?: string;
+        fontSize?: number;
+        strikethroughOnCheck?: boolean;
+    };
+}
+export interface BadgeNode extends BaseNode {
+    type: 'Badge';
+    props: {
+        text: string;
+        systemName?: string;
+        backgroundColor?: string;
+        textColor?: string;
+        borderColor?: string;
+        borderWidth?: number;
+        fontSize?: number;
+        paddingHorizontal?: number;
+        paddingVertical?: number;
+        borderRadius?: number;
+    };
+}
+export interface LinkProps extends ContainerProps {
+    /** URL Deep Link mở màn hình cụ thể trong App (vd 'fastdo://orders/9920') */
+    deepLink?: string;
+    /** Hoặc chạy Action ngầm trên Widget ('page:...', 'toggle:...', 'refresh') */
+    actionId?: string;
+}
+export interface LinkNode extends BaseNode {
+    type: 'Link';
+    props: LinkProps;
+    children: LayoutNode[];
+}
+export interface CustomNode extends BaseNode {
+    type: 'Custom';
+    props: {
+        /** Tên định danh Component đã đăng ký trong DynamicNodeRegistry (Swift / Kotlin) */
+        componentName: string;
+        [key: string]: any;
+    };
+    children?: LayoutNode[];
+}
+export type LayoutNode = VStackNode | HStackNode | ZStackNode | GridNode | DividerNode | TextNode | TimerNode | ProgressNode | GaugeNode | ChartNode | ImageNode | SpacerNode | ButtonNode | ToggleNode | BadgeNode | LinkNode | CustomNode;
 export interface DynamicIslandConfig {
     compactLeading: LayoutNode;
     compactTrailing: LayoutNode;
