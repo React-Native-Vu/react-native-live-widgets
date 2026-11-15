@@ -19,18 +19,18 @@ Pod::Spec.new do |s|
   # Dùng cho Target Widget Extension (nhẹ, không vướng APPLICATION_EXTENSION_API_ONLY)
   s.subspec "Widget" do |ss|
     ss.source_files = [
-      "ios/DynamicActivityAttributes.swift",
-      "ios/DynamicNodeView.swift",
-      "ios/DynamicLiveActivityWidget.swift",
-      "ios/DynamicHomeScreenWidget.swift"
+      "ios/Models/**/*.swift",
+      "ios/Storage/**/*.swift",
+      "ios/Intents/**/*.swift",
+      "ios/Renderer/**/*.swift",
+      "ios/Widgets/**/*.swift"
     ]
   end
 
   # 2. Subspec Bridge: Native Module giao tiếp với React Native (Dùng cho Main App)
   s.subspec "Bridge" do |ss|
     ss.source_files = [
-      "ios/LiveActivityModule.swift",
-      "ios/LiveActivityModule.m"
+      "ios/Bridge/**/*.{h,m,swift}"
     ]
     ss.dependency "React-Core"
     ss.dependency "react-native-live-widgets/Widget"
