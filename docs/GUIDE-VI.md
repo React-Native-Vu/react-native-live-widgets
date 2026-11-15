@@ -261,6 +261,13 @@ import { LiveActivity, Widget, SharedStorage, UI } from 'react-native-live-widge
 - `SharedStorage.remove(key, appGroup?)`: Xóa 1 khóa.
 - `SharedStorage.clear(appGroup?)`: Xóa sạch dữ liệu chung (dùng khi Logout).
 
+### 4. `AudioPlayer` API (Phát nhạc & Kiểm thử sóng Equalizer)
+- `AudioPlayer.play(url)`: Phát bài nhạc trực tiếp từ URL (`.mp3`, `.m4a`, `.aac`, `.wav`) qua loa máy (iOS `AVPlayer` / Android `MediaPlayer`).
+- `AudioPlayer.pause()`: Tạm dừng bài nhạc.
+- `AudioPlayer.resume()`: Tiếp tục phát bài nhạc.
+- `AudioPlayer.stop()`: Dừng bài nhạc và giải phóng bộ nhớ.
+- `AudioPlayer.getStatus()`: Lấy trạng thái phát (`{ isPlaying, currentTime, duration }`).
+
 ---
 
 ## 4. Xây dựng Giao diện Động (Declarative UI Engine)

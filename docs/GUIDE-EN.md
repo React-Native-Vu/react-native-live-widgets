@@ -261,6 +261,13 @@ import { LiveActivity, Widget, SharedStorage, UI } from 'react-native-live-widge
 - `SharedStorage.remove(key, appGroup?)`: Removes a key.
 - `SharedStorage.clear(appGroup?)`: Clears all shared widget data (useful on user logout).
 
+### 4. `AudioPlayer` API (Music Playback & Equalizer Testing)
+- `AudioPlayer.play(url)`: Plays audio directly from URL (`.mp3`, `.m4a`, `.aac`, `.wav`) through system speakers (iOS `AVPlayer` / Android `MediaPlayer`).
+- `AudioPlayer.pause()`: Pauses the currently playing track.
+- `AudioPlayer.resume()`: Resumes playback.
+- `AudioPlayer.stop()`: Stops playback and releases audio resources.
+- `AudioPlayer.getStatus()`: Returns current playback status (`{ isPlaying, currentTime, duration }`).
+
 ---
 
 ## 4. Declarative UI Engine (`UI.*`)
