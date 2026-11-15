@@ -1,4 +1,8 @@
-export type ActionHandler = (event: { actionId: string; activityId: string }) => Promise<any> | any;
+export type ActionHandler = (event: {
+  actionId: string;
+  activityId?: string;
+  [key: string]: any;
+}) => Promise<any> | any;
 
 export const actionHandlers = new Map<string, ActionHandler>();
 

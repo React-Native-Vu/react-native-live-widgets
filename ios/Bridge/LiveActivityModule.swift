@@ -101,9 +101,18 @@ public class LiveActivityModule: RCTEventEmitter {
     let state = DynamicWidgetStateStore.loadState()
     guard let actionId = state.lastActionId, !actionId.isEmpty else { return }
     if Date().timeIntervalSince1970 - state.updatedAt < 60 {
+      let resolvedGroup = DynamicWidgetProvider.resolveAppGroup("")
+      let defaults = !resolvedGroup.isEmpty ? UserDefaults(suiteName: resolvedGroup) : UserDefaults.standard
+      let counterVal = defaults?.object(forKey: "widget_counter_value") as? Int
+
+      var body: [String: Any] = ["actionId": actionId]
+      if let val = counterVal {
+        body["counterValue"] = val
+      }
+
       DispatchQueue.main.async {
         if self.hasListeners {
-          self.sendEvent(withName: "LiveActivityActionClicked", body: ["actionId": actionId])
+          self.sendEvent(withName: "LiveActivityActionClicked", body: body)
         }
       }
     }
