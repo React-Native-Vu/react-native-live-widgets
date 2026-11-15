@@ -807,11 +807,25 @@ public struct DynamicNodeView: View {
     let barWidth = CGFloat(node.props?["barWidth"]?.doubleValue ?? 3)
     let spacing = CGFloat(node.props?["spacing"]?.doubleValue ?? 2)
 
-    if #available(iOS 17.0, *) {
+    let phase = node.props?["phase"]?.doubleValue
+    let levels: [Double]? = node.props?["levels"]?.doubleArrayValue
+
+    if phase != nil || (levels?.isEmpty == false) {
+      // Frame-driven: app đẩy phase/levels mới định kỳ, SwiftUI animate chuyển tiếp giữa 2 frame
+      PhaseEqualizerView(
+        isPlaying: isPlaying,
+        phase: Int(phase ?? 0),
+        levels: levels,
+        barCount: barCount,
+        tintColor: tint,
+        maxHeight: maxHeight,
+        barWidth: barWidth,
+        spacing: spacing
+      )
+    } else if #available(iOS 17.0, *) {
       Image(systemName: "waveform")
         .font(.system(size: maxHeight, weight: .bold))
-        .foregroundColor(tint)
-        .symbolEffect(.variableColor.iterative.reversing, options: .repeating, isActive: isPlaying)
+        .foregroundColor(isPlaying ? tint : tint.opacity(0.5))
         .frame(height: maxHeight)
     } else if #available(iOS 15.0, *) {
       AnimatedEqualizerView(
@@ -964,3 +978,44 @@ struct StaticEqualizerView: View {
   }
 }
 
+
+/// Equalizer điều khiển theo frame: mỗi lần Live Activity nhận `phase`/`levels` mới,
+/// SwiftUI animate độ cao các thanh (Live Activity cho phép animation chuyển tiếp ≤ 2s khi content thay đổi).
+struct PhaseEqualizerView: View {
+  let isPlaying: Bool
+  let phase: Int
+  let levels: [Double]?
+  let barCount: Int
+  let tintColor: Color
+  let maxHeight: CGFloat
+  let barWidth: CGFloat
+  let spacing: CGFloat
+
+  private func ratio(for idx: Int) -> CGFloat {
+    guard isPlaying else { return 0.25 }
+    if let levels = levels, !levels.isEmpty {
+      return CGFloat(max(0.12, min(1.0, levels[idx % levels.count])))
+    }
+    // Hash ổn định (deterministic) theo phase + index -> 0.2...1.0
+    var x = UInt64(bitPattern: Int64(phase &* 7919 &+ idx &* 104729 &+ 12345))
+    x ^= x >> 33
+    x = x &* 0xff51afd7ed558ccd
+    x ^= x >> 33
+    x = x &* 0xc4ceb9fe1a85ec53
+    x ^= x >> 33
+    return 0.2 + CGFloat(Double(x % 1000) / 1000.0) * 0.8
+  }
+
+  var body: some View {
+    HStack(alignment: .center, spacing: spacing) {
+      ForEach(0..<barCount, id: \.self) { idx in
+        RoundedRectangle(cornerRadius: barWidth / 2)
+          .fill(isPlaying ? tintColor : tintColor.opacity(0.5))
+          .frame(width: barWidth, height: max(barWidth, maxHeight * ratio(for: idx)))
+      }
+    }
+    .frame(height: maxHeight)
+    .animation(.easeInOut(duration: 0.6), value: phase)
+    .animation(.easeInOut(duration: 0.3), value: isPlaying)
+  }
+}

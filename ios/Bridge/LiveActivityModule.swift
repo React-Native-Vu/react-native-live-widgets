@@ -1,6 +1,7 @@
 import ActivityKit
 import AVFoundation
 import Foundation
+import MediaPlayer
 import React
 import UIKit
 import UserNotifications
@@ -595,7 +596,8 @@ public class LiveActivityModule: RCTEventEmitter {
 
     DispatchQueue.main.async {
       do {
-        try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        // Không dùng .mixWithOthers: để iOS coi app là "Now Playing" (hiện trên Control Center / Lock Screen)
+        try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
         try AVAudioSession.sharedInstance().setActive(true)
       } catch {
         print("[LiveActivityModule] AVAudioSession setup error: \(error)")
@@ -604,8 +606,44 @@ public class LiveActivityModule: RCTEventEmitter {
       let playerItem = AVPlayerItem(url: url)
       Self.audioPlayer = AVPlayer(playerItem: playerItem)
       Self.audioPlayer?.play()
+      Self.setupNowPlaying(title: url.deletingPathExtension().lastPathComponent)
       resolve(true)
     }
+  }
+
+  private static var remoteCommandsConfigured = false
+
+  private static func setupNowPlaying(title: String) {
+    var info: [String: Any] = [
+      MPMediaItemPropertyTitle: title,
+      MPMediaItemPropertyArtist: "LiveWidgets",
+      MPNowPlayingInfoPropertyPlaybackRate: 1.0,
+      MPNowPlayingInfoPropertyElapsedPlaybackTime: 0.0,
+    ]
+    if let d = audioPlayer?.currentItem?.asset.duration, d.isNumeric {
+      info[MPMediaItemPropertyPlaybackDuration] = CMTimeGetSeconds(d)
+    }
+    MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+
+    guard !remoteCommandsConfigured else { return }
+    remoteCommandsConfigured = true
+    let center = MPRemoteCommandCenter.shared()
+    center.playCommand.addTarget { _ in
+      audioPlayer?.play(); updateNowPlayingRate(1.0); return .success
+    }
+    center.pauseCommand.addTarget { _ in
+      audioPlayer?.pause(); updateNowPlayingRate(0.0); return .success
+    }
+  }
+
+  private static func updateNowPlayingRate(_ rate: Double) {
+    guard var info = MPNowPlayingInfoCenter.default().nowPlayingInfo else { return }
+    info[MPNowPlayingInfoPropertyPlaybackRate] = rate
+    if let player = audioPlayer {
+      let t = CMTimeGetSeconds(player.currentTime())
+      if !t.isNaN { info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = t }
+    }
+    MPNowPlayingInfoCenter.default().nowPlayingInfo = info
   }
 
   @objc(pauseAudio:rejecter:)
@@ -615,6 +653,7 @@ public class LiveActivityModule: RCTEventEmitter {
   ) {
     DispatchQueue.main.async {
       Self.audioPlayer?.pause()
+      Self.updateNowPlayingRate(0.0)
       resolve(true)
     }
   }
@@ -626,6 +665,7 @@ public class LiveActivityModule: RCTEventEmitter {
   ) {
     DispatchQueue.main.async {
       Self.audioPlayer?.play()
+      Self.updateNowPlayingRate(1.0)
       resolve(true)
     }
   }
@@ -638,6 +678,7 @@ public class LiveActivityModule: RCTEventEmitter {
     DispatchQueue.main.async {
       Self.audioPlayer?.pause()
       Self.audioPlayer = nil
+      MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
       resolve(true)
     }
   }
