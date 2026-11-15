@@ -8,12 +8,49 @@ import WidgetKit
 
 @objc(LiveActivityModule)
 public class LiveActivityModule: RCTEventEmitter {
+  private static let tokenLock = NSLock()
   private static var currentDevicePushToken: String?
   private static var currentPushToStartToken: String?
-  private static var activityUpdateTokens: [String: String] = [:]
+  private static var _activityUpdateTokens: [String: String] = [:]
+  private static var observedActivityIds: Set<String> = []
   private static var isObservingTokens = false
   private static var isObservingActivities = false
   private var hasListeners = false
+
+  private static func setActivityUpdateToken(_ token: String, for activityId: String) {
+    tokenLock.lock()
+    defer { tokenLock.unlock() }
+    _activityUpdateTokens[activityId] = token
+  }
+
+  private static func getActivityUpdateToken(for activityId: String) -> String? {
+    tokenLock.lock()
+    defer { tokenLock.unlock() }
+    return _activityUpdateTokens[activityId]
+  }
+
+  private static func getAllActivityUpdateTokens() -> [String: String] {
+    tokenLock.lock()
+    defer { tokenLock.unlock() }
+    return _activityUpdateTokens
+  }
+
+  private static func shouldObserve(activityId: String) -> Bool {
+    tokenLock.lock()
+    defer { tokenLock.unlock() }
+    if observedActivityIds.contains(activityId) {
+      return false
+    }
+    observedActivityIds.insert(activityId)
+    return true
+  }
+
+  private static func removeObserved(activityId: String) {
+    tokenLock.lock()
+    defer { tokenLock.unlock() }
+    observedActivityIds.remove(activityId)
+    _activityUpdateTokens.removeValue(forKey: activityId)
+  }
 
   public override init() {
     super.init()
@@ -115,10 +152,11 @@ public class LiveActivityModule: RCTEventEmitter {
         }
 
         #if targetEnvironment(simulator)
-        if Self.activityUpdateTokens[activityId] == nil {
+        if Self.getActivityUpdateToken(for: activityId) == nil {
           let simUpdateToken = Self.generateSimulatorHexToken(seed: "apns_update_\(activityId)", byteLength: 64)
-          Self.activityUpdateTokens[activityId] = simUpdateToken
-          if self.hasListeners {
+          Self.setActivityUpdateToken(simUpdateToken, for: activityId)
+          DispatchQueue.main.async { [weak self] in
+            guard let self = self, self.hasListeners else { return }
             self.sendEvent(
               withName: "LiveActivityUpdateTokenChanged",
               body: ["activityId": activityId, "token": simUpdateToken]
@@ -137,12 +175,15 @@ public class LiveActivityModule: RCTEventEmitter {
   @available(iOS 16.2, *)
   private func observePushToken(for activity: Activity<DynamicActivityAttributes>) {
     let actId = activity.attributes.activityId
+    guard Self.shouldObserve(activityId: actId) else { return }
+
     Task {
       for await pushToken in activity.pushTokenUpdates {
         let tokenStr = pushToken.map { String(format: "%02x", $0) }.joined()
-        Self.activityUpdateTokens[actId] = tokenStr
+        Self.setActivityUpdateToken(tokenStr, for: actId)
         NSLog("🔔 [LiveActivityModule] Activity (\(actId)) Update APNs Token: \(tokenStr)")
-        if self.hasListeners {
+        DispatchQueue.main.async { [weak self] in
+          guard let self = self, self.hasListeners else { return }
           self.sendEvent(
             withName: "LiveActivityUpdateTokenChanged",
             body: ["activityId": actId, "token": tokenStr]
@@ -205,6 +246,7 @@ public class LiveActivityModule: RCTEventEmitter {
           await activity.end(nil, dismissalPolicy: .immediate)
         }
       }
+      Self.removeObserved(activityId: activityId)
       resolve(true)
     }
   }
@@ -295,7 +337,7 @@ public class LiveActivityModule: RCTEventEmitter {
     resolve: @escaping RCTPromiseResolveBlock,
     reject: @escaping RCTPromiseRejectBlock
   ) {
-    if let token = Self.activityUpdateTokens[activityId] {
+    if let token = Self.getActivityUpdateToken(for: activityId) {
       resolve(token)
       return
     }
@@ -318,18 +360,19 @@ public class LiveActivityModule: RCTEventEmitter {
     }
     #endif
 
+    let allTokens = Self.getAllActivityUpdateTokens()
     let specificUpdateToken: String? = {
-      if !activityId.isEmpty, let tok = Self.activityUpdateTokens[activityId] {
+      if !activityId.isEmpty, let tok = allTokens[activityId] {
         return tok
       }
-      return Self.activityUpdateTokens.values.first
+      return allTokens.values.first
     }()
 
     let result: [String: Any] = [
       "devicePushToken": Self.currentDevicePushToken as Any,
       "pushToStartToken": Self.currentPushToStartToken as Any,
       "activityUpdateToken": specificUpdateToken as Any,
-      "allActivityUpdateTokens": Self.activityUpdateTokens,
+      "allActivityUpdateTokens": allTokens,
     ]
     resolve(result)
   }

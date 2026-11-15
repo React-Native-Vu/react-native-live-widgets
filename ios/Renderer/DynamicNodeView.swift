@@ -807,7 +807,13 @@ public struct DynamicNodeView: View {
     let barWidth = CGFloat(node.props?["barWidth"]?.doubleValue ?? 3)
     let spacing = CGFloat(node.props?["spacing"]?.doubleValue ?? 2)
 
-    if #available(iOS 15.0, *) {
+    if #available(iOS 17.0, *) {
+      Image(systemName: "waveform")
+        .font(.system(size: maxHeight, weight: .bold))
+        .foregroundColor(tint)
+        .symbolEffect(.variableColor.iterative.reversing, options: .repeating, isActive: isPlaying)
+        .frame(height: maxHeight)
+    } else if #available(iOS 15.0, *) {
       AnimatedEqualizerView(
         isPlaying: isPlaying,
         barCount: barCount,
