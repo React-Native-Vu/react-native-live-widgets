@@ -641,23 +641,22 @@ public class LiveActivityModule: RCTEventEmitter {
   ) {
     UIApplication.shared.beginReceivingRemoteControlEvents()
 
+    let validDuration = duration ?? 230.0
     var info: [String: Any] = [
       MPMediaItemPropertyTitle: title,
       MPMediaItemPropertyArtist: artist,
+      MPMediaItemPropertyPlaybackDuration: validDuration,
       MPNowPlayingInfoPropertyPlaybackRate: 1.0,
       MPNowPlayingInfoPropertyElapsedPlaybackTime: 0.0,
     ]
-    if let d = duration ?? (audioPlayer?.currentItem?.asset.duration.seconds), !d.isNaN, d > 0 {
-      info[MPMediaItemPropertyPlaybackDuration] = d
-    }
 
     let artworkSize = CGSize(width: 300, height: 300)
     let renderer = UIGraphicsImageRenderer(size: artworkSize)
     let defaultArtworkImage = renderer.image { ctx in
       let cgCtx = ctx.cgContext
       let colors = [
-        UIColor(red: 0.08, green: 0.12, blue: 0.22, alpha: 1.0).cgColor,
-        UIColor(red: 0.03, green: 0.05, blue: 0.1, alpha: 1.0).cgColor
+        UIColor(red: 0.06, green: 0.72, blue: 0.5, alpha: 1.0).cgColor,
+        UIColor(red: 0.04, green: 0.35, blue: 0.25, alpha: 1.0).cgColor
       ]
       let colorSpace = CGColorSpaceCreateDeviceRGB()
       if let grad = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: [0, 1]) {
@@ -669,6 +668,7 @@ public class LiveActivityModule: RCTEventEmitter {
     }
     info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: artworkSize) { _ in defaultArtworkImage }
 
+    MPNowPlayingInfoCenter.default().playbackState = .playing
     MPNowPlayingInfoCenter.default().nowPlayingInfo = info
 
     if let artworkUrl = artworkUrl, let url = URL(string: artworkUrl) {
@@ -719,6 +719,7 @@ public class LiveActivityModule: RCTEventEmitter {
       let t = CMTimeGetSeconds(player.currentTime())
       if !t.isNaN { info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = t }
     }
+    MPNowPlayingInfoCenter.default().playbackState = (rate > 0) ? .playing : .paused
     MPNowPlayingInfoCenter.default().nowPlayingInfo = info
   }
 
@@ -786,6 +787,7 @@ public class LiveActivityModule: RCTEventEmitter {
     DispatchQueue.main.async {
       Self.audioPlayer?.pause()
       Self.audioPlayer = nil
+      MPNowPlayingInfoCenter.default().playbackState = .stopped
       MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
       resolve(true)
     }
