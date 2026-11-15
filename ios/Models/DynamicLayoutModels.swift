@@ -97,7 +97,7 @@ public struct WidgetMultiPagePayloadDTO: Codable {
 }
 
 public struct WidgetContainerBackgroundDTO: Codable {
-  public let backgroundColor: String?
+  public let backgroundColor: AnyCodable?
   public let gradientColors: [String]?
 }
 
@@ -151,6 +151,21 @@ public struct InteractiveWidgetState: Codable {
 
 // MARK: - AnyCodable Helper
 
+public struct AnyCodingKey: CodingKey {
+  public var stringValue: String
+  public var intValue: Int?
+
+  public init?(stringValue: String) {
+    self.stringValue = stringValue
+    self.intValue = nil
+  }
+
+  public init?(intValue: Int) {
+    self.stringValue = "\(intValue)"
+    self.intValue = intValue
+  }
+}
+
 public struct AnyCodable: Codable {
   public let value: Any
 
@@ -175,7 +190,32 @@ public struct AnyCodable: Codable {
     }
   }
 
-  public func encode(to encoder: Encoder) throws {}
+  public func encode(to encoder: Encoder) throws {
+    var container = encoder.singleValueContainer()
+    if let str = value as? String {
+      try container.encode(str)
+    } else if let bool = value as? Bool {
+      try container.encode(bool)
+    } else if let int = value as? Int {
+      try container.encode(int)
+    } else if let double = value as? Double {
+      try container.encode(double)
+    } else if let dict = value as? [String: Any] {
+      var keyedContainer = encoder.container(keyedBy: AnyCodingKey.self)
+      for (k, v) in dict {
+        if let key = AnyCodingKey(stringValue: k) {
+          try keyedContainer.encode(AnyCodable(v), forKey: key)
+        }
+      }
+    } else if let arr = value as? [Any] {
+      var unkeyedContainer = encoder.unkeyedContainer()
+      for item in arr {
+        try unkeyedContainer.encode(AnyCodable(item))
+      }
+    } else {
+      try container.encodeNil()
+    }
+  }
 
   public var stringValue: String? { value as? String }
   public var doubleValue: Double? { value as? Double }

@@ -119,7 +119,11 @@ public struct DynamicWidgetProvider: TimelineProvider {
 
   private func readLayoutJson() -> String? {
     let key = "widget_layout_\(widgetKey)"
-    guard var raw = Self.readSharedString(forKey: key, appGroup: appGroup) else {
+    var raw: String? = Self.readSharedString(forKey: key, appGroup: appGroup)
+    if raw == nil && widgetKey != "main" {
+      raw = Self.readSharedString(forKey: "widget_layout_main", appGroup: appGroup)
+    }
+    guard var raw = raw else {
       return nil
     }
 
@@ -209,6 +213,7 @@ public struct DynamicWidgetProvider: TimelineProvider {
 
 public struct DynamicHomeScreenWidgetView: View {
   @Environment(\.widgetFamily) var family
+  @Environment(\.colorScheme) var colorScheme
   let entry: DynamicWidgetEntry
 
   public init(entry: DynamicWidgetEntry) {
@@ -316,8 +321,12 @@ public struct DynamicHomeScreenWidgetView: View {
     if isAccessoryFamily {
       return Color.clear
     }
-    if let bgHex = activeNode?.props?["backgroundColor"]?.stringValue,
-       let color = Color(hex: bgHex) {
+    if let bgCodable = parsedPayload?.containerBackground?.backgroundColor,
+       let color = Color.resolve(from: bgCodable, colorScheme: colorScheme) {
+      return color
+    }
+    if let bgCodable = activeNode?.props?["backgroundColor"],
+       let color = Color.resolve(from: bgCodable, colorScheme: colorScheme) {
       return color
     }
     return Color(.systemBackground)
