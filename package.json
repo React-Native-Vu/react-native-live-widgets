@@ -21,6 +21,7 @@
     "android",
     "cli",
     "docs",
+    "assets",
     "react-native-live-widgets.podspec",
     "README.md",
     "CHANGELOG.md"
