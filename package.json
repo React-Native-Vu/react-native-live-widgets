@@ -1,11 +1,13 @@
 {
   "name": "react-native-live-widgets",
-  "version": "1.0.0",
-  "description": "All-in-One Live Activities (iOS 16.1+ WidgetKit / Dynamic Island), Live Updates (Android 16+ ProgressStyle) and Interactive Multi-Page Home Screen Widgets for React Native with Declarative Dynamic UI Engine",
+  "version": "1.1.0",
+  "description": "All-in-One Live Activities (iOS 16.1+ WidgetKit / Dynamic Island), Live Updates (Android 16+ ProgressStyle) and Interactive Multi-Page Home Screen Widgets for React Native & Expo with Declarative Dynamic UI Engine",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "react-native": "src/index.ts",
   "source": "src/index.ts",
+  "app": "./app.plugin.js",
+  "plugin": "./app.plugin.js",
   "exports": {
     ".": {
       "react-native": "./src/index.ts",
@@ -20,6 +22,7 @@
     "ios",
     "android/src",
     "android/build.gradle",
+    "app.plugin.js",
     "cli",
     "docs",
     "assets",
@@ -56,15 +59,25 @@
     "android-live-update",
     "progress-style",
     "shared-storage",
-    "app-groups"
+    "app-groups",
+    "expo",
+    "expo-plugin",
+    "config-plugin"
   ],
   "author": "vu-tran",
   "license": "MIT",
   "peerDependencies": {
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "@expo/config-plugins": "^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@expo/config-plugins": {
+      "optional": true
+    }
   },
   "devDependencies": {
+    "@expo/config-plugins": "^9.0.0",
     "typescript": "^5.0.0"
   }
 }

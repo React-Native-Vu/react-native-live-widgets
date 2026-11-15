@@ -11,9 +11,11 @@ import {
   WidgetTimelineConfig,
 } from './types';
 
+declare const __DEV__: boolean | undefined;
+
 const { LiveActivityModule } = NativeModules;
 
-if (!LiveActivityModule && __DEV__) {
+if (!LiveActivityModule && typeof __DEV__ !== 'undefined' && __DEV__) {
   console.warn(
     '[react-native-live-widgets] Native module not found. ' +
       'Please ensure you have run "npx react-native-live-widgets init" and re-compiled your app.'

@@ -38,7 +38,7 @@ jobs:
         run: npm run build
 
       - name: Verify CLI setup script syntax
-        run: node --check cli/setup.js && node --check scripts/build.js && node --check scripts/release.js
+        run: node --check cli/setup.js && node --check scripts/build.js && node --check scripts/release.js && node --check app.plugin.js
 
       - name: Verify npm package tarball
         run: npm pack --dry-run

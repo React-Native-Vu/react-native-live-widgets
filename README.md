@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-3178C6.svg?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
-**The Ultimate All-in-One Engine for Live Activities, Dynamic Island, and Interactive Home Screen Widgets in Bare React Native.**
+**The Ultimate All-in-One Engine for Live Activities, Dynamic Island, and Interactive Home Screen Widgets in React Native & Expo.**
 
 *Write 100% Declarative TypeScript. Render dynamically to Native SwiftUI & Android 2D Canvas without touching Xcode or Android Studio.*
 
@@ -16,15 +16,6 @@
 ---
 
 </div>
-
-## 📸 Showcase & Demos
-
-| Dynamic Island (Expanded) | Interactive Home Screen Widget | Lock Screen Live Activity |
-|:-------------------------:|:------------------------------:|:-------------------------:|
-| <img src="assets/dynamic_island_expanded.png" width="260" alt="Dynamic Island Expanded" /> | <img src="assets/home_widget_interactive.png" width="260" alt="Interactive Widget" /> | <img src="assets/lock_screen_live_activity.png" width="260" alt="Lock Screen Live Activity" /> |
-| *Segmented Progress & Realtime Timer* | *Buttons & Bi-directional State Sync* | *Multi-card KPI & Status Dashboard* |
-
----
 
 ## 💡 Why `react-native-live-widgets`?
 
@@ -92,12 +83,46 @@ Until now, adding **Live Activities** or **Home Screen Widgets** to a React Nati
 ### 1. Installation
 
 ```bash
+# React Native CLI
 npm install react-native-live-widgets
-# or
-yarn add react-native-live-widgets
+
+# Expo (Managed or Bare)
+npx expo install react-native-live-widgets
 ```
 
-### 2. Auto-Configuration CLI
+### 2. Configuration
+
+#### A. Expo (Config Plugin)
+
+Add `react-native-live-widgets` to your `app.json` or `app.config.js`:
+
+```json
+{
+  "expo": {
+    "plugins": [
+      [
+        "react-native-live-widgets",
+        {
+          "appGroup": "group.com.yourcompany.app",
+          "enableLiveActivities": true,
+          "frequentUpdates": true
+        }
+      ]
+    ]
+  }
+}
+```
+
+Then generate native projects or run with Expo Dev Client:
+
+```bash
+npx expo prebuild
+# Run on iOS & Android:
+npx expo run:ios
+npx expo run:android
+```
+
+#### B. Bare React Native CLI
 
 Run the automated scaffolding script in your React Native project root:
 
@@ -110,7 +135,7 @@ This will automatically:
 - Scaffold the `LiveWidgetsExtension` bundle in your `ios/` folder.
 - Configure `AndroidManifest.xml` with required notification permissions.
 
-### 3. Install Pods
+And install pods:
 
 ```bash
 cd ios && pod install
@@ -206,12 +231,6 @@ await Widget.reloadAll();
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request or open an Issue.
-
-1. Fork the Project.
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`).
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`).
-4. Push to the Branch (`git push origin feature/AmazingFeature`).
-5. Open a Pull Request.
 
 ---
 
