@@ -594,52 +594,7 @@ public class LiveActivityModule: RCTEventEmitter {
 
   // MARK: - Audio Player (Music playback for testing Equalizer animations)
   private static var audioPlayer: AVPlayer?
-  private static var visualizerTimer: DispatchSourceTimer?
-  private static var visualizerPhase: Int = 0
   private static var lastPayloadJson: String?
-
-  private static func startNativeVisualizerTimer() {
-    stopNativeVisualizerTimer()
-    let queue = DispatchQueue(label: "com.reactnativeliveactivity.visualizer", qos: .default)
-    let timer = DispatchSource.makeTimerSource(queue: queue)
-    timer.schedule(deadline: .now() + 0.8, repeating: 0.9)
-    timer.setEventHandler {
-      guard let player = audioPlayer, player.timeControlStatus == .playing else { return }
-      guard var payload = lastPayloadJson, #available(iOS 16.2, *) else { return }
-
-      visualizerPhase &+= 1
-
-      let updatedPayload: String
-      if payload.contains("\"phase\"") {
-        updatedPayload = payload.replacingOccurrences(
-          of: #"("phase"\s*:\s*)\d+"#,
-          with: "$1\(visualizerPhase)",
-          options: .regularExpression
-        )
-      } else {
-        updatedPayload = payload.replacingOccurrences(
-          of: #"("type"\s*:\s*"Equalizer"\s*,\s*"props"\s*:\s*\{)"#,
-          with: "$1\"phase\":\(visualizerPhase),",
-          options: .regularExpression
-        )
-      }
-      lastPayloadJson = updatedPayload
-      let updatedState = DynamicActivityAttributes.ContentState(payloadJson: updatedPayload)
-
-      Task {
-        for activity in Activity<DynamicActivityAttributes>.activities {
-          await activity.update(.init(state: updatedState, staleDate: nil))
-        }
-      }
-    }
-    visualizerTimer = timer
-    timer.resume()
-  }
-
-  private static func stopNativeVisualizerTimer() {
-    visualizerTimer?.cancel()
-    visualizerTimer = nil
-  }
 
   @objc(playAudio:metadata:resolver:rejecter:)
   public func playAudio(
@@ -775,7 +730,6 @@ public class LiveActivityModule: RCTEventEmitter {
     DispatchQueue.main.async {
       Self.audioPlayer?.pause()
       Self.updateNowPlayingRate(0.0)
-      Self.stopNativeVisualizerTimer()
 
       if var payload = Self.lastPayloadJson, #available(iOS 16.2, *) {
         let pausedPayload = payload.replacingOccurrences(
@@ -804,7 +758,6 @@ public class LiveActivityModule: RCTEventEmitter {
     DispatchQueue.main.async {
       Self.audioPlayer?.play()
       Self.updateNowPlayingRate(1.0)
-      Self.startNativeVisualizerTimer()
 
       if var payload = Self.lastPayloadJson, #available(iOS 16.2, *) {
         let resumePayload = payload.replacingOccurrences(
@@ -831,7 +784,6 @@ public class LiveActivityModule: RCTEventEmitter {
     reject: @escaping RCTPromiseRejectBlock
   ) {
     DispatchQueue.main.async {
-      Self.stopNativeVisualizerTimer()
       Self.audioPlayer?.pause()
       Self.audioPlayer = nil
       MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
