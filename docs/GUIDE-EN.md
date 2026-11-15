@@ -260,6 +260,42 @@ import { LiveActivity, Widget, SharedStorage, UI } from 'react-native-live-widge
 
 ## 4. Declarative UI Engine (`UI.*`)
 
+### `UI.StyleSheet` & Reusable Styling (`StyleProp`)
+Just like React Native's `StyleSheet.create`, you can define reusable styles to keep your widget layouts modular and clean, supporting conditional style arrays:
+
+```typescript
+import { UI } from 'react-native-live-widgets';
+
+const styles = UI.StyleSheet.create({
+  card: {
+    padding: 14,
+    backgroundColor: '#0F172A',
+    borderRadius: 14,
+    spacing: 8,
+  },
+  headerText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#38BDF8',
+  },
+  titleText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#F8FAFC',
+  },
+  errorText: {
+    color: '#EF4444',
+  },
+});
+
+// Single style or conditional array:
+UI.VStack(
+  styles.card,
+  UI.Text('REPORT TITLE', styles.headerText),
+  UI.Text('Current Shift Status', [styles.titleText, isError && styles.errorText])
+);
+```
+
 ### `UI.VStack` & `UI.HStack`
 Vertical (`VStack`) and horizontal (`HStack`) flex-like containers:
 ```typescript

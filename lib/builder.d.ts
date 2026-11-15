@@ -1,16 +1,24 @@
-import { BadgeNode, ButtonNode, ChartNode, ContainerProps, CustomNode, DividerNode, GaugeNode, GridNode, GridProps, HStackNode, ImageNode, LayoutNode, LinkNode, LinkProps, ProgressNode, SpacerNode, TextNode, TimerNode, ToggleNode, VStackNode, ZStackNode, ZStackProps } from './types';
+import { BadgeNode, ButtonNode, ChartNode, ContainerProps, CustomNode, DividerNode, GaugeNode, GridNode, GridProps, HStackNode, ImageNode, LayoutNode, LinkNode, LinkProps, ProgressNode, SpacerNode, StyleProp, TextNode, TextStyle, TimerNode, ToggleNode, VStackNode, ZStackNode, ZStackProps } from './types';
+export declare function flattenStyle<T extends object>(...styles: StyleProp<T>[]): T | undefined;
+export type AnyWidgetStyle = TextStyle | ContainerProps | Record<string, any>;
+export type NamedStyles<T> = {
+    [P in keyof T]: AnyWidgetStyle;
+};
+export declare const StyleSheet: {
+    create: <T extends NamedStyles<T> | NamedStyles<any>>(styles: T & NamedStyles<any>) => T;
+    flatten: typeof flattenStyle;
+};
 /**
  * Các hàm helper tạo node cây giao diện trực quan cho TypeScript/JavaScript
  */
 export declare const UI: {
-    VStack: (propsOrChildren?: ContainerProps | LayoutNode | LayoutNode[], ...children: LayoutNode[]) => VStackNode;
-    HStack: (propsOrChildren?: ContainerProps | LayoutNode | LayoutNode[], ...children: LayoutNode[]) => HStackNode;
-    Text: (text: string, options?: {
-        color?: string;
-        fontSize?: number;
-        fontWeight?: "regular" | "medium" | "semibold" | "bold";
-        numberOfLines?: number;
-    }) => TextNode;
+    StyleSheet: {
+        create: <T extends NamedStyles<T> | NamedStyles<any>>(styles: T & NamedStyles<any>) => T;
+        flatten: typeof flattenStyle;
+    };
+    VStack: (propsOrChildren?: StyleProp<ContainerProps> | LayoutNode | LayoutNode[], ...children: LayoutNode[]) => VStackNode;
+    HStack: (propsOrChildren?: StyleProp<ContainerProps> | LayoutNode | LayoutNode[], ...children: LayoutNode[]) => HStackNode;
+    Text: (text: string, ...styles: StyleProp<TextStyle>[]) => TextNode;
     Timer: (targetTimestamp: number, options?: {
         mode?: "countdown" | "countup";
         color?: string;

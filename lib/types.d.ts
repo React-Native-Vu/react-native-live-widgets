@@ -16,8 +16,22 @@ export interface ContainerProps {
     spacing?: number;
     backgroundColor?: string;
     borderRadius?: number;
-    alignment?: 'leading' | 'center' | 'trailing';
-    justifyContent?: 'flexStart' | 'center' | 'flexEnd' | 'spaceBetween';
+    borderColor?: string;
+    borderWidth?: number;
+    alignment?: 'leading' | 'center' | 'trailing' | string;
+    justifyContent?: 'flexStart' | 'center' | 'flexEnd' | 'spaceBetween' | string;
+}
+export type FontWeight = 'regular' | 'medium' | 'semibold' | 'bold' | 'heavy' | 'light' | (string & {}) | string;
+export interface TextStyle {
+    color?: string;
+    fontSize?: number;
+    fontWeight?: FontWeight;
+    numberOfLines?: number;
+    strikethroughWhenToggled?: string;
+}
+export type StyleProp<T> = T | null | undefined | false | StyleProp<T>[];
+export interface TextNodeProps extends TextStyle {
+    text: string;
 }
 export interface VStackNode extends BaseNode {
     type: 'VStack';
@@ -31,13 +45,7 @@ export interface HStackNode extends BaseNode {
 }
 export interface TextNode extends BaseNode {
     type: 'Text';
-    props: {
-        text: string;
-        color?: string;
-        fontSize?: number;
-        fontWeight?: 'regular' | 'medium' | 'semibold' | 'bold';
-        numberOfLines?: number;
-    };
+    props: TextNodeProps;
 }
 export interface TimerNode extends BaseNode {
     type: 'Timer';

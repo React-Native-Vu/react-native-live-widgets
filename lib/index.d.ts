@@ -102,4 +102,5 @@ export declare const SharedStorage: {
 };
 export * from './types';
 export * from './builder';
+export { StyleSheet } from './builder';
 //# sourceMappingURL=index.d.ts.map

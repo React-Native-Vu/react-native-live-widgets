@@ -102,7 +102,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             val aspectRatio = when (family) {
                 "small" -> 1.02f
                 "medium" -> (widgetHeightDp / widgetWidthDp).coerceIn(0.45f, 0.62f)
-                else -> (widgetHeightDp / widgetWidthDp).coerceIn(0.78f, 1.15f)
+                else -> (widgetHeightDp / widgetWidthDp).coerceIn(0.78f, 1.45f)
             }
             val logicalHeightDp = logicalWidthDp * aspectRatio
 

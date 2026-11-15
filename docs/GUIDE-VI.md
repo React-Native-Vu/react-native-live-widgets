@@ -260,6 +260,42 @@ import { LiveActivity, Widget, SharedStorage, UI } from 'react-native-live-widge
 
 ## 4. Xây dựng Giao diện Động (Declarative UI Engine)
 
+### `UI.StyleSheet` & Tái sử dụng Style (`StyleProp`)
+Tương tự như `StyleSheet.create` trong React Native, bạn có thể gom nhóm các style định dạng lại để tái sử dụng nhiều nơi, giữ code sạch sẽ và hỗ trợ truyền mảng style có điều kiện:
+
+```typescript
+import { UI } from 'react-native-live-widgets';
+
+const styles = UI.StyleSheet.create({
+  card: {
+    padding: 14,
+    backgroundColor: '#0F172A',
+    borderRadius: 14,
+    spacing: 8,
+  },
+  headerText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#38BDF8',
+  },
+  titleText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#F8FAFC',
+  },
+  errorText: {
+    color: '#EF4444',
+  },
+});
+
+// Sử dụng đơn lẻ hoặc mảng có điều kiện (conditional styling):
+UI.VStack(
+  styles.card,
+  UI.Text('TIÊU ĐỀ BÁO CÁO', styles.headerText),
+  UI.Text('Trạng thái ca làm', [styles.titleText, isError && styles.errorText])
+);
+```
+
 ### `UI.VStack` & `UI.HStack`
 Khối bố cục dọc (`VStack`) và ngang (`HStack`):
 ```typescript

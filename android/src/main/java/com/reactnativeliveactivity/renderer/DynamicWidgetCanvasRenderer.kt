@@ -136,7 +136,7 @@ object DynamicWidgetCanvasRenderer {
                 val children = node.optJSONArray("children")
                 val innerW = (availWidth - pad * 2).coerceAtLeast(10f)
                 val measuredH = measureNodeHeight(context, node, availWidth, density)
-                val boxH = if (isRoot) max(availHeight, measuredH) else measuredH
+                val boxH = if (isRoot) max(availHeight, measuredH) else (measuredH + 2f * density)
 
                 if (!isRoot && bgHex.isNotEmpty()) {
                     val rect = RectF(left, top, left + availWidth, top + boxH)
@@ -1005,7 +1005,7 @@ object DynamicWidgetCanvasRenderer {
             }
             "Text", "Timer" -> {
                 val fs = ((props?.optDouble("fontSize", 13.0) ?: 13.0).toFloat() * density)
-                fs * 1.32f + 1.5f * density
+                fs * 1.45f + 2.5f * density
             }
             "Progress" -> {
                 val style = props?.optString("style", "bar") ?: "bar"

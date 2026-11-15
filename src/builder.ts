@@ -15,7 +15,9 @@ import {
   LinkProps,
   ProgressNode,
   SpacerNode,
+  StyleProp,
   TextNode,
+  TextStyle,
   TimerNode,
   ToggleNode,
   VStackNode,
@@ -23,35 +25,71 @@ import {
   ZStackProps,
 } from './types';
 
+export function flattenStyle<T extends object>(...styles: StyleProp<T>[]): T | undefined {
+  let merged: any = undefined;
+
+  function walk(item: any) {
+    if (!item) return;
+    if (Array.isArray(item)) {
+      for (const sub of item) walk(sub);
+    } else if (typeof item === 'object') {
+      if (!merged) merged = {};
+      Object.assign(merged, item);
+    }
+  }
+
+  for (const s of styles) {
+    walk(s);
+  }
+  return merged as T | undefined;
+}
+
+export type AnyWidgetStyle = TextStyle | ContainerProps | Record<string, any>;
+
+export type NamedStyles<T> = {
+  [P in keyof T]: AnyWidgetStyle;
+};
+
+export const StyleSheet = {
+  create: <T extends NamedStyles<T> | NamedStyles<any>>(styles: T & NamedStyles<any>): T => styles,
+  flatten: flattenStyle,
+};
+
 function isLayoutNode(item: any): item is LayoutNode {
   return item && typeof item === 'object' && typeof item.type === 'string';
 }
 
-function parseContainerArgs(
-  first?: ContainerProps | LayoutNode | LayoutNode[],
+function parseContainerArgs<P extends object>(
+  first?: StyleProp<P> | LayoutNode | LayoutNode[],
   rest?: LayoutNode[]
-): { props?: ContainerProps; children: LayoutNode[] } {
+): { props?: P; children: LayoutNode[] } {
   if (!first) {
     return { props: undefined, children: [] };
   }
   if (Array.isArray(first)) {
-    return { props: undefined, children: first };
+    if (first.length > 0 && isLayoutNode(first[0])) {
+      return { props: undefined, children: first as LayoutNode[] };
+    }
+    const flattened = flattenStyle<P>(first as StyleProp<P>);
+    return { props: flattened, children: rest || [] };
   }
   if (isLayoutNode(first)) {
     return { props: undefined, children: [first, ...(rest || [])] };
   }
-  return { props: first as ContainerProps, children: rest || [] };
+  return { props: first as P, children: rest || [] };
 }
 
 /**
  * Các hàm helper tạo node cây giao diện trực quan cho TypeScript/JavaScript
  */
 export const UI = {
+  StyleSheet,
+
   VStack: (
-    propsOrChildren?: ContainerProps | LayoutNode | LayoutNode[],
+    propsOrChildren?: StyleProp<ContainerProps> | LayoutNode | LayoutNode[],
     ...children: LayoutNode[]
   ): VStackNode => {
-    const { props, children: parsedChildren } = parseContainerArgs(propsOrChildren, children);
+    const { props, children: parsedChildren } = parseContainerArgs<ContainerProps>(propsOrChildren, children);
     return {
       type: 'VStack',
       props,
@@ -60,10 +98,10 @@ export const UI = {
   },
 
   HStack: (
-    propsOrChildren?: ContainerProps | LayoutNode | LayoutNode[],
+    propsOrChildren?: StyleProp<ContainerProps> | LayoutNode | LayoutNode[],
     ...children: LayoutNode[]
   ): HStackNode => {
-    const { props, children: parsedChildren } = parseContainerArgs(propsOrChildren, children);
+    const { props, children: parsedChildren } = parseContainerArgs<ContainerProps>(propsOrChildren, children);
     return {
       type: 'HStack',
       props,
@@ -73,19 +111,17 @@ export const UI = {
 
   Text: (
     text: string,
-    options?: {
-      color?: string;
-      fontSize?: number;
-      fontWeight?: 'regular' | 'medium' | 'semibold' | 'bold';
-      numberOfLines?: number;
-    }
-  ): TextNode => ({
-    type: 'Text',
-    props: {
-      text,
-      ...options,
-    },
-  }),
+    ...styles: StyleProp<TextStyle>[]
+  ): TextNode => {
+    const merged = flattenStyle(...styles);
+    return {
+      type: 'Text',
+      props: {
+        text,
+        ...(merged || {}),
+      },
+    };
+  },
 
   Timer: (
     targetTimestamp: number,

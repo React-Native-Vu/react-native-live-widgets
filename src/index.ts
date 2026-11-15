@@ -347,3 +347,4 @@ export const SharedStorage = {
 
 export * from './types';
 export * from './builder';
+export { StyleSheet } from './builder';
