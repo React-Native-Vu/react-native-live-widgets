@@ -618,8 +618,12 @@ public class LiveActivityModule: RCTEventEmitter {
       }
 
       let playerItem = AVPlayerItem(url: url)
-      Self.audioPlayer = AVPlayer(playerItem: playerItem)
-      Self.audioPlayer?.play()
+      let player = AVPlayer(playerItem: playerItem)
+      player.actionAtItemEnd = .none
+      Self.audioPlayer = player
+      player.play()
+
+      print("🎵 [LiveActivityModule] AVPlayer started playing: \(url)")
 
       let title = metadata?["title"] as? String ?? url.deletingPathExtension().lastPathComponent
       let artist = metadata?["artist"] as? String ?? "LiveWidgets"

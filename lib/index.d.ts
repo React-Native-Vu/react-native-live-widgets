@@ -114,11 +114,18 @@ export interface AudioPlayerStatus {
     currentTime: number;
     duration: number;
 }
+export interface AudioTrackMetadata {
+    title?: string;
+    artist?: string;
+    artworkUrl?: string;
+    duration?: number;
+}
 export declare const AudioPlayer: {
     /**
      * Phát nhạc trực tiếp từ URL (hỗ trợ stream mp3, m4a, aac, wav...)
+     * và đăng ký hệ thống Now Playing của iOS (hiện trên Dynamic Island & Lock Screen như Spotify).
      */
-    play: (url: string) => Promise<boolean>;
+    play: (url: string, metadata?: AudioTrackMetadata) => Promise<boolean>;
     /**
      * Tạm dừng bài nhạc đang phát.
      */
