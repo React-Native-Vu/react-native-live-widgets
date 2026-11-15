@@ -1,0 +1,12 @@
+# Changelog
+
+All notable changes to `react-native-live-widgets` will be documented in this file.
+
+## [1.0.0] - 2026-11-15
+### Added
+- **Declarative UI Engine (`UI.*`)**: Build Home Screen Widgets (`small`, `medium`, `large`) and Live Activities (`lockScreen`, `dynamicIsland`) 100% in React Native using `UI.VStack`, `UI.HStack`, `UI.Text`, `UI.Timer`, `UI.Progress` (`bar`, `segmented`, `circular`), `UI.Image`, and `UI.Button`.
+- **Interactive Multi-Page & Checklist Widgets (iOS & Android)**: In-place page switching (`actionId: 'page:<id>'`, `'page:next'`, `'page:prev'`) and task checklist toggling (`actionId: 'toggle:<key>'`) via iOS 17+ `AppIntents` and Android `PendingIntent` hit zones.
+- **Background API Auto-Sync (`Widget.setRemoteConfig`)**: Autonomous background HTTP JSON fetch and `{{field}}` template interpolation even when the main app is force-killed.
+- **Multi-Source Image Loader & Cache (`UI.Image`)**: Remote `https://` URLs (auto-prefetched, downscaled to `360px` max dimension, and cached), `base64`, `filePath`, `assetName`, and `systemName` (SF Symbols / Android Vector mapping).
+- **Unified Push Token Management**: `devicePushToken`, `pushToStartToken` (iOS 17.2+), and `activityUpdateToken` across iOS APNs and Android FCM.
+- **CLI Setup Wizard**: `npx react-native-live-widgets init` for automatic iOS & Android project configuration.

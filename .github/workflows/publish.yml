@@ -1,0 +1,41 @@
+name: Build & Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    name: Build TypeScript & Publish Package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install TypeScript compiler
+        run: npm install --no-save typescript
+
+      - name: Compile TypeScript -> JavaScript + Type Definitions (.d.ts)
+        run: npm run build
+
+      - name: Verify Package Tarball
+        run: npm pack --dry-run
+
+      - name: Publish to npm Registry
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

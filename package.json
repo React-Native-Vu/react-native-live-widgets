@@ -1,11 +1,43 @@
 {
   "name": "react-native-live-widgets",
-  "version": "0.2.0",
-  "description": "All-in-One Live Activities (iOS 16.1+ WidgetKit / Dynamic Island), Live Updates (Android 16+ ProgressStyle) and Home Screen Widgets for React Native with Declarative Dynamic UI Engine",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "version": "1.0.0",
+  "description": "All-in-One Live Activities (iOS 16.1+ WidgetKit / Dynamic Island), Live Updates (Android 16+ ProgressStyle) and Interactive Multi-Page Home Screen Widgets for React Native with Declarative Dynamic UI Engine",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "react-native": "src/index.ts",
+  "source": "src/index.ts",
+  "exports": {
+    ".": {
+      "react-native": "./src/index.ts",
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "src",
+    "ios",
+    "android",
+    "cli",
+    "docs",
+    "react-native-live-widgets.podspec",
+    "README.md",
+    "CHANGELOG.md"
+  ],
   "bin": {
     "react-native-live-widgets": "cli/setup.js"
+  },
+  "scripts": {
+    "build": "node scripts/build.js",
+    "typecheck": "tsc --noEmit",
+    "prepack": "node scripts/build.js",
+    "version:patch": "node scripts/release.js patch",
+    "version:minor": "node scripts/release.js minor",
+    "version:major": "node scripts/release.js major",
+    "release:patch": "node scripts/release.js patch --tag",
+    "release:minor": "node scripts/release.js minor --tag",
+    "release:major": "node scripts/release.js major --tag"
   },
   "repository": {
     "type": "git",
@@ -17,6 +49,7 @@
     "dynamic-island",
     "widgetkit",
     "home-screen-widgets",
+    "interactive-widgets",
     "android-live-update",
     "progress-style",
     "shared-storage",
@@ -27,5 +60,8 @@
   "peerDependencies": {
     "react": "*",
     "react-native": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
   }
 }

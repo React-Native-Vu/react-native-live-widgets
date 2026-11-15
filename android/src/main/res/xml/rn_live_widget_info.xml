@@ -10,3 +10,4 @@
     android:initialLayout="@layout/rn_live_widget_host"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />
+
