@@ -1,4 +1,7 @@
-import { LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetLayoutConfig, WidgetRemoteConfig } from './types';
+import { ActiveActivityInfo, EndActivityOptions, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig } from './types';
+import { ActionHandler, registerAction, unregisterAction } from './dispatcher';
+export type { ActionHandler };
+export { registerAction, unregisterAction };
 export declare const LiveActivity: {
     /**
      * Khởi động một Live Activity (iOS) hoặc Live Update / Ongoing Notification (Android).
@@ -9,9 +12,9 @@ export declare const LiveActivity: {
      */
     update: (options: UpdateActivityOptions) => Promise<boolean>;
     /**
-     * Kết thúc một Live Activity cụ thể theo activityId.
+     * Kết thúc một Live Activity cụ thể theo activityId với các chính sách linh hoạt (Dismissal Policy & Final Summary Layout).
      */
-    end: (activityId: string) => Promise<boolean>;
+    end: (activityId: string, options?: EndActivityOptions) => Promise<boolean>;
     /**
      * Tắt tất cả Live Activity / Live Update của ứng dụng.
      */
@@ -53,6 +56,29 @@ export declare const LiveActivity: {
         token: string;
     }) => void) => (() => void);
     /**
+     * Đăng ký một hàm xử lý logic TypeScript khi người dùng bấm nút có `actionId` tương ứng ngoài Widget/Live Activity.
+     * Hoạt động mượt mà cả khi App đang mở lẫn chạy ngầm.
+     * Trả về hàm hủy đăng ký (unsubscribe).
+     */
+    registerAction: (actionId: string, handler: ActionHandler) => (() => void);
+    /**
+     * Hủy đăng ký action handler theo `actionId`.
+     */
+    unregisterAction: (actionId: string) => void;
+    /**
+     * Lấy danh sách các phiên Live Activity đang chạy trên thiết bị (ID và Push Token).
+     * Giúp ứng dụng khôi phục lại trạng thái giao diện khi mở lại App.
+     */
+    getActiveActivities: () => Promise<ActiveActivityInfo[]>;
+    /**
+     * Kiểm tra xem người dùng có cấp quyền Hoạt động trực tiếp (Live Activities) trong Cài đặt máy hay không.
+     */
+    areActivitiesEnabled: () => Promise<boolean>;
+    /**
+     * iOS 16.2+: Kiểm tra xem người dùng có bật tùy chọn nhận cập nhật đẩy APNs tần suất cao (Frequent Pushes) hay không.
+     */
+    areFrequentPushesEnabled: () => Promise<boolean>;
+    /**
      * Lắng nghe khi người dùng bấm vào một Action Button.
      */
     onActionClicked: (listener: (actionId: string, activityId: string) => void) => (() => void);
@@ -60,6 +86,11 @@ export declare const LiveActivity: {
      * Android 16+: Kiểm tra quyền Promoted Ongoing Notifications.
      */
     canPostPromoted: () => Promise<boolean>;
+    /**
+     * Đăng ký tác vụ chạy ngầm xử lý tương tác nút bấm trên Widget (Headless JS / Background Action Task).
+     * Hoạt động ngay cả khi App chính đã bị người dùng vuốt đóng (Killed).
+     */
+    registerBackgroundActionHandler: (handler?: (actionId: string, activityId?: string) => Promise<void> | void) => void;
 };
 export declare const Widget: {
     /**
@@ -75,6 +106,25 @@ export declare const Widget: {
      * Tự động lưu vào Shared Storage và yêu cầu vẽ lại.
      */
     setLayout: (widgetKey: string, layoutConfig: WidgetLayoutConfig, appGroup?: string) => Promise<boolean>;
+    /**
+     * Thiết lập dòng thời gian tự động (Timeline Entries) cho Widget.
+     * Hệ điều hành iOS/Android sẽ tự động chuyển đổi giữa các layout theo từng mốc thời gian
+     * mà KHÔNG tốn pin, không cần ứng dụng mở hay chạy ngầm.
+     */
+    setTimeline: (widgetKey: string, timelineConfig: WidgetTimelineConfig, appGroup?: string) => Promise<boolean>;
+    /**
+     * Cung cấp danh sách các tùy chọn cấu hình cho Widget (dành cho tính năng Edit Widget / AppIntent Configuration).
+     * Ví dụ: Danh sách các Dự án, Chi nhánh, Ca làm để người dùng chọn khi nhấn giữ Widget ngoài Home Screen.
+     */
+    setConfigurationOptions: (widgetKey: string, options: WidgetConfigOption[], appGroup?: string) => Promise<boolean>;
+    /**
+     * Lấy ID tùy chọn cấu hình đang được người dùng chọn ghim trên Widget.
+     */
+    getSelectedConfiguration: (widgetKey: string, appGroup?: string) => Promise<string | null>;
+    /**
+     * Thiết lập lựa chọn cấu hình cho Widget từ trong ứng dụng.
+     */
+    setSelectedConfiguration: (widgetKey: string, selectedId: string, appGroup?: string) => Promise<boolean>;
     /**
      * Cấu hình Endpoint API để bản thân Widget Extension tự chạy ngầm lấy dữ liệu mới
      * theo chu kỳ (`getTimeline`) hoặc khi bấm nút `actionId: 'refresh'` trên mặt Widget,

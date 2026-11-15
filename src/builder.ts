@@ -26,6 +26,9 @@ import {
   ZStackNode,
   ZStackProps,
 } from './types';
+import { registerAction } from './dispatcher';
+
+let autoActionCounter = 0;
 
 export function flattenStyle<T extends object>(...styles: StyleProp<T>[]): T | undefined {
   let merged: any = undefined;
@@ -194,15 +197,64 @@ export const UI = {
   }),
 
   Button: (
-    title: string,
+    titleOrProps: string | ButtonNode['props'],
     options?: Omit<ButtonNode['props'], 'title'>
-  ): ButtonNode => ({
-    type: 'Button',
-    props: {
-      title,
-      ...options,
-    },
-  }),
+  ): ButtonNode => {
+    if (typeof titleOrProps === 'object' && titleOrProps !== null) {
+      if (titleOrProps.onPress && !titleOrProps.actionId) {
+        autoActionCounter += 1;
+        titleOrProps.actionId = `act_${Date.now()}_${autoActionCounter}`;
+        registerAction(titleOrProps.actionId, titleOrProps.onPress);
+      } else if (titleOrProps.onPress && titleOrProps.actionId) {
+        registerAction(titleOrProps.actionId, titleOrProps.onPress);
+      }
+      return {
+        type: 'Button',
+        props: titleOrProps,
+      };
+    }
+
+    let finalActionId = options?.actionId;
+    if (options?.onPress) {
+      if (!finalActionId) {
+        autoActionCounter += 1;
+        finalActionId = `act_${Date.now()}_${autoActionCounter}`;
+      }
+      registerAction(finalActionId, options.onPress);
+    }
+
+    return {
+      type: 'Button',
+      props: {
+        title: titleOrProps,
+        ...options,
+        actionId: finalActionId,
+      },
+    };
+  },
+
+  /**
+   * Tạo nút bấm kèm logic hàm TypeScript trực tiếp.
+   * Thư viện tự động sinh ActionId và kết nối bộ lắng nghe Native -> hàm async TypeScript của bạn!
+   */
+  ActionButton: (
+    title: string,
+    onPress: (payload?: any) => Promise<any> | any,
+    options?: Omit<ButtonNode['props'], 'title' | 'actionId' | 'onPress'>
+  ): ButtonNode => {
+    autoActionCounter += 1;
+    const actionId = `act_${Date.now()}_${autoActionCounter}`;
+    registerAction(actionId, onPress);
+    return {
+      type: 'Button',
+      props: {
+        title,
+        actionId,
+        onPress,
+        ...options,
+      },
+    };
+  },
 
   ZStack: (
     propsOrChildren?: ZStackProps | LayoutNode | LayoutNode[],

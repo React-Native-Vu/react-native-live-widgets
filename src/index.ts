@@ -1,10 +1,14 @@
-import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
+import { AppRegistry, NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import {
+  ActiveActivityInfo,
+  EndActivityOptions,
   LiveActivityPushTokens,
   StartActivityOptions,
   UpdateActivityOptions,
+  WidgetConfigOption,
   WidgetLayoutConfig,
   WidgetRemoteConfig,
+  WidgetTimelineConfig,
 } from './types';
 
 const { LiveActivityModule } = NativeModules;
@@ -24,6 +28,26 @@ const DEVICE_TOKEN_CHANGED_EVENT = 'DevicePushTokenChanged';
 const TOKEN_CHANGED_EVENT = 'LiveActivityTokenChanged';
 const UPDATE_TOKEN_CHANGED_EVENT = 'LiveActivityUpdateTokenChanged';
 const ACTION_CLICKED_EVENT = 'LiveActivityActionClicked';
+
+import { ActionHandler, actionHandlers, registerAction, unregisterAction } from './dispatcher';
+export type { ActionHandler };
+export { registerAction, unregisterAction };
+
+// Tự động lắng nghe action event từ Native để dispatch tới các hàm TypeScript đã đăng ký
+if (liveActivityEmitter) {
+  liveActivityEmitter.addListener(ACTION_CLICKED_EVENT, async (event: any) => {
+    const actionId = event?.actionId || '';
+    const activityId = event?.activityId || '';
+    const handler = actionHandlers.get(actionId);
+    if (handler) {
+      try {
+        await handler({ actionId, activityId });
+      } catch (e) {
+        console.warn(`[react-native-live-widgets] Error executing action '${actionId}':`, e);
+      }
+    }
+  });
+}
 
 // ─── 1. LIVE ACTIVITY & LIVE UPDATE ──────────────────────────────────────────
 
@@ -57,12 +81,30 @@ export const LiveActivity = {
   },
 
   /**
-   * Kết thúc một Live Activity cụ thể theo activityId.
+   * Kết thúc một Live Activity cụ thể theo activityId với các chính sách linh hoạt (Dismissal Policy & Final Summary Layout).
    */
-  end: async (activityId: string): Promise<boolean> => {
-    if (!LiveActivityModule?.end) return false;
+  end: async (activityId: string, options?: EndActivityOptions): Promise<boolean> => {
     try {
-      return await LiveActivityModule.end(activityId);
+      if (options && (LiveActivityModule?.endWithOptions || LiveActivityModule?.endActivity)) {
+        const payloadJson = options.finalLockScreen || options.finalDynamicIsland
+          ? JSON.stringify({
+              activityId,
+              lockScreen: options.finalLockScreen,
+              dynamicIsland: options.finalDynamicIsland,
+            })
+          : null;
+        const nativeOptions = {
+          dismissalPolicy: options.dismissalPolicy || 'immediate',
+          dismissalAfterSeconds: options.dismissalAfterSeconds ?? 900,
+          finalPayloadJson: payloadJson,
+        };
+        const endFn = LiveActivityModule.endWithOptions || LiveActivityModule.endActivity;
+        return await endFn.call(LiveActivityModule, activityId, nativeOptions);
+      }
+      if (LiveActivityModule?.end) {
+        return await LiveActivityModule.end(activityId);
+      }
+      return false;
     } catch (error) {
       console.warn('[react-native-live-widgets] end error:', error);
       return false;
@@ -188,6 +230,73 @@ export const LiveActivity = {
   },
 
   /**
+   * Đăng ký một hàm xử lý logic TypeScript khi người dùng bấm nút có `actionId` tương ứng ngoài Widget/Live Activity.
+   * Hoạt động mượt mà cả khi App đang mở lẫn chạy ngầm.
+   * Trả về hàm hủy đăng ký (unsubscribe).
+   */
+  registerAction: (actionId: string, handler: ActionHandler): (() => void) => {
+    actionHandlers.set(actionId, handler);
+    return () => {
+      actionHandlers.delete(actionId);
+    };
+  },
+
+  /**
+   * Hủy đăng ký action handler theo `actionId`.
+   */
+  unregisterAction: (actionId: string): void => {
+    actionHandlers.delete(actionId);
+  },
+
+  /**
+   * Lấy danh sách các phiên Live Activity đang chạy trên thiết bị (ID và Push Token).
+   * Giúp ứng dụng khôi phục lại trạng thái giao diện khi mở lại App.
+   */
+  getActiveActivities: async (): Promise<ActiveActivityInfo[]> => {
+    if (!LiveActivityModule?.getActiveActivities) {
+      return [];
+    }
+    try {
+      const list = await LiveActivityModule.getActiveActivities();
+      return (list || []).map((item: any) => ({
+        activityId: item.activityId || '',
+        pushToken: item.pushToken,
+      }));
+    } catch (e) {
+      console.warn('[react-native-live-widgets] getActiveActivities error:', e);
+      return [];
+    }
+  },
+
+  /**
+   * Kiểm tra xem người dùng có cấp quyền Hoạt động trực tiếp (Live Activities) trong Cài đặt máy hay không.
+   */
+  areActivitiesEnabled: async (): Promise<boolean> => {
+    if (!LiveActivityModule?.areActivitiesEnabled) {
+      return false;
+    }
+    try {
+      return await LiveActivityModule.areActivitiesEnabled();
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * iOS 16.2+: Kiểm tra xem người dùng có bật tùy chọn nhận cập nhật đẩy APNs tần suất cao (Frequent Pushes) hay không.
+   */
+  areFrequentPushesEnabled: async (): Promise<boolean> => {
+    if (!LiveActivityModule?.areFrequentPushesEnabled) {
+      return false;
+    }
+    try {
+      return await LiveActivityModule.areFrequentPushesEnabled();
+    } catch {
+      return false;
+    }
+  },
+
+  /**
    * Lắng nghe khi người dùng bấm vào một Action Button.
    */
   onActionClicked: (listener: (actionId: string, activityId: string) => void): (() => void) => {
@@ -206,6 +315,35 @@ export const LiveActivity = {
       return false;
     }
     return await LiveActivityModule.canPostPromoted();
+  },
+
+  /**
+   * Đăng ký tác vụ chạy ngầm xử lý tương tác nút bấm trên Widget (Headless JS / Background Action Task).
+   * Hoạt động ngay cả khi App chính đã bị người dùng vuốt đóng (Killed).
+   */
+  registerBackgroundActionHandler: (
+    handler?: (actionId: string, activityId?: string) => Promise<void> | void
+  ) => {
+    if (Platform.OS === 'android') {
+      try {
+        AppRegistry.registerHeadlessTask(
+          'LiveActivityBackgroundTask',
+          () => async (taskData: any) => {
+            const actionId = taskData?.actionId || '';
+            const activityId = taskData?.activityId || '';
+            if (handler) {
+              await handler(actionId, activityId);
+            }
+            const registered = actionHandlers.get(actionId);
+            if (registered) {
+              await registered({ actionId, activityId });
+            }
+          }
+        );
+      } catch (e) {
+        console.warn('[react-native-live-widgets] registerHeadlessTask warning:', e);
+      }
+    }
   },
 };
 
@@ -255,6 +393,89 @@ export const Widget = {
       console.warn('[react-native-live-widgets] setLayout error:', error);
       return false;
     }
+  },
+
+  /**
+   * Thiết lập dòng thời gian tự động (Timeline Entries) cho Widget.
+   * Hệ điều hành iOS/Android sẽ tự động chuyển đổi giữa các layout theo từng mốc thời gian
+   * mà KHÔNG tốn pin, không cần ứng dụng mở hay chạy ngầm.
+   */
+  setTimeline: async (
+    widgetKey: string,
+    timelineConfig: WidgetTimelineConfig,
+    appGroup?: string
+  ): Promise<boolean> => {
+    try {
+      const formattedEntries = timelineConfig.entries.map((entry) => ({
+        date:
+          typeof entry.date === 'string'
+            ? new Date(entry.date).getTime() / 1000.0
+            : entry.date > 10000000000
+            ? entry.date / 1000.0
+            : entry.date,
+        layout: entry.layout,
+      }));
+      const formattedConfig = {
+        entries: formattedEntries,
+        policy: timelineConfig.policy || 'atEnd',
+        afterDate: timelineConfig.afterDate
+          ? typeof timelineConfig.afterDate === 'string'
+            ? new Date(timelineConfig.afterDate).getTime() / 1000.0
+            : timelineConfig.afterDate > 10000000000
+            ? timelineConfig.afterDate / 1000.0
+            : timelineConfig.afterDate
+          : undefined,
+      };
+      const saved = await SharedStorage.set(
+        `widget_timeline_${widgetKey}`,
+        formattedConfig,
+        appGroup
+      );
+      if (!saved) return false;
+      return await Widget.reloadAll();
+    } catch (error) {
+      console.warn('[react-native-live-widgets] setTimeline error:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Cung cấp danh sách các tùy chọn cấu hình cho Widget (dành cho tính năng Edit Widget / AppIntent Configuration).
+   * Ví dụ: Danh sách các Dự án, Chi nhánh, Ca làm để người dùng chọn khi nhấn giữ Widget ngoài Home Screen.
+   */
+  setConfigurationOptions: async (
+    widgetKey: string,
+    options: WidgetConfigOption[],
+    appGroup?: string
+  ): Promise<boolean> => {
+    return await SharedStorage.set(`widget_config_options_${widgetKey}`, options, appGroup);
+  },
+
+  /**
+   * Lấy ID tùy chọn cấu hình đang được người dùng chọn ghim trên Widget.
+   */
+  getSelectedConfiguration: async (
+    widgetKey: string,
+    appGroup?: string
+  ): Promise<string | null> => {
+    return await SharedStorage.get<string>(`widget_selected_config_${widgetKey}`, appGroup);
+  },
+
+  /**
+   * Thiết lập lựa chọn cấu hình cho Widget từ trong ứng dụng.
+   */
+  setSelectedConfiguration: async (
+    widgetKey: string,
+    selectedId: string,
+    appGroup?: string
+  ): Promise<boolean> => {
+    const ok = await SharedStorage.set(
+      `widget_selected_config_${widgetKey}`,
+      selectedId,
+      appGroup
+    );
+    await Widget.reloadAll();
+    return ok;
   },
 
   /**

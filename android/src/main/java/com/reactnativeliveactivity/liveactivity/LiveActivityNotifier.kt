@@ -67,6 +67,12 @@ object LiveActivityNotifier {
         manager.cancelAll()
     }
 
+    fun getActiveIds(context: Context): List<String> {
+        return prefs(context).all.keys.filter {
+            it != "last_action_id" && !it.startsWith("__")
+        }
+    }
+
     fun refresh(context: Context, activityId: String) {
         val json = prefs(context).getString(activityId, null) ?: return
         showNotification(context, activityId, json)

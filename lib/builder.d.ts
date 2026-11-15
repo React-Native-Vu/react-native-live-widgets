@@ -30,7 +30,12 @@ export declare const UI: {
     Progress: (valueOrOptions: number | ProgressNode["props"], options?: Omit<ProgressNode["props"], "value">) => ProgressNode;
     Image: (urlOrOptions: string | ImageNode["props"], options?: Omit<ImageNode["props"], "url">) => ImageNode;
     Spacer: (minLength?: number) => SpacerNode;
-    Button: (title: string, options?: Omit<ButtonNode["props"], "title">) => ButtonNode;
+    Button: (titleOrProps: string | ButtonNode["props"], options?: Omit<ButtonNode["props"], "title">) => ButtonNode;
+    /**
+     * Tạo nút bấm kèm logic hàm TypeScript trực tiếp.
+     * Thư viện tự động sinh ActionId và kết nối bộ lắng nghe Native -> hàm async TypeScript của bạn!
+     */
+    ActionButton: (title: string, onPress: (payload?: any) => Promise<any> | any, options?: Omit<ButtonNode["props"], "title" | "actionId" | "onPress">) => ButtonNode;
     ZStack: (propsOrChildren?: ZStackProps | LayoutNode | LayoutNode[], ...children: LayoutNode[]) => ZStackNode;
     Grid: (propsOrChildren?: GridProps | LayoutNode | LayoutNode[], ...children: LayoutNode[]) => GridNode;
     Divider: (options?: DividerNode["props"]) => DividerNode;

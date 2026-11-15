@@ -22,25 +22,32 @@ public struct DynamicLiveActivityWidget: Widget {
       let island = payload?.dynamicIsland
 
       return DynamicIsland {
-        // Expanded Regions
+        // Expanded Regions với Safe Padding & Smart Fallback tránh tình trạng Dynamic Island bị đen trống rỗng
         DynamicIslandExpandedRegion(.leading) {
-          if let leading = island?.expanded?.leading {
+          if let leading = island?.expanded?.leading ?? island?.compactLeading {
             DynamicNodeView(node: leading)
+              .padding(.leading, 6)
+              .padding(.top, 4)
           }
         }
         DynamicIslandExpandedRegion(.trailing) {
-          if let trailing = island?.expanded?.trailing {
+          if let trailing = island?.expanded?.trailing ?? island?.compactTrailing {
             DynamicNodeView(node: trailing)
+              .padding(.trailing, 6)
+              .padding(.top, 4)
           }
         }
         DynamicIslandExpandedRegion(.bottom) {
-          if let bottom = island?.expanded?.bottom {
+          if let bottom = island?.expanded?.bottom ?? payload?.lockScreen {
             DynamicNodeView(node: bottom)
+              .padding(.horizontal, 8)
+              .padding(.bottom, 6)
           }
         }
         DynamicIslandExpandedRegion(.center) {
           if let center = island?.expanded?.center {
             DynamicNodeView(node: center)
+              .padding(.top, 4)
           }
         }
       } compactLeading: {

@@ -92,6 +92,26 @@ public struct WidgetMultiPagePayloadDTO: Codable {
   public let pages: [String: WidgetSinglePageDTO]?
   public let pageOrder: [String]?
   public let initialPage: String?
+  public let rootDeepLink: String?
+  public let containerBackground: WidgetContainerBackgroundDTO?
+}
+
+public struct WidgetContainerBackgroundDTO: Codable {
+  public let backgroundColor: String?
+  public let gradientColors: [String]?
+}
+
+// MARK: - Timeline Entries DTO (Widget Timeline Provider)
+
+public struct WidgetTimelineEntryDTO: Codable {
+  public let date: Double
+  public let layout: WidgetMultiPagePayloadDTO
+}
+
+public struct WidgetTimelineConfigDTO: Codable {
+  public let entries: [WidgetTimelineEntryDTO]
+  public let policy: String?
+  public let afterDate: Double?
 }
 
 public struct WidgetRemoteConfigDTO: Codable {

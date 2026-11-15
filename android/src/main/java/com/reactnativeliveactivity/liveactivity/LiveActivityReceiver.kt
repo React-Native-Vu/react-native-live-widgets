@@ -50,6 +50,13 @@ class LiveActivityReceiver : BroadcastReceiver() {
                         DynamicHomeScreenWidgetProvider.updateAllWidgets(context)
                         LiveActivityNotifier.refreshAllActive(context)
                         LiveActivityModule.emitActionClicked(actionId, activityId)
+                        try {
+                            val headlessIntent = Intent(context, LiveActivityHeadlessTaskService::class.java).apply {
+                                putExtra("actionId", actionId)
+                                putExtra("activityId", activityId)
+                            }
+                            context.startService(headlessIntent)
+                        } catch (_: Exception) {}
                     } finally {
                         pendingResult.finish()
                     }

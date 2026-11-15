@@ -6,6 +6,14 @@
  * - Android Live Update & Ongoing Notification
  */
 export type LayoutNodeType = 'VStack' | 'HStack' | 'ZStack' | 'Grid' | 'Divider' | 'Text' | 'Timer' | 'Progress' | 'Gauge' | 'Chart' | 'Image' | 'Spacer' | 'Button' | 'Toggle' | 'Badge' | 'Link' | 'Equalizer' | 'Custom';
+/**
+ * Định dạng màu hỗ trợ chuỗi Hex đơn (ví dụ '#0F172A')
+ * hoặc Object Dynamic Color tự đổi theo chế độ Sáng / Tối (Dark Mode) của hệ điều hành.
+ */
+export type DynamicColor = string | {
+    light: string;
+    dark: string;
+};
 export interface BaseNode {
     type: LayoutNodeType;
 }
@@ -14,20 +22,30 @@ export interface ContainerProps {
     paddingHorizontal?: number;
     paddingVertical?: number;
     spacing?: number;
-    backgroundColor?: string;
+    backgroundColor?: DynamicColor;
     borderRadius?: number;
-    borderColor?: string;
+    borderColor?: DynamicColor;
     borderWidth?: number;
     alignment?: 'leading' | 'center' | 'trailing' | string;
     justifyContent?: 'flexStart' | 'center' | 'flexEnd' | 'spaceBetween' | string;
+    /** Tự động ẩn hoặc làm mờ nội dung khi thiết bị đang khóa màn hình (Bảo mật chuẩn Apple) */
+    privacySensitive?: boolean;
+    /** Chủ động che nội dung thành vệt khối mờ Placeholder (Skeleton Redaction) */
+    redacted?: boolean;
 }
 export type FontWeight = 'regular' | 'medium' | 'semibold' | 'bold' | 'heavy' | 'light' | (string & {}) | string;
 export interface TextStyle {
-    color?: string;
+    color?: DynamicColor;
     fontSize?: number;
     fontWeight?: FontWeight;
     numberOfLines?: number;
     strikethroughWhenToggled?: string;
+    /** Tự động làm mờ hoặc ẩn chữ khi màn hình khóa (iOS Privacy Redacted) */
+    privacySensitive?: boolean;
+    /** Chủ động che nội dung thành vệt khối mờ Placeholder (Skeleton Redaction) */
+    redacted?: boolean;
+    /** Hiệu ứng cuộn lật số mượt mà kiểu Odometer (iOS 16+ numericText animation) khi số liệu thay đổi */
+    numericAnimation?: boolean;
 }
 export type StyleProp<T> = T | null | undefined | false | StyleProp<T>[];
 export interface TextNodeProps extends TextStyle {
@@ -54,7 +72,7 @@ export interface TimerNode extends BaseNode {
         targetTimestamp: number;
         /** 'countdown': đếm ngược tới mốc; 'countup': đếm tiến từ mốc */
         mode?: 'countdown' | 'countup';
-        color?: string;
+        color?: DynamicColor;
         fontSize?: number;
         fontWeight?: 'regular' | 'medium' | 'semibold' | 'bold';
         prefix?: string;
@@ -78,16 +96,16 @@ export interface ProgressNode extends BaseNode {
         height?: number;
         /** Bo góc thanh. Mặc định bo tròn hoàn toàn */
         borderRadius?: number;
-        /** Màu thanh khi lấp đầy (dạng '#RRGGBB') */
-        tintColor?: string;
+        /** Màu thanh khi lấp đầy (dạng '#RRGGBB' hoặc { light, dark }) */
+        tintColor?: DynamicColor;
         /** Màu nền rãnh phía sau */
-        trackColor?: string;
+        trackColor?: DynamicColor;
         /** Dải màu Gradient lấp đầy (ví dụ ['#00C6FF', '#0072FF']) */
         gradientColors?: string[];
         /** Số giây cuối trước khi hết hạn để tự đổi sang màu cảnh báo (vd 300 = còn 5 phút) */
         warningSeconds?: number;
         /** Màu cảnh báo khi bước vào giai đoạn warningSeconds (mặc định '#FFA500' cam hoặc đỏ) */
-        warningTintColor?: string;
+        warningTintColor?: DynamicColor;
         /** Tổng số chặng (ví dụ 4 bước: Đặt -> Nhận -> Nấu -> Giao) */
         segments?: number;
         /** Chặng hiện tại đang ở (từ 1 đến segments) */
@@ -102,7 +120,7 @@ export interface ProgressNode extends BaseNode {
         trackerSize?: number;
         /** Có hiển thị chữ phần trăm ở góc không (ví dụ "75%") */
         showPercentage?: boolean;
-        percentageColor?: string;
+        percentageColor?: DynamicColor;
     };
 }
 export interface ImageNode extends BaseNode {
@@ -124,15 +142,21 @@ export interface ImageNode extends BaseNode {
         height?: number;
         /** 'fill': phủ kín khung ảnh (crop) | 'fit': vừa khung ảnh */
         contentMode?: 'fit' | 'fill';
-        tintColor?: string;
-        backgroundColor?: string;
+        tintColor?: DynamicColor;
+        backgroundColor?: DynamicColor;
         padding?: number;
         /** Bo góc ảnh (đặt bằng width / 2 để tạo ảnh Avatar tròn) */
         borderRadius?: number;
         /** Độ dày viền quanh ảnh (ví dụ viền Avatar) */
         borderWidth?: number;
         /** Màu viền quanh ảnh */
-        borderColor?: string;
+        borderColor?: DynamicColor;
+        /** Hiệu ứng hoạt họa cho SF Symbol trên iOS 17+ (bounce, pulse, variableColor) */
+        symbolEffect?: 'bounce' | 'pulse' | 'variableColor' | 'scale';
+        /** Cho phép icon tự động đổi màu tương thích chế độ StandBy / Tinted của iOS 17+ / iOS 18 */
+        widgetAccentable?: boolean;
+        /** Tự động ẩn hoặc làm mờ ảnh khi màn hình khóa */
+        privacySensitive?: boolean;
     };
 }
 export interface SpacerNode extends BaseNode {
@@ -152,10 +176,12 @@ export interface ButtonNode extends BaseNode {
          * - 'toggle:<itemKey>': Tick / bỏ tick hoàn thành 1 mục ngay trên mặt Widget
          */
         actionId?: string;
+        /** Hàm xử lý logic TypeScript chạy khi người dùng bấm nút ngoài Widget */
+        onPress?: (payload?: any) => Promise<any> | any;
         /** Mở App và điều hướng tới URL Deep Link cụ thể */
         deepLink?: string;
-        backgroundColor?: string;
-        textColor?: string;
+        backgroundColor?: DynamicColor;
+        textColor?: DynamicColor;
         fontSize?: number;
         fontWeight?: 'regular' | 'medium' | 'semibold' | 'bold';
         padding?: number;
@@ -166,9 +192,9 @@ export interface ButtonNode extends BaseNode {
         /** Tiêu đề hiển thị khi nút ở trạng thái đã tick (dùng với actionId 'toggle:<key>') */
         checkedTitle?: string;
         /** Màu nền khi nút đã được tick */
-        checkedBackgroundColor?: string;
+        checkedBackgroundColor?: DynamicColor;
         /** Màu chữ khi nút đã được tick */
-        checkedTextColor?: string;
+        checkedTextColor?: DynamicColor;
     };
 }
 export interface ZStackProps extends ContainerProps {
@@ -224,6 +250,8 @@ export interface GaugeNode extends BaseNode {
         size?: number;
         /** Độ dày nét vẽ cung đồng hồ (mặc định 7) */
         strokeWidth?: number;
+        /** Tự động ẩn hoặc làm mờ đồng hồ khi màn hình khóa */
+        privacySensitive?: boolean;
     };
 }
 export interface ChartNode extends BaseNode {
@@ -242,6 +270,8 @@ export interface ChartNode extends BaseNode {
         height?: number;
         /** Có hiển thị chấm tròn tại các đỉnh của biểu đồ đường không */
         showDots?: boolean;
+        /** Tự động ẩn hoặc làm mờ biểu đồ khi màn hình khóa */
+        privacySensitive?: boolean;
     };
 }
 export interface ToggleNode extends BaseNode {
@@ -354,8 +384,24 @@ export interface UpdateActivityOptions {
     activityId: string;
     lockScreen?: LayoutNode;
     dynamicIsland?: DynamicIslandConfig;
+    staleTimestamp?: number;
     alertTitle?: string;
     alertBody?: string;
+}
+export interface EndActivityOptions {
+    /**
+     * Chính sách kết thúc Live Activity trên hệ thống:
+     * - 'immediate': Biến mất ngay lập tức (mặc định)
+     * - 'default': Giữ lại thẻ hoàn thành trên màn hình khóa tối đa 4 tiếng (như Grab/Shopee)
+     * - 'afterDate': Giữ lại trong số giây xác định rồi tự động ẩn
+     */
+    dismissalPolicy?: 'immediate' | 'default' | 'afterDate';
+    /** Số giây giữ lại trên Lock Screen (dùng khi dismissalPolicy = 'afterDate', mặc định 900 = 15 phút) */
+    dismissalAfterSeconds?: number;
+    /** Layout Lock Screen tổng kết cuối cùng hiển thị trước khi phiên Live Activity đóng */
+    finalLockScreen?: LayoutNode;
+    /** Layout Dynamic Island tổng kết cuối cùng trước khi phiên Live Activity đóng */
+    finalDynamicIsland?: DynamicIslandConfig;
 }
 export interface WidgetSinglePageConfig {
     small?: LayoutNode;
@@ -378,6 +424,43 @@ export interface WidgetLayoutConfig extends WidgetSinglePageConfig {
     pageOrder?: string[];
     /** Trang hiển thị mặc định ban đầu */
     initialPage?: string;
+    /**
+     * URL Deep Link khi người dùng chạm vào bất kỳ đâu trên mặt Widget (mở App đến màn hình đích).
+     * Rất quan trọng cho Small Widget vì iOS chỉ cho phép 1 liên kết cho toàn bộ widget nhỏ.
+     */
+    rootDeepLink?: string;
+    /**
+     * Cấu hình màu nền container hoặc gradient (chuẩn iOS 17 StandBy Mode & macOS Desktop).
+     */
+    containerBackground?: {
+        backgroundColor?: string;
+        gradientColors?: string[];
+    };
+}
+export interface WidgetTimelineEntry {
+    /** Epoch timestamp (giây hoặc mili-giây) hoặc chuỗi ISO thời điểm chuyển sang layout này */
+    date: number | string;
+    /** Cấu hình layout tại mốc thời gian tương ứng */
+    layout: WidgetLayoutConfig;
+}
+export interface WidgetTimelineConfig {
+    /** Danh sách các mốc thời gian và layout tương ứng */
+    entries: WidgetTimelineEntry[];
+    /**
+     * Chính sách làm mới khi chạy hết Timeline:
+     * - 'atEnd': Tự động yêu cầu timeline mới khi hết danh sách (mặc định)
+     * - 'never': Không tự động làm mới thêm nữa
+     * - 'afterDate': Yêu cầu làm mới sau một mốc thời gian xác định
+     */
+    policy?: 'atEnd' | 'never' | 'afterDate';
+    /** Timestamp (epoch giây hoặc ms) tiếp tục nạp timeline mới khi policy = 'afterDate' */
+    afterDate?: number | string;
+}
+export interface WidgetConfigOption {
+    id: string;
+    title: string;
+    subtitle?: string;
+    icon?: string;
 }
 export interface WidgetRemoteConfig {
     /** URL API mà Widget Extension sẽ tự gọi ngầm (kể cả khi người dùng đã kill App chính) */
@@ -398,5 +481,9 @@ export interface LiveActivityPushTokens {
     activityUpdateToken: string | null;
     /** Map toàn bộ { [activityId]: updateToken } đang hoạt động */
     allActivityUpdateTokens: Record<string, string>;
+}
+export interface ActiveActivityInfo {
+    activityId: string;
+    pushToken?: string;
 }
 //# sourceMappingURL=types.d.ts.map

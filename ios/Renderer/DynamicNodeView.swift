@@ -6,6 +6,7 @@ import WidgetKit
 // MARK: - SwiftUI Recursive Dynamic Node View
 
 public struct DynamicNodeView: View {
+  @Environment(\.colorScheme) var colorScheme
   public let node: LayoutNodeDTO
 
   public init(node: LayoutNodeDTO) {
@@ -13,6 +14,15 @@ public struct DynamicNodeView: View {
   }
 
   public var body: some View {
+    rawContent
+      .applyPrivacySensitive(
+        node.props?["privacySensitive"]?.boolValue == true,
+        isRedacted: node.props?["redacted"]?.boolValue == true
+      )
+  }
+
+  @ViewBuilder
+  private var rawContent: some View {
     switch node.type {
     case "VStack":
       renderVStack()
@@ -92,23 +102,30 @@ public struct DynamicNodeView: View {
   @ViewBuilder
   private func renderText() -> some View {
     let text = node.props?["text"]?.stringValue ?? ""
-    let colorHex = node.props?["color"]?.stringValue
+    let color = Color.resolve(from: node.props?["color"], colorScheme: colorScheme) ?? .primary
     let fontSize = node.props?["fontSize"]?.doubleValue ?? 14
     let fontWeightStr = node.props?["fontWeight"]?.stringValue ?? "regular"
     let numberOfLines = node.props?["numberOfLines"]?.doubleValue.map { Int($0) }
+    let numericAnimation = node.props?["numericAnimation"]?.boolValue ?? false
 
-    Text(text)
+    let textNode = Text(text)
       .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
-      .foregroundColor(colorHex.flatMap { Color(hex: $0) } ?? .primary)
+      .foregroundColor(color)
       .lineLimit(numberOfLines)
       .minimumScaleFactor(0.85)
+
+    if #available(iOS 16.0, *), numericAnimation {
+      textNode.contentTransition(.numericText())
+    } else {
+      textNode
+    }
   }
 
   @ViewBuilder
   private func renderTimer() -> some View {
     let targetTimestamp = node.props?["targetTimestamp"]?.doubleValue ?? 0
     let targetDate = Date(timeIntervalSince1970: targetTimestamp)
-    let colorHex = node.props?["color"]?.stringValue
+    let color = Color.resolve(from: node.props?["color"], colorScheme: colorScheme) ?? .orange
     let fontSize = node.props?["fontSize"]?.doubleValue ?? 14
     let fontWeightStr = node.props?["fontWeight"]?.stringValue ?? "semibold"
     let mode = node.props?["mode"]?.stringValue ?? "countdown"
@@ -127,7 +144,7 @@ public struct DynamicNodeView: View {
         showsHours: showsHours
       )
       .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
-      .foregroundColor(colorHex.flatMap { Color(hex: $0) } ?? .orange)
+      .foregroundColor(color)
       .monospacedDigit()
       .multilineTextAlignment(.trailing)
       .frame(width: compactWidth, alignment: .trailing)
@@ -135,7 +152,7 @@ public struct DynamicNodeView: View {
     } else {
       Text(targetDate, style: .timer)
         .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
-        .foregroundColor(colorHex.flatMap { Color(hex: $0) } ?? .orange)
+        .foregroundColor(color)
         .multilineTextAlignment(.trailing)
         .frame(width: compactWidth, alignment: .trailing)
     }
@@ -270,13 +287,11 @@ public struct DynamicNodeView: View {
        let warningSecs = node.props?["warningSeconds"]?.doubleValue {
       let secondsRemaining = targetTimestamp - now
       if secondsRemaining <= warningSecs {
-        let warningHex = node.props?["warningTintColor"]?.stringValue ?? "#FFA500"
-        return Color(hex: warningHex) ?? .orange
+        return Color.resolve(from: node.props?["warningTintColor"], colorScheme: colorScheme) ?? .orange
       }
     }
 
-    let tintHex = node.props?["tintColor"]?.stringValue
-    return tintHex.flatMap { Color(hex: $0) } ?? .blue
+    return Color.resolve(from: node.props?["tintColor"], colorScheme: colorScheme) ?? .blue
   }
 
   @ViewBuilder
@@ -318,6 +333,8 @@ public struct DynamicNodeView: View {
         .padding(pad)
         .frame(width: width, height: height)
         .foregroundColor(tint ?? .primary)
+        .applySymbolEffect(node.props?["symbolEffect"]?.stringValue)
+        .applyWidgetAccentable(node.props?["widgetAccentable"]?.boolValue == true)
         .background(
           Group {
             if let bgColor = bgColor {
@@ -399,18 +416,18 @@ public struct DynamicNodeView: View {
       return rawTitle
     }()
 
-    let bgHex: String? = {
-      if isToggled, let checkedBg = node.props?["checkedBackgroundColor"]?.stringValue {
+    let bgColor: Color = {
+      if isToggled, let checkedBg = Color.resolve(from: node.props?["checkedBackgroundColor"], colorScheme: colorScheme) {
         return checkedBg
       }
-      return node.props?["backgroundColor"]?.stringValue
+      return Color.resolve(from: node.props?["backgroundColor"], colorScheme: colorScheme) ?? Color.blue
     }()
 
-    let textHex: String? = {
-      if isToggled, let checkedText = node.props?["checkedTextColor"]?.stringValue {
+    let textColor: Color = {
+      if isToggled, let checkedText = Color.resolve(from: node.props?["checkedTextColor"], colorScheme: colorScheme) {
         return checkedText
       }
-      return node.props?["textColor"]?.stringValue
+      return Color.resolve(from: node.props?["textColor"], colorScheme: colorScheme) ?? .white
     }()
 
     let fontSize = node.props?["fontSize"]?.doubleValue ?? 12
@@ -425,7 +442,7 @@ public struct DynamicNodeView: View {
     let labelView = HStack(spacing: 4) {
       Text(displayTitle)
         .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
-        .foregroundColor(textHex.flatMap { Color(hex: $0) } ?? .white)
+        .foregroundColor(textColor)
         .lineLimit(1)
       if fullWidth {
         Spacer(minLength: 0)
@@ -436,7 +453,7 @@ public struct DynamicNodeView: View {
     .frame(maxWidth: fullWidth ? .infinity : nil, alignment: .leading)
     .background(
       RoundedRectangle(cornerRadius: cornerRadius)
-        .fill(bgHex.flatMap { Color(hex: $0) } ?? Color.blue)
+        .fill(bgColor)
     )
 
     if let deepLink = deepLink, let url = URL(string: deepLink) {
@@ -864,6 +881,7 @@ public struct DynamicNodeView: View {
 // Container padding, background modifier
 struct ContainerStyleModifier: ViewModifier {
   @Environment(\.widgetFamily) var family
+  @Environment(\.colorScheme) var colorScheme
   let props: [String: AnyCodable]?
 
   private var isAccessory: Bool {
@@ -877,14 +895,14 @@ struct ContainerStyleModifier: ViewModifier {
     let rawPad = props?["padding"]?.doubleValue.map { CGFloat($0) } ?? 0
     let pad = isAccessory ? min(rawPad, 2) : rawPad
     // Trên Lock Screen widgets, nền luôn trong suốt để hiển thị tự nhiên trên hình nền điện thoại
-    let bgHex = isAccessory ? nil : props?["backgroundColor"]?.stringValue
+    let bgColor = isAccessory ? nil : Color.resolve(from: props?["backgroundColor"], colorScheme: colorScheme)
     let cornerRadius = props?["borderRadius"]?.doubleValue.map { CGFloat($0) } ?? 0
 
     content
       .padding(pad)
       .background(
         Group {
-          if let bgHex = bgHex, let color = Color(hex: bgHex) {
+          if let color = bgColor {
             RoundedRectangle(cornerRadius: cornerRadius).fill(color)
           }
         }
@@ -992,5 +1010,51 @@ struct PhaseEqualizerView: View {
     .frame(height: maxHeight, alignment: .bottom)
     .animation(.easeInOut(duration: 0.6), value: phase)
     .animation(.easeInOut(duration: 0.3), value: isPlaying)
+  }
+}
+
+// MARK: - View Modifiers for iOS 15-18 Capabilities
+
+extension View {
+  @ViewBuilder
+  func applyPrivacySensitive(_ isSensitive: Bool, isRedacted: Bool = false) -> some View {
+    if isRedacted {
+      self.redacted(reason: .placeholder)
+    } else if isSensitive {
+      if #available(iOS 15.0, *) {
+        self.privacySensitive()
+      } else {
+        self
+      }
+    } else {
+      self
+    }
+  }
+
+  @ViewBuilder
+  func applySymbolEffect(_ effect: String?) -> some View {
+    if #available(iOS 17.0, *), let effect = effect {
+      switch effect {
+      case "bounce":
+        self.symbolEffect(.bounce)
+      case "pulse":
+        self.symbolEffect(.pulse)
+      case "variableColor":
+        self.symbolEffect(.variableColor.iterative)
+      default:
+        self
+      }
+    } else {
+      self
+    }
+  }
+
+  @ViewBuilder
+  func applyWidgetAccentable(_ accentable: Bool) -> some View {
+    if #available(iOS 16.0, *), accentable {
+      self.widgetAccentable()
+    } else {
+      self
+    }
   }
 }

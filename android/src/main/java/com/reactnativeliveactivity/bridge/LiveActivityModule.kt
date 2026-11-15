@@ -116,6 +116,26 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun endWithOptions(activityId: String, options: ReadableMap?, promise: Promise) {
+        val finalPayload = if (options?.hasKey("finalPayloadJson") == true) options.getString("finalPayloadJson") else null
+        val seconds = if (options?.hasKey("dismissalAfterSeconds") == true) options.getDouble("dismissalAfterSeconds").toLong() else 0L
+
+        if (finalPayload != null) {
+            LiveActivityNotifier.showOrUpdate(reactContext, activityId, finalPayload)
+        }
+
+        if (seconds > 0) {
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                LiveActivityNotifier.end(reactContext, activityId)
+                activityUpdateTokens.remove(activityId)
+            }, seconds * 1000)
+            promise.resolve(true)
+        } else {
+            end(activityId, promise)
+        }
+    }
+
+    @ReactMethod
     fun endAll(promise: Promise) {
         LiveActivityNotifier.endAll(reactContext)
         activityUpdateTokens.clear()
@@ -127,6 +147,33 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
         val allowed = Build.VERSION.SDK_INT >= 36 &&
             reactContext.getSystemService(NotificationManager::class.java)?.canPostPromotedNotifications() == true
         promise.resolve(allowed)
+    }
+
+    @ReactMethod
+    fun getActiveActivities(promise: Promise) {
+        val activeIds = LiveActivityNotifier.getActiveIds(reactContext)
+        val array = Arguments.createArray()
+        for (id in activeIds) {
+            val map = Arguments.createMap().apply {
+                putString("activityId", id)
+                putString("activityState", "active")
+                activityUpdateTokens[id]?.let { putString("pushToken", it) }
+            }
+            array.pushMap(map)
+        }
+        promise.resolve(array)
+    }
+
+    @ReactMethod
+    fun areActivitiesEnabled(promise: Promise) {
+        val manager = reactContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        val enabled = manager?.areNotificationsEnabled() ?: true
+        promise.resolve(enabled)
+    }
+
+    @ReactMethod
+    fun areFrequentPushesEnabled(promise: Promise) {
+        promise.resolve(true)
     }
 
     // ─── 2. PUSH TOKENS (FCM / LIVE UPDATE TOKENS) ───────────────────────────

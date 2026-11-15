@@ -26,6 +26,11 @@ public struct DynamicWidgetActionIntent: AppIntent {
     } else {
       DynamicWidgetStateStore.handleAction(actionId)
     }
+
+    // Thông báo cho Main App nếu đang chạy ngầm hoặc nền
+    let center = CFNotificationCenterGetDarwinNotifyCenter()
+    CFNotificationCenterPostNotification(center, CFNotificationName("rn_live_widgets_action_clicked" as CFString), nil, nil, true)
+
     WidgetCenter.shared.reloadAllTimelines()
     return .result()
   }

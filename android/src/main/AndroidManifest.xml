@@ -17,6 +17,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Service Headless JS chạy tác vụ ngầm khi người dùng bấm nút trên Widget mà App đang đóng -->
+        <service
+            android:name=".LiveActivityHeadlessTaskService"
+            android:exported="false" />
+
         <!-- Home Screen AppWidgetProvider tự động tích hợp cho Android -->
         <receiver
             android:name=".DynamicHomeScreenWidgetProvider"

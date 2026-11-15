@@ -32,6 +32,52 @@ public struct DynamicWidgetProvider: TimelineProvider {
   public func getTimeline(in context: Context, completion: @escaping (Timeline<DynamicWidgetEntry>) -> Void) {
     let wKey = widgetKey
     let group = appGroup
+
+    // 1. Kiểm tra xem có cấu hình Timeline nhiều mốc thời gian không (widget_timeline_<key>)
+    if let timelineRaw = Self.readSharedString(forKey: "widget_timeline_\(wKey)", appGroup: group),
+       let data = timelineRaw.data(using: .utf8),
+       let timelineDTO = try? JSONDecoder().decode(WidgetTimelineConfigDTO.self, from: data),
+       !timelineDTO.entries.isEmpty {
+      var entries: [DynamicWidgetEntry] = []
+      for item in timelineDTO.entries {
+        let entryDate: Date
+        if item.date > 10_000_000_000 {
+          entryDate = Date(timeIntervalSince1970: item.date / 1000.0)
+        } else {
+          entryDate = Date(timeIntervalSince1970: item.date)
+        }
+        let layoutJson: String
+        if let encoded = try? JSONEncoder().encode(item.layout),
+           let str = String(data: encoded, encoding: .utf8) {
+          layoutJson = str
+        } else {
+          layoutJson = ""
+        }
+        entries.append(DynamicWidgetEntry(date: entryDate, layoutJson: layoutJson))
+      }
+
+      entries.sort { $0.date < $1.date }
+
+      let policy: TimelineReloadPolicy
+      switch timelineDTO.policy {
+      case "never":
+        policy = .never
+      case "afterDate":
+        if let after = timelineDTO.afterDate {
+          let afterDate = after > 10_000_000_000 ? Date(timeIntervalSince1970: after / 1000.0) : Date(timeIntervalSince1970: after)
+          policy = .after(afterDate)
+        } else {
+          policy = .atEnd
+        }
+      default:
+        policy = .atEnd
+      }
+
+      completion(Timeline(entries: entries, policy: policy))
+      return
+    }
+
+    // 2. Chạy cơ chế đơn mốc mặc định (Layout snapshot hiện tại)
     let rawLayout = Self.readSharedString(forKey: "widget_layout_\(wKey)", appGroup: group)
     let hasTemplateVars = rawLayout?.contains("{{") == true
     let hasRemoteConfig = Self.readSharedString(forKey: "widget_remote_config_\(wKey)", appGroup: group) != nil
@@ -90,6 +136,11 @@ public struct DynamicWidgetProvider: TimelineProvider {
         let escaped = v.replacingOccurrences(of: "\"", with: "\\\"")
         raw = raw.replacingOccurrences(of: "{{\(k)}}", with: escaped)
       }
+    }
+
+    if let selectedConfig = Self.readSharedString(forKey: "widget_selected_config_\(widgetKey)", appGroup: appGroup) {
+      raw = raw.replacingOccurrences(of: "{{_selectedConfigId}}", with: selectedConfig)
+      raw = raw.replacingOccurrences(of: "{{selectedConfigId}}", with: selectedConfig)
     }
     return raw
   }
@@ -164,10 +215,25 @@ public struct DynamicHomeScreenWidgetView: View {
     self.entry = entry
   }
 
-  private var activeNode: LayoutNodeDTO? {
+  private var parsedPayload: WidgetMultiPagePayloadDTO? {
     guard let json = entry.layoutJson,
           let data = json.data(using: .utf8),
           let payload = try? JSONDecoder().decode(WidgetMultiPagePayloadDTO.self, from: data) else {
+      return nil
+    }
+    return payload
+  }
+
+  private var rootDeepLink: String? {
+    parsedPayload?.rootDeepLink
+  }
+
+  private var containerGradientColors: [String]? {
+    parsedPayload?.containerBackground?.gradientColors
+  }
+
+  private var activeNode: LayoutNodeDTO? {
+    guard let payload = parsedPayload else {
       return nil
     }
 
@@ -186,12 +252,12 @@ public struct DynamicHomeScreenWidgetView: View {
 
       if let pageConfig = pages[activePageId] {
         return selectFamilyNode(
-          small: pageConfig.small,
-          medium: pageConfig.medium,
-          large: pageConfig.large,
-          accessoryRectangular: pageConfig.accessoryRectangular,
-          accessoryCircular: pageConfig.accessoryCircular,
-          accessoryInline: pageConfig.accessoryInline
+          small: pageConfig.small ?? payload.small,
+          medium: pageConfig.medium ?? payload.medium,
+          large: pageConfig.large ?? payload.large,
+          accessoryRectangular: pageConfig.accessoryRectangular ?? payload.accessoryRectangular,
+          accessoryCircular: pageConfig.accessoryCircular ?? payload.accessoryCircular,
+          accessoryInline: pageConfig.accessoryInline ?? payload.accessoryInline
         )
       }
     }
@@ -270,7 +336,8 @@ public struct DynamicHomeScreenWidgetView: View {
         fallbackView()
       }
     }
-    .applyWidgetBackground(rootBackgroundColor, isAccessory: isAccessoryFamily)
+    .applyWidgetURL(rootDeepLink)
+    .applyWidgetBackground(rootBackgroundColor, gradientColors: containerGradientColors, isAccessory: isAccessoryFamily)
   }
 
   @ViewBuilder
@@ -304,9 +371,22 @@ public struct DynamicHomeScreenWidgetView: View {
 }
 
 extension View {
-  /// Tương thích iOS 17+ / iOS 27: Bắt buộc dùng `containerBackground(for: .widget)`
   @ViewBuilder
-  func applyWidgetBackground(_ color: Color, isAccessory: Bool = false) -> some View {
+  func applyWidgetURL(_ urlString: String?) -> some View {
+    if let urlStr = urlString, let url = URL(string: urlStr) {
+      self.widgetURL(url)
+    } else {
+      self
+    }
+  }
+
+  /// Tương thích iOS 17+ / iOS 18+: Bắt buộc dùng `containerBackground(for: .widget)`
+  @ViewBuilder
+  func applyWidgetBackground(
+    _ color: Color,
+    gradientColors: [String]? = nil,
+    isAccessory: Bool = false
+  ) -> some View {
     if #available(iOS 17.0, *) {
       if isAccessory {
         self.containerBackground(for: .widget) {
@@ -314,14 +394,32 @@ extension View {
         }
       } else {
         self.containerBackground(for: .widget) {
-          color
+          if let grad = gradientColors, grad.count >= 2 {
+            LinearGradient(
+              colors: grad.compactMap { Color(hex: $0) },
+              startPoint: .topLeading,
+              endPoint: .bottomTrailing
+            )
+          } else {
+            color
+          }
         }
       }
     } else {
       if isAccessory {
         self
       } else {
-        self.padding().background(color)
+        if let grad = gradientColors, grad.count >= 2 {
+          self.padding().background(
+            LinearGradient(
+              colors: grad.compactMap { Color(hex: $0) },
+              startPoint: .topLeading,
+              endPoint: .bottomTrailing
+            )
+          )
+        } else {
+          self.padding().background(color)
+        }
       }
     }
   }

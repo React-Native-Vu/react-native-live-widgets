@@ -27,5 +27,23 @@ extension Color {
     }
     self.init(.sRGB, red: r, green: g, blue: b, opacity: a)
   }
+
+  /// Tự động resolve màu theo chuỗi Hex đơn hoặc Object Dynamic Color { light: "...", dark: "..." }
+  static func resolve(from anyCodable: AnyCodable?, colorScheme: ColorScheme? = nil) -> Color? {
+    guard let anyCodable = anyCodable else { return nil }
+    if let hex = anyCodable.stringValue {
+      return Color(hex: hex)
+    }
+    if let dict = anyCodable.value as? [String: Any] {
+      let schemeKey = (colorScheme == .dark) ? "dark" : "light"
+      if let hex = dict[schemeKey] as? String {
+        return Color(hex: hex)
+      }
+      if let fallbackHex = dict["light"] as? String ?? dict["dark"] as? String {
+        return Color(hex: fallbackHex)
+      }
+    }
+    return nil
+  }
 }
 

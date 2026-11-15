@@ -61,12 +61,52 @@ public class LiveActivityModule: RCTEventEmitter {
       name: Notification.Name("RNLiveWidgetsDidRegisterDeviceToken"),
       object: nil
     )
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(appDidBecomeActive),
+      name: UIApplication.didBecomeActiveNotification,
+      object: nil
+    )
+
+    let darwinCenter = CFNotificationCenterGetDarwinNotifyCenter()
+    let observer = Unmanaged.passUnretained(self).toOpaque()
+    CFNotificationCenterAddObserver(
+      darwinCenter,
+      observer,
+      { _, observer, _, _, _ in
+        guard let observer = observer else { return }
+        let mySelf = Unmanaged<LiveActivityModule>.fromOpaque(observer).takeUnretainedValue()
+        mySelf.checkPendingAction()
+      },
+      "rn_live_widgets_action_clicked" as CFString,
+      nil,
+      .deliverImmediately
+    )
+
     startObservingPushToStartTokenIfNeeded()
     startObservingActivityUpdatesIfNeeded()
   }
 
   deinit {
+    let darwinCenter = CFNotificationCenterGetDarwinNotifyCenter()
+    CFNotificationCenterRemoveEveryObserver(darwinCenter, Unmanaged.passUnretained(self).toOpaque())
     NotificationCenter.default.removeObserver(self)
+  }
+
+  @objc private func appDidBecomeActive() {
+    checkPendingAction()
+  }
+
+  private func checkPendingAction() {
+    let state = DynamicWidgetStateStore.loadState()
+    guard let actionId = state.lastActionId, !actionId.isEmpty else { return }
+    if Date().timeIntervalSince1970 - state.updatedAt < 60 {
+      DispatchQueue.main.async {
+        if self.hasListeners {
+          self.sendEvent(withName: "LiveActivityActionClicked", body: ["actionId": actionId])
+        }
+      }
+    }
   }
 
   @objc private func handleDeviceTokenNotification(_ notification: Notification) {
@@ -130,6 +170,7 @@ public class LiveActivityModule: RCTEventEmitter {
 
     let attributes = DynamicActivityAttributes(activityId: activityId)
     let initialContentState = DynamicActivityAttributes.ContentState(payloadJson: payloadJson)
+    let initialStaleDate = parseStaleDate(from: payloadJson)
     Self.lastPayloadJson = payloadJson
 
     Task {
@@ -139,7 +180,7 @@ public class LiveActivityModule: RCTEventEmitter {
         do {
           let activity = try Activity.request(
             attributes: attributes,
-            content: .init(state: initialContentState, staleDate: nil),
+            content: .init(state: initialContentState, staleDate: initialStaleDate),
             pushType: .token
           )
           self.observePushToken(for: activity)
@@ -147,7 +188,7 @@ public class LiveActivityModule: RCTEventEmitter {
           // Fallback sang local Live Activity (pushType: nil) khi chạy môi trường chưa cấu hình APNs
           let activity = try Activity.request(
             attributes: attributes,
-            content: .init(state: initialContentState, staleDate: nil),
+            content: .init(state: initialContentState, staleDate: initialStaleDate),
             pushType: nil
           )
           self.observePushToken(for: activity)
@@ -219,6 +260,7 @@ public class LiveActivityModule: RCTEventEmitter {
     }
 
     let updatedState = DynamicActivityAttributes.ContentState(payloadJson: payloadJson)
+    let updatedStaleDate = parseStaleDate(from: payloadJson)
     Self.lastPayloadJson = payloadJson
 
     Task {
@@ -226,7 +268,7 @@ public class LiveActivityModule: RCTEventEmitter {
       // xong thì đẩy lại 1 lần để hiển thị.
       for activity in Activity<DynamicActivityAttributes>.activities {
         if activity.attributes.activityId == activityId {
-          await activity.update(.init(state: updatedState, staleDate: nil))
+          await activity.update(.init(state: updatedState, staleDate: updatedStaleDate))
         }
       }
       resolve(true)
@@ -235,7 +277,7 @@ public class LiveActivityModule: RCTEventEmitter {
       if fetchedNew {
         for activity in Activity<DynamicActivityAttributes>.activities {
           if activity.attributes.activityId == activityId {
-            await activity.update(.init(state: updatedState, staleDate: nil))
+            await activity.update(.init(state: updatedState, staleDate: updatedStaleDate))
           }
         }
       }
@@ -248,20 +290,59 @@ public class LiveActivityModule: RCTEventEmitter {
     resolve: @escaping RCTPromiseResolveBlock,
     reject: @escaping RCTPromiseRejectBlock
   ) {
+    endWithOptions(activityId: activityId, options: nil, resolve: resolve, reject: reject)
+  }
+
+  @objc(endWithOptions:options:resolver:rejecter:)
+  public func endWithOptions(
+    activityId: String,
+    options: [String: Any]?,
+    resolve: @escaping RCTPromiseResolveBlock,
+    reject: @escaping RCTPromiseRejectBlock
+  ) {
     guard #available(iOS 16.2, *) else {
       resolve(false)
       return
     }
 
+    let policyStr = options?["dismissalPolicy"] as? String ?? "immediate"
+    let seconds = options?["dismissalAfterSeconds"] as? Double ?? 900
+    let finalPayloadJson = options?["finalPayloadJson"] as? String
+
+    let policy: ActivityUIDismissalPolicy
+    switch policyStr {
+    case "default":
+      policy = .default
+    case "after", "afterDate":
+      policy = .after(Date().addingTimeInterval(seconds))
+    default:
+      policy = .immediate
+    }
+
     Task {
       for activity in Activity<DynamicActivityAttributes>.activities {
         if activity.attributes.activityId == activityId {
-          await activity.end(nil, dismissalPolicy: .immediate)
+          if let json = finalPayloadJson, !json.isEmpty {
+            let finalState = DynamicActivityAttributes.ContentState(payloadJson: json)
+            await activity.end(ActivityContent(state: finalState, staleDate: nil), dismissalPolicy: policy)
+          } else {
+            await activity.end(nil, dismissalPolicy: policy)
+          }
         }
       }
       Self.removeObserved(activityId: activityId)
       resolve(true)
     }
+  }
+
+  private func parseStaleDate(from json: String) -> Date? {
+    guard let data = json.data(using: .utf8),
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let ts = obj["staleTimestamp"] as? Double else {
+      return nil
+    }
+    let seconds = ts > 10_000_000_000 ? ts / 1000.0 : ts
+    return Date(timeIntervalSince1970: seconds)
   }
 
   @objc(endAll:rejecter:)
@@ -815,6 +896,57 @@ public class LiveActivityModule: RCTEventEmitter {
         "currentTime": currentTime.isNaN ? 0 : currentTime,
         "duration": duration.isNaN ? 0 : duration
       ])
+    }
+  }
+
+  // MARK: - Advanced ActivityKit Capabilities
+
+  @objc(getActiveActivities:rejecter:)
+  public func getActiveActivities(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    if #available(iOS 16.1, *) {
+      var result: [[String: Any]] = []
+      for activity in Activity<DynamicActivityAttributes>.activities {
+        var item: [String: Any] = [
+          "activityId": activity.id,
+          "activityState": String(describing: activity.activityState)
+        ]
+        if let token = Self.getActivityUpdateToken(for: activity.id) {
+          item["pushToken"] = token
+        }
+        result.append(item)
+      }
+      resolve(result)
+    } else {
+      resolve([])
+    }
+  }
+
+  @objc(areActivitiesEnabled:rejecter:)
+  public func areActivitiesEnabled(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    if #available(iOS 16.1, *) {
+      let authInfo = ActivityAuthorizationInfo()
+      resolve(authInfo.areActivitiesEnabled)
+    } else {
+      resolve(false)
+    }
+  }
+
+  @objc(areFrequentPushesEnabled:rejecter:)
+  public func areFrequentPushesEnabled(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    if #available(iOS 16.2, *) {
+      let authInfo = ActivityAuthorizationInfo()
+      resolve(authInfo.frequentPushesEnabled)
+    } else {
+      resolve(false)
     }
   }
 }
