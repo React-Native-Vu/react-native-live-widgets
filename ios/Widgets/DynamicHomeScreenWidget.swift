@@ -225,11 +225,11 @@ public struct DynamicHomeScreenWidgetView: View {
     if #available(iOS 16.0, *) {
       switch family {
       case .accessoryRectangular:
-        return accessoryRectangular ?? medium ?? small ?? large
+        return accessoryRectangular ?? small
       case .accessoryCircular:
-        return accessoryCircular ?? small ?? medium
+        return accessoryCircular
       case .accessoryInline:
-        return accessoryInline ?? small
+        return accessoryInline
       default:
         break
       }
@@ -283,17 +283,31 @@ public struct DynamicHomeScreenWidgetView: View {
 
   @ViewBuilder
   private func fallbackView() -> some View {
-    VStack(spacing: isAccessoryFamily ? 2 : 6) {
-      Text("Live Widgets")
-        .font(isAccessoryFamily ? .caption2.weight(.bold) : .headline)
-      if !isAccessoryFamily {
+    if isAccessoryFamily {
+      if family == .accessoryCircular {
+        Image(systemName: "clock.badge.checkmark.fill")
+          .font(.system(size: 22, weight: .bold))
+          .foregroundColor(.white)
+      } else {
+        VStack(alignment: .leading, spacing: 2) {
+          Text("Live Widgets")
+            .font(.caption2.weight(.bold))
+          Text("Chưa có dữ liệu")
+            .font(.system(size: 9))
+            .foregroundColor(.secondary)
+        }
+      }
+    } else {
+      VStack(spacing: 6) {
+        Text("Live Widgets")
+          .font(.headline)
         Text("Chọn 1 mẫu UI trong app để hiển thị")
           .font(.caption)
           .foregroundColor(.secondary)
           .multilineTextAlignment(.center)
       }
+      .padding(12)
     }
-    .padding(isAccessoryFamily ? 2 : 12)
   }
 }
 

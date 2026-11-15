@@ -836,11 +836,21 @@ public struct DynamicNodeView: View {
 
 // Container padding, background modifier
 struct ContainerStyleModifier: ViewModifier {
+  @Environment(\.widgetFamily) var family
   let props: [String: AnyCodable]?
 
+  private var isAccessory: Bool {
+    if #available(iOS 16.0, *) {
+      return family == .accessoryRectangular || family == .accessoryCircular || family == .accessoryInline
+    }
+    return false
+  }
+
   func body(content: Content) -> some View {
-    let pad = props?["padding"]?.doubleValue.map { CGFloat($0) } ?? 0
-    let bgHex = props?["backgroundColor"]?.stringValue
+    let rawPad = props?["padding"]?.doubleValue.map { CGFloat($0) } ?? 0
+    let pad = isAccessory ? min(rawPad, 2) : rawPad
+    // Trên Lock Screen widgets, nền luôn trong suốt để hiển thị tự nhiên trên hình nền điện thoại
+    let bgHex = isAccessory ? nil : props?["backgroundColor"]?.stringValue
     let cornerRadius = props?["borderRadius"]?.doubleValue.map { CGFloat($0) } ?? 0
 
     content
