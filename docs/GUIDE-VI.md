@@ -22,10 +22,13 @@ Tài liệu hướng dẫn toàn diện từ cài đặt, thiết lập native (
    - [UI.Text](#uitext)
    - [UI.Timer (Realtime không tốn pin)](#uitimer-realtime-không-tốn-pin)
    - [UI.Progress (Thanh tiến trình bar, segmented, circular)](#uiprogress-thanh-tiến-trình-đa-dạng)
+   - [UI.Equalizer (Sóng nhạc chuyển động liên tục)](#uiequalizer-sóng-nhạc-chuyển-động-liên-tục)
    - [UI.Image (URL mạng, Base64, File, Asset & SF Symbols)](#uiimage-url-mạng-base64-file-asset--sf-symbols)
    - [UI.Button (Tương tác chuyển trang, Tick công việc, Refresh API & Deep Link)](#uibutton-nút-bấm-tương-tác-trực-tiếp-trên-widget)
 5. [Cấu hình Dynamic Island (iPhone 14 Pro, 15, 16, 17)](#5-cấu-hình-dynamic-island-iphone-14-pro-15-16-17)
-6. [Tạo Home Screen Widget Đa Trang & Tương Tác bằng JavaScript](#6-tạo-home-screen-widget-đa-trang--tương-tác-bằng-javascript)
+6. [Tạo Home Screen & Lock Screen Widget Đa Dạng bằng JavaScript](#6-tạo-home-screen-widget-đa-trang--tương-tác-bằng-javascript)
+   - [Lock Screen Widgets trên iOS (accessoryRectangular, circular, inline)](#lock-screen-widgets-trên-ios)
+   - [Ghim Tiện ích vào Màn hình chính trong App (Android In-App Pin)](#ghim-tiện-ích-vào-màn-hình-chính-trong-app-android-in-app-pin)
 7. [Đồng bộ API Ngầm cho Widget kể cả khi Kill App (`Widget.setRemoteConfig`)](#7-đồng-bộ-api-ngầm-cho-widget-kể-cả-khi-kill-app-widgetsetremoteconfig)
 8. [Quản lý 3 loại Push Token (APNs & FCM) cho Live Activity](#8-quản-lý-3-loại-push-token-apns--fcm-cho-live-activity)
 9. [State Machine & Tự động cập nhật theo pha (Phases)](#9-state-machine--tự-động-cập-nhật-theo-pha-phases)
@@ -362,6 +365,28 @@ UI.Progress({
 })
 ```
 
+### `UI.Equalizer` (Sóng nhạc chuyển động liên tục)
+Component sóng nhạc / âm thanh động chuyên dụng. Trên Dynamic Island và Live Activity màn hình khóa (iOS), component tự động chạy nhịp sóng dao động liên tục thời gian thực (Native TimelineView Animation) mượt mà mà không tốn pin; trên Android và Home Screen hiển thị các thanh sóng nhạc trực quan:
+```typescript
+// 1. Dùng trong Dynamic Island (compactTrailing hoặc minimal)
+UI.Equalizer({
+  isPlaying: true,        // true: sóng nhảy liên tục | false: đứng yên
+  barCount: 4,            // Số thanh sóng nhạc (2 đến 8)
+  tintColor: '#10B981',   // Màu sắc thanh sóng (Spotify / Apple Music green)
+  height: 14,             // Chiều cao thanh
+  barWidth: 3,            // Độ rộng mỗi thanh
+  spacing: 2,             // Khoảng cách giữa các thanh
+})
+
+// 2. Dùng trong Widget nghe nhạc ngoài Home Screen / Lock Screen
+UI.Equalizer({
+  isPlaying: true,
+  barCount: 5,
+  tintColor: '#FFFFFF',
+  height: 18,
+})
+```
+
 ### `UI.Image` (URL mạng, Base64, File, Asset & SF Symbols)
 Hỗ trợ truyền ảnh từ **5 nguồn khác nhau** trên cả iOS và Android. Khi truyền `url` (`https://...`), thư viện sẽ tự động tải ngầm, nén ảnh tối ưu RAM (`maxDimension = 360px` để không bao giờ vượt giới hạn 30MB của iOS WidgetKit) và lưu vào bộ nhớ đệm:
 ```typescript
@@ -598,6 +623,60 @@ await Widget.setLayout('main', {
     },
   },
 });
+```
+
+### Lock Screen Widgets trên iOS
+Từ iOS 16+, WidgetKit hỗ trợ 3 kích thước đặc biệt trên màn hình khóa (Lock Screen):
+- `accessoryRectangular`: Khung chữ nhật nằm ngang phía dưới đồng hồ.
+- `accessoryCircular`: Biểu tượng / chỉ số tròn nhỏ.
+- `accessoryInline`: Dòng chữ vắn tắt nằm ngay phía trên đồng hồ.
+
+> [!NOTE]
+> Thư viện tự động loại bỏ nền opaque (`backgroundColor`) và căn chỉnh padding chuẩn xác để widget màn hình khóa hiển thị tự nhiên với hệ số trong suốt (vibrancy) của iOS.
+
+```typescript
+await Widget.setLayout('main', {
+  // Widget Home Screen
+  small: smallNode,
+  medium: mediumNode,
+  large: largeNode,
+
+  // Widget Lock Screen (iOS 16+)
+  accessoryRectangular: UI.HStack(
+    { spacing: 6 },
+    UI.VStack(
+      { spacing: 2 },
+      UI.Text('Starboy', { fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }),
+      UI.Text('The Weeknd', { fontSize: 11, color: '#CCCCCC' })
+    ),
+    UI.Spacer(),
+    UI.Equalizer({ isPlaying: true, barCount: 4, tintColor: '#FFFFFF', height: 16 })
+  ),
+  accessoryCircular: UI.VStack(
+    { spacing: 2 },
+    UI.Equalizer({ isPlaying: true, barCount: 4, tintColor: '#FFFFFF', height: 18 }),
+    UI.Text('MUSIC', { fontSize: 8, fontWeight: 'bold', color: '#FFFFFF' })
+  ),
+  accessoryInline: UI.Text('♪ Starboy • The Weeknd', { fontSize: 12, fontWeight: 'medium' }),
+});
+```
+
+### Ghim Tiện ích vào Màn hình chính trong App (Android In-App Pin)
+Trên Android 8.0+ (API 26+), bạn có thể hiển thị nút trong ứng dụng để người dùng bấm ghim ngay tiện ích ra màn hình chính mà không cần hướng dẫn người dùng nhấn giữ màn hình thủ công:
+
+```typescript
+import { Widget } from 'react-native-live-widgets';
+
+// Kiểm tra xem Launcher hiện tại có hỗ trợ ghim hay không
+const isSupported = await Widget.isPinSupported();
+
+if (isSupported) {
+  // Yêu cầu hệ điều hành hiện hộp thoại ghim Widget
+  const success = await Widget.requestPin();
+  if (success) {
+    console.log('Hệ thống đã nhận yêu cầu ghim tiện ích');
+  }
+}
 ```
 
 ---

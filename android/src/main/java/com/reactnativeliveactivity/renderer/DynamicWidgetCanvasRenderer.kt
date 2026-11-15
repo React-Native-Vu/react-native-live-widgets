@@ -917,6 +917,32 @@ object DynamicWidgetCanvasRenderer {
                 usedH
             }
 
+            "Equalizer" -> {
+                val isPlaying = props?.optBoolean("isPlaying", true) ?: true
+                val barCount = (props?.optInt("barCount", 4) ?: 4).coerceIn(2, 12)
+                val tintHex = props?.optString("tintColor", "#10B981") ?: "#10B981"
+                val maxHeight = ((props?.optDouble("height", 16.0) ?: 16.0).toFloat() * density)
+                val barW = ((props?.optDouble("barWidth", 3.0) ?: 3.0).toFloat() * density).coerceAtLeast(2f)
+                val spacing = ((props?.optDouble("spacing", 2.0) ?: 2.0).toFloat() * density).coerceAtLeast(1f)
+                val defaultRatios = floatArrayOf(0.45f, 0.9f, 0.6f, 0.8f, 0.35f, 0.95f, 0.5f)
+
+                paint.style = Paint.Style.FILL
+                paint.color = parseHexColor(tintHex, Color.parseColor("#10B981"))
+                if (!isPlaying) paint.alpha = 140
+
+                val cornerRadius = barW / 2f
+                val startX = left
+
+                for (i in 0 until barCount) {
+                    val ratio = if (isPlaying) defaultRatios[i % defaultRatios.size] else 0.25f
+                    val barH = max(barW, maxHeight * ratio)
+                    val bx = startX + i * (barW + spacing)
+                    val by = top + (maxHeight - barH)
+                    canvas.drawRoundRect(RectF(bx, by, bx + barW, top + maxHeight), cornerRadius, cornerRadius, paint)
+                }
+                maxHeight + 1.5f * density
+            }
+
             "Custom" -> {
                 val customComp = DynamicNodeRegistry.resolve(node)
                 if (customComp != null) {
@@ -1084,6 +1110,8 @@ object DynamicWidgetCanvasRenderer {
                 val asVStack = JSONObject(node.toString()).apply { put("type", "VStack") }
                 measureNodeHeight(context, asVStack, availWidth, density)
             }
+            "Equalizer" -> ((props?.optDouble("height", 16.0) ?: 16.0).toFloat() * density) + 1.5f * density
+
             "Custom" -> {
                 val customComp = DynamicNodeRegistry.resolve(node)
                 if (customComp != null) {
@@ -1138,6 +1166,12 @@ object DynamicWidgetCanvasRenderer {
                 paint.measureText(text) + padH * 2
             }
             "Gauge" -> ((props?.optDouble("size", 64.0) ?: 64.0).toFloat() * density)
+            "Equalizer" -> {
+                val barCount = (props?.optInt("barCount", 4) ?: 4).coerceIn(2, 12)
+                val barW = ((props?.optDouble("barWidth", 3.0) ?: 3.0).toFloat() * density).coerceAtLeast(2f)
+                val spacing = ((props?.optDouble("spacing", 2.0) ?: 2.0).toFloat() * density).coerceAtLeast(1f)
+                barCount * barW + (barCount - 1) * spacing
+            }
             "Spacer" -> ((props?.optDouble("minLength", 4.0) ?: 4.0).toFloat() * density)
             "VStack" -> {
                 val pad = ((props?.optDouble("padding", 0.0) ?: 0.0).toFloat() * density)

@@ -5,6 +5,8 @@ import {
   ContainerProps,
   CustomNode,
   DividerNode,
+  EqualizerNode,
+  EqualizerProps,
   GaugeNode,
   GridNode,
   GridProps,
@@ -333,5 +335,23 @@ export const UI = {
       componentName,
     },
     children: children.length > 0 ? children : undefined,
+  }),
+
+  /**
+   * Component sóng nhạc chuyển động (Equalizer / Sound Visualizer):
+   * Tự động chạy animation nhịp sóng nhạc mượt mà trên Dynamic Island và Lock Screen (iOS)
+   * và hiển thị trực quan trên Android.
+   */
+  Equalizer: (options?: EqualizerProps): EqualizerNode => ({
+    type: 'Equalizer',
+    props: {
+      isPlaying: true,
+      barCount: 4,
+      tintColor: '#10B981',
+      height: 16,
+      barWidth: 3,
+      spacing: 2,
+      ...options,
+    },
   }),
 };

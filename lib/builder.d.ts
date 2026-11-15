@@ -1,4 +1,4 @@
-import { BadgeNode, ButtonNode, ChartNode, ContainerProps, CustomNode, DividerNode, GaugeNode, GridNode, GridProps, HStackNode, ImageNode, LayoutNode, LinkNode, LinkProps, ProgressNode, SpacerNode, StyleProp, TextNode, TextStyle, TimerNode, ToggleNode, VStackNode, ZStackNode, ZStackProps } from './types';
+import { BadgeNode, ButtonNode, ChartNode, ContainerProps, CustomNode, DividerNode, EqualizerNode, EqualizerProps, GaugeNode, GridNode, GridProps, HStackNode, ImageNode, LayoutNode, LinkNode, LinkProps, ProgressNode, SpacerNode, StyleProp, TextNode, TextStyle, TimerNode, ToggleNode, VStackNode, ZStackNode, ZStackProps } from './types';
 export declare function flattenStyle<T extends object>(...styles: StyleProp<T>[]): T | undefined;
 export type AnyWidgetStyle = TextStyle | ContainerProps | Record<string, any>;
 export type NamedStyles<T> = {
@@ -45,5 +45,11 @@ export declare const UI: {
      * - Android (Kotlin): `DynamicNodeRegistry.register("MyComponent", ...)`
      */
     Custom: (componentName: string, props?: Record<string, any>, ...children: LayoutNode[]) => CustomNode;
+    /**
+     * Component sóng nhạc chuyển động (Equalizer / Sound Visualizer):
+     * Tự động chạy animation nhịp sóng nhạc mượt mà trên Dynamic Island và Lock Screen (iOS)
+     * và hiển thị trực quan trên Android.
+     */
+    Equalizer: (options?: EqualizerProps) => EqualizerNode;
 };
 //# sourceMappingURL=builder.d.ts.map

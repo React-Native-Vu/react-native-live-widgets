@@ -44,6 +44,8 @@ public struct DynamicNodeView: View {
       renderBadge()
     case "Link":
       renderLink()
+    case "Equalizer":
+      renderEqualizer()
     case "Spacer":
       if let minLength = node.props?["minLength"]?.doubleValue {
         Spacer(minLength: CGFloat(minLength))
@@ -796,6 +798,36 @@ public struct DynamicNodeView: View {
   }
 
   @ViewBuilder
+  private func renderEqualizer() -> some View {
+    let isPlaying = node.props?["isPlaying"]?.boolValue ?? true
+    let barCount = max(2, min(12, Int(node.props?["barCount"]?.doubleValue ?? 4)))
+    let tintHex = node.props?["tintColor"]?.stringValue
+    let tint = tintHex.flatMap { Color(hex: $0) } ?? Color(hex: "#10B981") ?? .green
+    let maxHeight = CGFloat(node.props?["height"]?.doubleValue ?? 16)
+    let barWidth = CGFloat(node.props?["barWidth"]?.doubleValue ?? 3)
+    let spacing = CGFloat(node.props?["spacing"]?.doubleValue ?? 2)
+
+    if #available(iOS 15.0, *) {
+      AnimatedEqualizerView(
+        isPlaying: isPlaying,
+        barCount: barCount,
+        tintColor: tint,
+        maxHeight: maxHeight,
+        barWidth: barWidth,
+        spacing: spacing
+      )
+    } else {
+      StaticEqualizerView(
+        barCount: barCount,
+        tintColor: tint,
+        maxHeight: maxHeight,
+        barWidth: barWidth,
+        spacing: spacing
+      )
+    }
+  }
+
+  @ViewBuilder
   private func renderCustom() -> some View {
     if let registeredView = DynamicNodeRegistry.shared.resolve(node) {
       registeredView
@@ -862,6 +894,67 @@ struct ContainerStyleModifier: ViewModifier {
           }
         }
       )
+  }
+}
+
+// MARK: - Animated Equalizer Components (Audio Waveform for Live Activity & Dynamic Island)
+
+@available(iOS 15.0, *)
+struct AnimatedEqualizerView: View {
+  let isPlaying: Bool
+  let barCount: Int
+  let tintColor: Color
+  let maxHeight: CGFloat
+  let barWidth: CGFloat
+  let spacing: CGFloat
+
+  var body: some View {
+    if isPlaying {
+      TimelineView(.animation(minimumInterval: 0.16)) { timeline in
+        let time = timeline.date.timeIntervalSinceReferenceDate
+        HStack(alignment: .bottom, spacing: spacing) {
+          ForEach(0..<barCount, id: \.self) { idx in
+            let phase = time * 6.5 + Double(idx) * 1.85
+            let wave = sin(phase) * 0.44 + 0.56
+            let h = max(barWidth, CGFloat(wave) * maxHeight)
+            RoundedRectangle(cornerRadius: barWidth / 2)
+              .fill(tintColor)
+              .frame(width: barWidth, height: h)
+          }
+        }
+      }
+      .frame(height: maxHeight)
+    } else {
+      StaticEqualizerView(
+        barCount: barCount,
+        tintColor: tintColor.opacity(0.5),
+        maxHeight: maxHeight,
+        barWidth: barWidth,
+        spacing: spacing
+      )
+    }
+  }
+}
+
+struct StaticEqualizerView: View {
+  let barCount: Int
+  let tintColor: Color
+  let maxHeight: CGFloat
+  let barWidth: CGFloat
+  let spacing: CGFloat
+
+  private let defaultRatios: [CGFloat] = [0.4, 0.85, 0.55, 0.7, 0.35, 0.9, 0.6]
+
+  var body: some View {
+    HStack(alignment: .bottom, spacing: spacing) {
+      ForEach(0..<barCount, id: \.self) { idx in
+        let ratio = defaultRatios[idx % defaultRatios.count]
+        RoundedRectangle(cornerRadius: barWidth / 2)
+          .fill(tintColor)
+          .frame(width: barWidth, height: max(barWidth, maxHeight * ratio))
+      }
+    }
+    .frame(height: maxHeight)
   }
 }
 

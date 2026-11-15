@@ -23,6 +23,7 @@ export type LayoutNodeType =
   | 'Toggle'
   | 'Badge'
   | 'Link'
+  | 'Equalizer'
   | 'Custom';
 
 export interface BaseNode {
@@ -361,6 +362,26 @@ export interface LinkNode extends BaseNode {
   children: LayoutNode[];
 }
 
+export interface EqualizerProps {
+  /** Trạng thái đang phát nhạc hay tạm dừng (mặc định: true) */
+  isPlaying?: boolean;
+  /** Số lượng thanh sóng nhạc (mặc định: 4, từ 3 đến 8) */
+  barCount?: number;
+  /** Màu sắc của thanh sóng nhạc (mặc định: '#10B981' - xanh Spotify / Apple Music) */
+  tintColor?: string;
+  /** Chiều cao tối đa của thanh sóng (mặc định: 16) */
+  height?: number;
+  /** Độ rộng của mỗi thanh (mặc định: 3) */
+  barWidth?: number;
+  /** Khoảng cách giữa các thanh (mặc định: 2) */
+  spacing?: number;
+}
+
+export interface EqualizerNode extends BaseNode {
+  type: 'Equalizer';
+  props?: EqualizerProps;
+}
+
 export interface CustomNode extends BaseNode {
   type: 'Custom';
   props: {
@@ -388,6 +409,7 @@ export type LayoutNode =
   | ToggleNode
   | BadgeNode
   | LinkNode
+  | EqualizerNode
   | CustomNode;
 
 export interface DynamicIslandConfig {

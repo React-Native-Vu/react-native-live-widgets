@@ -22,10 +22,13 @@ Comprehensive guide covering installation, native setup (iOS & Android), and bui
    - [UI.Text](#uitext)
    - [UI.Timer (Zero-Battery Hardware Timer)](#uitimer-zero-battery-hardware-timer)
    - [UI.Progress (Bar, Segmented & Circular Progress)](#uiprogress-bar-segmented--circular-progress)
+   - [UI.Equalizer (Realtime Animated Music Waveform)](#uiequalizer-realtime-animated-music-waveform)
    - [UI.Image (Remote URL, Base64, File, Asset & SF Symbols)](#uiimage-remote-url-base64-file-asset--sf-symbols)
    - [UI.Button (Interactive Page Switching, Task Toggle, API Refresh & Deep Links)](#uibutton-interactive-widget-buttons)
 5. [Dynamic Island Configuration (iPhone 14 Pro, 15, 16, 17)](#5-dynamic-island-configuration-iphone-14-pro-15-16-17)
 6. [Building Multi-Page & Interactive Home Screen Widgets in JavaScript](#6-building-multi-page--interactive-home-screen-widgets-in-javascript)
+   - [Lock Screen Widgets on iOS (accessoryRectangular, circular, inline)](#lock-screen-widgets-on-ios)
+   - [In-App Pin Widget on Android](#in-app-pin-widget-on-android)
 7. [Background API Auto-Sync When App Is Killed (`Widget.setRemoteConfig`)](#7-background-api-auto-sync-when-app-is-killed-widgetsetremoteconfig)
 8. [Managing All 3 Push Token Types (APNs & FCM)](#8-managing-all-3-push-token-types-apns--fcm)
 9. [State Machine & Timed Phases (`phases`)](#9-state-machine--timed-phases-phases)
@@ -362,6 +365,28 @@ UI.Progress({
 })
 ```
 
+### `UI.Equalizer` (Realtime Animated Music Waveform)
+A dedicated audio equalizer and waveform visualizer. On Dynamic Island and Lock Screen Live Activities (iOS), the equalizer automatically oscillates rhythmically in real-time (using SwiftUI `TimelineView(.animation)`) with zero battery drain; on Android and Home Screen, it renders crisp audio frequency bars:
+```typescript
+// 1. Used in Dynamic Island (compactTrailing or minimal)
+UI.Equalizer({
+  isPlaying: true,        // true: oscillating animated wave | false: paused
+  barCount: 4,            // Number of wave bars (2 to 8)
+  tintColor: '#10B981',   // Wave bar color (Spotify / Apple Music green)
+  height: 14,             // Height in points
+  barWidth: 3,            // Width of each bar
+  spacing: 2,             // Spacing between bars
+})
+
+// 2. Used in Home Screen or Lock Screen Widget
+UI.Equalizer({
+  isPlaying: true,
+  barCount: 5,
+  tintColor: '#FFFFFF',
+  height: 18,
+})
+```
+
 ### `UI.Image` (Remote URL, Base64, File, Asset & SF Symbols)
 Supports **5 image sources** across both iOS and Android. When you pass a remote `url` (`https://...`), the library automatically downloads, downscales (`maxDimension = 360px` to stay safely below WidgetKit's 30MB memory ceiling), caches it on disk/memory, and refreshes the widget:
 ```typescript
@@ -597,6 +622,60 @@ await Widget.setLayout('main', {
     },
   },
 });
+```
+
+### Lock Screen Widgets on iOS
+On iOS 16+, WidgetKit supports 3 lock screen accessory families:
+- `accessoryRectangular`: Horizontal rectangle positioned below the clock.
+- `accessoryCircular`: Compact circular gauge or indicator.
+- `accessoryInline`: Compact single-line text row above the clock.
+
+> [!NOTE]
+> The library automatically strips opaque background colors and adapts paddings so that lock screen widgets render natively with system vibrancy against the user's wallpaper.
+
+```typescript
+await Widget.setLayout('main', {
+  // Home Screen sizes
+  small: smallNode,
+  medium: mediumNode,
+  large: largeNode,
+
+  // Lock Screen sizes (iOS 16+)
+  accessoryRectangular: UI.HStack(
+    { spacing: 6 },
+    UI.VStack(
+      { spacing: 2 },
+      UI.Text('Starboy', { fontSize: 13, fontWeight: 'bold', color: '#FFFFFF' }),
+      UI.Text('The Weeknd', { fontSize: 11, color: '#CCCCCC' })
+    ),
+    UI.Spacer(),
+    UI.Equalizer({ isPlaying: true, barCount: 4, tintColor: '#FFFFFF', height: 16 })
+  ),
+  accessoryCircular: UI.VStack(
+    { spacing: 2 },
+    UI.Equalizer({ isPlaying: true, barCount: 4, tintColor: '#FFFFFF', height: 18 }),
+    UI.Text('MUSIC', { fontSize: 8, fontWeight: 'bold', color: '#FFFFFF' })
+  ),
+  accessoryInline: UI.Text('♪ Starboy • The Weeknd', { fontSize: 12, fontWeight: 'medium' }),
+});
+```
+
+### In-App Pin Widget on Android
+On Android 8.0+ (API 26+), you can trigger the system dialog from inside your React Native app to pin a widget to the home screen without asking users to manually search the launcher:
+
+```typescript
+import { Widget } from 'react-native-live-widgets';
+
+// Check if launcher supports in-app pinning
+const isSupported = await Widget.isPinSupported();
+
+if (isSupported) {
+  // Request system dialog to pin widget
+  const success = await Widget.requestPin();
+  if (success) {
+    console.log('Pin request accepted by system');
+  }
+}
 ```
 
 ---
