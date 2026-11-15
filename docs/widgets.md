@@ -49,3 +49,4 @@ await Widget.setRemoteConfig({
 ```
 
 Any `UI.Text` containing `{{fieldName}}` or `{{_lastSyncTime}}` will be automatically populated from the JSON response even when the app is killed.
+

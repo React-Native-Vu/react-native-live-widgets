@@ -26,3 +26,4 @@
 - [ ] `npm run build` compiles cleanly with zero TypeScript errors (`lib/*.js` & `lib/*.d.ts` updated)
 - [ ] `npm pack --dry-run` succeeds without unwanted files
 - [ ] Documentation (`docs/GUIDE-VI.md` & `docs/GUIDE-EN.md`) updated if public API changed
+

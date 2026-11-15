@@ -19,6 +19,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.RemoteViews
 import org.json.JSONObject
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min

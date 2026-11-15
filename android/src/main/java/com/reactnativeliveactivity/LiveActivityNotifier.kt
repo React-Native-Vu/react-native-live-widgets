@@ -335,10 +335,10 @@ object LiveActivityNotifier {
                 val countsDown = props.optBoolean("countsDown", false)
                 val segments = props.optInt("segments", -1).takeIf { it > 0 }
                 val currentSeg = props.optInt("currentSegment", -1).takeIf { it > 0 }
-                val tint = props.optString("tintColor", null)
-                val track = props.optString("trackColor", null)
+                val tint = props.optString("tintColor", "").takeIf { it.isNotEmpty() }
+                val track = props.optString("trackColor", "").takeIf { it.isNotEmpty() }
                 val warnSecs = props.optDouble("warningSeconds", -1.0).takeIf { it > 0 }
-                val warnTint = props.optString("warningTintColor", null)
+                val warnTint = props.optString("warningTintColor", "").takeIf { it.isNotEmpty() }
                 val showPct = props.optBoolean("showPercentage", false)
 
                 onProgress(
