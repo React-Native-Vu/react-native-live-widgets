@@ -65,3 +65,4 @@ try {
   console.error('❌ [react-native-live-widgets] Build failed:', err.message);
   process.exit(1);
 }
+

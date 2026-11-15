@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  verify:
+    name: Typecheck, Build & Package Verification
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install TypeScript toolchain
+        run: npm install --no-save typescript
+
+      - name: Run TypeScript typecheck
+        run: npx tsc -p tsconfig.json --noEmit
+
+      - name: Build library (lib/*.js + lib/*.d.ts)
+        run: npm run build
+
+      - name: Verify CLI setup script syntax
+        run: node --check cli/setup.js && node --check scripts/build.js && node --check scripts/release.js
+
+      - name: Verify npm package tarball
+        run: npm pack --dry-run

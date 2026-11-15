@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📖 Documentation (English)
+    url: https://github.com/vu-tran/react-native-live-widgets/blob/main/docs/GUIDE-EN.md
+    about: Read the complete English setup and API reference guide
+  - name: 🇻🇳 Tài liệu hướng dẫn (Tiếng Việt)
+    url: https://github.com/vu-tran/react-native-live-widgets/blob/main/docs/GUIDE-VI.md
+    about: Xem hướng dẫn cài đặt và sử dụng chi tiết bằng Tiếng Việt

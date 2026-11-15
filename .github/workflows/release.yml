@@ -1,4 +1,4 @@
-name: Build & Publish to npm
+name: Release & Publish
 
 on:
   push:
@@ -7,17 +7,24 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version or bump type (patch | minor | major | X.Y.Z)'
+        required: false
+        default: 'patch'
 
 jobs:
-  build-and-publish:
-    name: Build TypeScript & Publish Package
+  release:
+    name: Build, Create GitHub Release & Publish to npm
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -33,6 +40,12 @@ jobs:
 
       - name: Verify Package Tarball
         run: npm pack --dry-run
+
+      - name: Create GitHub Release (on tag push)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
 
       - name: Publish to npm Registry
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'

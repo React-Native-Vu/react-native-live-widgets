@@ -10,3 +10,4 @@ All notable changes to `react-native-live-widgets` will be documented in this fi
 - **Multi-Source Image Loader & Cache (`UI.Image`)**: Remote `https://` URLs (auto-prefetched, downscaled to `360px` max dimension, and cached), `base64`, `filePath`, `assetName`, and `systemName` (SF Symbols / Android Vector mapping).
 - **Unified Push Token Management**: `devicePushToken`, `pushToStartToken` (iOS 17.2+), and `activityUpdateToken` across iOS APNs and Android FCM.
 - **CLI Setup Wizard**: `npx react-native-live-widgets init` for automatic iOS & Android project configuration.
+
