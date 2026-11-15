@@ -11,7 +11,8 @@ Comprehensive guide covering installation, native setup (iOS & Android), and bui
 2. [Installation & Project Setup](#2-installation--project-setup)
    - [Package Installation](#package-installation)
    - [iOS Setup (Xcode & Widget Extension)](#ios-setup-xcode--widget-extension)
-   - [Android Setup (Manifest & Permissions)](#android-setup-manifest--permissions)
+   - [Android Setup (Gradle, Manifest, MainApplication & Permissions)](#android-setup-gradle-manifest-mainapplication--permissions)
+   - [Native Directory Architecture (`ios/` & `android/`)](#native-directory-architecture-ios--android)
 3. [Core API Reference](#3-core-api-reference)
    - [LiveActivity API (Lock Screen, Dynamic Island & 3 Push Token Types)](#1-liveactivity-api)
    - [Widget API (Home Screen Widgets, Multi-Page & Background Sync)](#2-widget-api-home-screen-widgets)
@@ -115,11 +116,110 @@ cd ios && pod install
 
 ---
 
-### Android Setup (Manifest & Permissions)
+### Android Setup (Gradle, Manifest, MainApplication & Permissions)
 
-The library **automatically registers** `DynamicHomeScreenWidgetProvider` (Home Screen Widget) and `LiveActivityReceiver` (Background Sync & Interactive Action Handler) in its own `AndroidManifest.xml`, which merges seamlessly into your Android app.
+On Android, most of the native setup is **handled automatically** out of the box via Gradle's **Android Manifest Merger**. Below is a complete breakdown of what is pre-configured and what you should verify in your project:
 
-On Android 13+ (API 33+), request the `android.permission.POST_NOTIFICATIONS` runtime permission before starting a Live Update notification.
+#### 1. What the Library Auto-Registers for You (Zero Manual Manifest Setup)
+The library's bundled `AndroidManifest.xml` automatically merges the following into your app at build time:
+- **System Permissions:**
+  - `android.permission.INTERNET` (downloads remote URL images & executes background Widget API calls).
+  - `android.permission.POST_NOTIFICATIONS` (displays Live Update Notifications on Android 13+).
+  - `android.permission.POST_PROMOTED_NOTIFICATIONS` (enables status-bar Live Update chips on Android 16 / API 36).
+  - `android.permission.VIBRATE`.
+- **Home Screen Widget Provider (`DynamicHomeScreenWidgetProvider`):** Linked with `@xml/rn_live_widgets_info` supporting free horizontal & vertical resizing (`resizeMode="horizontal|vertical"`).
+- **Broadcast Receiver (`LiveActivityReceiver`):** Handles interactive button taps on both Notifications and Home Screen Widgets.
+
+#### 2. Step 1: Verify SDK Versions in `android/build.gradle`
+Ensure your root `android/build.gradle` uses `minSdkVersion >= 24` and `compileSdkVersion >= 35` (or `36` for Android 16 Live Updates):
+```groovy
+buildscript {
+    ext {
+        buildToolsVersion = "35.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 35 // Or 36 for Android 16
+        targetSdkVersion = 35
+        ndkVersion = "27.1.12297006"
+        kotlinVersion = "2.1.20"
+    }
+}
+```
+
+#### 3. Step 2: Verify `MainApplication.kt`
+React Native 0.7x / 0.8x **Autolinking** (`PackageList(this).packages`) automatically registers `LiveActivityPackage`.
+> ⚠️ **Important Note for React Native 0.80+:** Ensure `loadReactNative(this)` is called inside `MainApplication.onCreate()` so SoLoader/JSI initializes properly on launch:
+```kotlin
+package com.yourcompany.app
+
+import android.app.Application
+import com.facebook.react.PackageList
+import com.facebook.react.ReactApplication
+import com.facebook.react.ReactHost
+import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
+import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+
+class MainApplication : Application(), ReactApplication {
+  override val reactHost: ReactHost by lazy {
+    getDefaultReactHost(
+      context = applicationContext,
+      packageList = PackageList(this).packages, // LiveActivityPackage() is auto-linked here
+    )
+  }
+
+  override fun onCreate() {
+    super.onCreate()
+    loadReactNative(this) // Required on React Native 0.80+
+  }
+}
+```
+
+#### 4. Step 3: Request Runtime Notification Permission on Android 13+ (API 33+)
+On Android 13 (API 33) and above, request `POST_NOTIFICATIONS` at runtime before starting a Live Update notification:
+```typescript
+import { Platform, PermissionsAndroid } from 'react-native';
+import { LiveActivity } from 'react-native-live-widgets';
+
+async function ensureAndroidNotificationPermission() {
+  if (Platform.OS === 'android' && Platform.Version >= 33) {
+    await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+    );
+  }
+  // Or call the library's cross-platform helper directly:
+  await LiveActivity.registerForPushNotifications();
+}
+```
+
+#### 5. Step 4: Adding & Resizing Home Screen Widgets on Android (`small` / `medium` / `large`)
+1. After calling `Widget.update('main', { small, medium, large })` in your app, go to the Android Home Screen.
+2. **Long-press an empty area** on the Home Screen -> Tap **Widgets** -> Find your app -> Drag **Live Widgets** onto the Home Screen.
+3. **Responsive Family Switching (`small` / `medium` / `large`):** Long-press the placed widget and release to show the resize handles:
+   - Resize to **2×2 cells** (`width < 210dp`): Automatically renders the **`small`** layout (1:1 square aspect ratio).
+   - Resize to **4×2 cells** (default): Automatically renders the **`medium`** layout.
+   - Resize vertically to **4×4 cells** (`height >= 200dp`): Automatically renders the **`large`** layout.
+
+---
+
+### Native Directory Architecture (`ios/` & `android/`)
+
+The native codebase is modularized by feature so you can easily navigate or extend it:
+
+```text
+react-native-live-widgets/
+├── ios/
+│   ├── Bridge/       # LiveActivityModule.swift/.m (React Native <-> iOS Bridge)
+│   ├── Models/       # DynamicLayoutModels.swift, DynamicActivityAttributes.swift
+│   ├── Storage/      # DynamicWidgetStateStore.swift, DynamicWidgetImageCache.swift
+│   ├── Intents/      # DynamicWidgetActionIntent.swift (iOS 17+ interactive AppIntent)
+│   ├── Renderer/     # DynamicNodeView.swift, ColorHexExtension.swift (SwiftUI JSON Renderer)
+│   └── Widgets/      # DynamicHomeScreenWidget.swift, DynamicLiveActivityWidget.swift
+└── android/src/main/java/com/reactnativeliveactivity/
+    ├── bridge/       # LiveActivityModule.kt, LiveActivityPackage.kt
+    ├── storage/      # DynamicWidgetStateStore.kt, DynamicWidgetImageCache.kt
+    ├── renderer/     # DynamicWidgetCanvasRenderer.kt (2D Canvas Renderer + HitBox Calculator)
+    ├── widgets/      # DynamicHomeScreenWidgetProvider.kt (Small/Medium/Large AppWidget Provider)
+    └── liveactivity/ # LiveActivityNotifier.kt, LiveActivityReceiver.kt (Android 8 -> 16 Live Updates)
+```
 
 ---
 

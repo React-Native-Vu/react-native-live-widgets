@@ -117,3 +117,4 @@ object DynamicWidgetImageCache {
         return Bitmap.createScaledBitmap(bmp, w, h, true)
     }
 }
+

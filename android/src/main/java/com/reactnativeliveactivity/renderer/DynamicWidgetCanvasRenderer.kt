@@ -737,3 +737,4 @@ object DynamicWidgetCanvasRenderer {
         }
     }
 }
+

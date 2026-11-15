@@ -30,3 +30,4 @@ public struct DynamicWidgetActionIntent: AppIntent {
     return .result()
   }
 }
+

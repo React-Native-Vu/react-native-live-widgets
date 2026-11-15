@@ -156,3 +156,4 @@ public struct AnyCodable: Codable {
   public var boolValue: Bool? { value as? Bool }
   public var arrayValue: [Any]? { value as? [Any] }
 }
+

@@ -58,6 +58,24 @@ public enum DynamicWidgetImageCache {
     #endif
   }
 
+  public static func hasUncachedUrls(in jsonString: String) -> Bool {
+    guard jsonString.contains("http") else { return false }
+    let pattern = #""url"\s*:\s*"(https?://[^"]+)""#
+    guard let regex = try? NSRegularExpression(pattern: pattern) else { return false }
+    let nsRange = NSRange(jsonString.startIndex..<jsonString.endIndex, in: jsonString)
+    let matches = regex.matches(in: jsonString, range: nsRange)
+    for match in matches {
+      if match.numberOfRanges > 1,
+         let r = Range(match.range(at: 1), in: jsonString) {
+        let urlStr = String(jsonString[r])
+        if cachedImage(for: urlStr) == nil {
+          return true
+        }
+      }
+    }
+    return false
+  }
+
   public static func prefetchUrls(in jsonString: String) async {
     guard jsonString.contains("http") else { return }
     let pattern = #""url"\s*:\s*"(https?://[^"]+)""#
@@ -109,3 +127,4 @@ public enum DynamicWidgetImageCache {
     return resized.jpegData(compressionQuality: 0.85) ?? data
   }
 }
+

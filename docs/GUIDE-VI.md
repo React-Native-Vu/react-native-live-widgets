@@ -11,7 +11,8 @@ Tài liệu hướng dẫn toàn diện từ cài đặt, thiết lập native (
 2. [Cài đặt và Thiết lập Dự án](#2-cài-đặt-và-thiết-lập-dự-án)
    - [Cài đặt package](#cài-đặt-package)
    - [Thiết lập iOS (Xcode & Widget Extension)](#thiết-lập-ios-xcode--widget-extension)
-   - [Thiết lập Android (Manifest & Permissions)](#thiết-lập-android-manifest--permissions)
+   - [Thiết lập Android (Gradle, Manifest, MainApplication & Permissions)](#thiết-lập-android-gradle-manifest-mainapplication--permissions)
+   - [Cấu trúc Thư mục Native của Thư viện (`ios/` & `android/`)](#cấu-trúc-thư-mục-native-của-thư-viện-ios--android)
 3. [Tài liệu API (Core API Reference)](#3-tài-liệu-api-core-api-reference)
    - [LiveActivity API (Màn hình khóa, Dynamic Island & 3 loại Push Token)](#1-liveactivity-api)
    - [Widget API (Tiện ích màn hình chính, Multi-page & Background Sync)](#2-widget-api)
@@ -115,11 +116,110 @@ cd ios && pod install
 
 ---
 
-### Thiết lập Android (Manifest & Permissions)
+### Thiết lập Android (Gradle, Manifest, MainApplication & Permissions)
 
-Thư viện đã **tự động đăng ký sẵn** `DynamicHomeScreenWidgetProvider` (Home Screen Widget) và `LiveActivityReceiver` (Background Sync & Action Handler) trong `AndroidManifest.xml` của thư viện và tự động gộp (manifest merge) vào ứng dụng của bạn.
+Trên Android, phần lớn cấu hình phức tạp đã được thư viện **tự động hóa sẵn** thông qua cơ chế **Android Manifest Merger** của Gradle. Dưới đây là chi tiết những gì đã có sẵn và những gì bạn cần kiểm tra trong dự án:
 
-Trên Android 13+ (API 33+), hãy xin quyền `POST_NOTIFICATIONS` trước khi bật Live Update nếu cần hiển thị thông báo nổi.
+#### 1. Những thành phần thư viện đã tự động đăng ký (Bạn KHÔNG cần khai báo lại)
+Trong file `AndroidManifest.xml` của thư viện `react-native-live-widgets` đã tích hợp sẵn và tự động gộp vào app của bạn khi build:
+- **Các quyền hệ thống (Permissions):**
+  - `android.permission.INTERNET` (tải ảnh từ URL mạng & gọi Background API cho Widget).
+  - `android.permission.POST_NOTIFICATIONS` (hiển thị Live Update Notification trên Android 13+).
+  - `android.permission.POST_PROMOTED_NOTIFICATIONS` (hiển thị Live Updates chip trên thanh trạng thái Android 16 / API 36).
+  - `android.permission.VIBRATE`.
+- **Home Screen Widget Provider (`DynamicHomeScreenWidgetProvider`):** Đã gắn sẵn bộ cấu hình `@xml/rn_live_widgets_info` hỗ trợ kéo giãn tự do (`resizeMode="horizontal|vertical"`).
+- **Broadcast Receiver (`LiveActivityReceiver`):** Tự động bắt các sự kiện bấm nút trên Notification và Widget.
+
+#### 2. Bước 1: Kiểm tra phiên bản SDK trong `android/build.gradle`
+Đảm bảo file `android/build.gradle` của dự án có `minSdkVersion >= 24` và `compileSdkVersion >= 35` (hoặc `36` nếu muốn dùng Live Updates chuẩn Android 16):
+```groovy
+buildscript {
+    ext {
+        buildToolsVersion = "35.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 35 // Hoặc 36 cho Android 16
+        targetSdkVersion = 35
+        ndkVersion = "27.1.12297006"
+        kotlinVersion = "2.1.20"
+    }
+}
+```
+
+#### 3. Bước 2: Kiểm tra `MainApplication.kt`
+Với React Native 0.7x / 0.8x, cơ chế **Autolinking** (`PackageList(this).packages`) sẽ tự động liên kết `LiveActivityPackage`.
+> ⚠️ **Lưu ý quan trọng với React Native 0.80+:** Trong `MainApplication.kt`, bắt buộc phải gọi `loadReactNative(this)` bên trong `onCreate()` để khởi tạo SoLoader/JSI trước khi mở ứng dụng:
+```kotlin
+package com.yourcompany.app
+
+import android.app.Application
+import com.facebook.react.PackageList
+import com.facebook.react.ReactApplication
+import com.facebook.react.ReactHost
+import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
+import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+
+class MainApplication : Application(), ReactApplication {
+  override val reactHost: ReactHost by lazy {
+    getDefaultReactHost(
+      context = applicationContext,
+      packageList = PackageList(this).packages, // LiveActivityPackage() đã tự động được thêm tại đây
+    )
+  }
+
+  override fun onCreate() {
+    super.onCreate()
+    loadReactNative(this) // Bắt buộc trên React Native 0.80+
+  }
+}
+```
+
+#### 4. Bước 3: Xin quyền Thông báo (Runtime Permission) trên Android 13+ (API 33+)
+Trên Android 13 trở lên, hệ điều hành yêu cầu xin quyền `POST_NOTIFICATIONS` lúc chạy trước khi hiển thị Live Update Notification. Bạn có thể gọi hàm có sẵn của thư viện hoặc dùng `PermissionsAndroid` trong `App.tsx`:
+```typescript
+import { Platform, PermissionsAndroid } from 'react-native';
+import { LiveActivity } from 'react-native-live-widgets';
+
+async function ensureAndroidNotificationPermission() {
+  if (Platform.OS === 'android' && Platform.Version >= 33) {
+    await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+    );
+  }
+  // Hoặc gọi trực tiếp hàm đa nền tảng của thư viện:
+  await LiveActivity.registerForPushNotifications();
+}
+```
+
+#### 5. Bước 4: Cách thêm và kéo giãn Home Screen Widget trên Android (`small` / `medium` / `large`)
+1. Sau khi gọi `Widget.update('main', { small, medium, large })` trong app, ra màn hình chính (Home Screen) của Android.
+2. **Nhấn giữ vào khoảng trống** trên màn hình chính -> Chọn **Widgets (Tiện ích)** -> Tìm ứng dụng của bạn -> Kéo **Live Widgets** ra màn hình.
+3. **Thay đổi kích thước tự động (Responsive Sizing):** Nhấn giữ vào Widget trên màn hình chính rồi thả tay ra để xuất hiện khung viền 4 chấm tròn:
+   - Kéo thu nhỏ về **2×2 ô** (`chiều rộng < 210dp`): Tự động hiển thị giao diện **`small`** (tỷ lệ vuông 1:1).
+   - Kéo ngang **4×2 ô** (mặc định): Tự động hiển thị giao diện **`medium`**.
+   - Kéo giãn dọc xuống **4×4 ô** (`chiều cao >= 200dp`): Tự động hiển thị giao diện **`large`** đầy đủ chi tiết.
+
+---
+
+### Cấu trúc Thư mục Native của Thư viện (`ios/` & `android/`)
+
+Mã nguồn native của thư viện được chia theo từng nhóm chức năng rõ ràng để bạn dễ dàng tra cứu hoặc mở rộng khi cần:
+
+```text
+react-native-live-widgets/
+├── ios/
+│   ├── Bridge/       # LiveActivityModule.swift/.m (Cầu nối React Native <-> iOS)
+│   ├── Models/       # DynamicLayoutModels.swift, DynamicActivityAttributes.swift
+│   ├── Storage/      # DynamicWidgetStateStore.swift, DynamicWidgetImageCache.swift
+│   ├── Intents/      # DynamicWidgetActionIntent.swift (Xử lý nút bấm iOS 17+)
+│   ├── Renderer/     # DynamicNodeView.swift, ColorHexExtension.swift (Vẽ SwiftUI từ JSON)
+│   └── Widgets/      # DynamicHomeScreenWidget.swift, DynamicLiveActivityWidget.swift
+└── android/src/main/java/com/reactnativeliveactivity/
+    ├── bridge/       # LiveActivityModule.kt, LiveActivityPackage.kt
+    ├── storage/      # DynamicWidgetStateStore.kt, DynamicWidgetImageCache.kt
+    ├── renderer/     # DynamicWidgetCanvasRenderer.kt (Vẽ Canvas 2D + tính vùng bấm HitBox)
+    ├── widgets/      # DynamicHomeScreenWidgetProvider.kt (Quản lý AppWidget Small/Medium/Large)
+    └── liveactivity/ # LiveActivityNotifier.kt, LiveActivityReceiver.kt (Android 8 -> 16 Live Update)
+```
 
 ---
 

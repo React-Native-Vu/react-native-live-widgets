@@ -21,7 +21,7 @@ public struct DynamicWidgetProvider: TimelineProvider {
   }
 
   public func placeholder(in context: Context) -> DynamicWidgetEntry {
-    DynamicWidgetEntry(date: Date(), layoutJson: nil)
+    DynamicWidgetEntry(date: Date(), layoutJson: readLayoutJson())
   }
 
   public func getSnapshot(in context: Context, completion: @escaping (DynamicWidgetEntry) -> Void) {
@@ -32,16 +32,32 @@ public struct DynamicWidgetProvider: TimelineProvider {
   public func getTimeline(in context: Context, completion: @escaping (Timeline<DynamicWidgetEntry>) -> Void) {
     let wKey = widgetKey
     let group = appGroup
+    let rawLayout = Self.readSharedString(forKey: "widget_layout_\(wKey)", appGroup: group)
+    let hasTemplateVars = rawLayout?.contains("{{") == true
+    let hasRemoteConfig = Self.readSharedString(forKey: "widget_remote_config_\(wKey)", appGroup: group) != nil
+    let state = DynamicWidgetStateStore.loadState()
+    let secondsSinceLastUpdate = Date().timeIntervalSince1970 - (state.updatedAt ?? 0)
+    let needsRemoteSync = hasRemoteConfig && hasTemplateVars && (state.lastSyncTime == nil || secondsSinceLastUpdate >= 20)
+    let needsImagePrefetch = rawLayout.map { DynamicWidgetImageCache.hasUncachedUrls(in: $0) } ?? false
+
+    // Đường dẫn nhanh (Fast-path): Nếu dữ liệu đã sẵn sàng và không cần tải mạng, trả kết quả ngay lập tức
+    // để khi chuyển sang Widget cỡ lớn (Large) hoặc thêm Widget mới không bao giờ bị treo màn hình chờ (skeleton).
+    if !needsRemoteSync && !needsImagePrefetch {
+      let json = readLayoutJson()
+      let entry = DynamicWidgetEntry(date: Date(), layoutJson: json)
+      let intervalMins = readRefreshIntervalMinutes()
+      let nextUpdate = Calendar.current.date(byAdding: .minute, value: intervalMins, to: Date())!
+      completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
+      return
+    }
 
     Task {
-      // Nếu có cấu hình Remote API Config, Widget Extension tự gọi API cập nhật dữ liệu
-      // kể cả khi Main App đã bị người dùng đóng (kill app) hoàn toàn!
-      if Self.readSharedString(forKey: "widget_remote_config_\(wKey)", appGroup: group) != nil {
+      if needsRemoteSync {
         await DynamicWidgetStateStore.performRemoteSync(widgetKey: wKey)
       }
 
       let json = readLayoutJson()
-      if let json = json {
+      if let json = json, needsImagePrefetch {
         await DynamicWidgetImageCache.prefetchUrls(in: json)
       }
       let entry = DynamicWidgetEntry(date: Date(), layoutJson: json)

@@ -116,7 +116,7 @@ public enum DynamicWidgetStateStore {
 
     var request = URLRequest(url: url)
     request.httpMethod = config.method ?? "GET"
-    request.timeoutInterval = 8
+    request.timeoutInterval = 3.0
     if let headers = config.headers {
       for (k, v) in headers {
         request.setValue(v, forHTTPHeaderField: k)
@@ -162,3 +162,4 @@ public enum DynamicWidgetStateStore {
     saveState(state)
   }
 }
+

@@ -400,6 +400,7 @@ public class LiveActivityModule: RCTEventEmitter {
        let data = value.data(using: .utf8),
        let dto = try? JSONDecoder().decode(WidgetMultiPagePayloadDTO.self, from: data) {
       var state = DynamicWidgetStateStore.loadState()
+      state.updatedAt = Date().timeIntervalSince1970
       if let initial = dto.initialPage {
         state.activePage = initial
       }
@@ -409,6 +410,20 @@ public class LiveActivityModule: RCTEventEmitter {
         state.pageOrder = Array(pages.keys).sorted()
       }
       DynamicWidgetStateStore.saveState(state)
+
+      // Nếu đẩy mẫu UI tĩnh không chứa biến {{...}}, tự động dọn cấu hình Remote Config cũ
+      // để Widget không bị gọi API ngầm không cần thiết khi đổi kích thước.
+      if !value.contains("{{") {
+        let wKey = String(key.dropFirst("widget_layout_".count))
+        let remoteKey = "widget_remote_config_\(wKey)"
+        if let remoteFileURL = DynamicWidgetProvider.sharedFileURL(key: remoteKey, appGroup: appGroup) {
+          try? FileManager.default.removeItem(at: remoteFileURL)
+        }
+        getDefaults(appGroup: appGroup).removeObject(forKey: remoteKey)
+        #if targetEnvironment(simulator)
+        try? FileManager.default.removeItem(atPath: "/tmp/rn_live_widgets_\(remoteKey).json")
+        #endif
+      }
     }
 
     let defaults = getDefaults(appGroup: appGroup)
