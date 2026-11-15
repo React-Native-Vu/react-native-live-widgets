@@ -16,7 +16,9 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.util.SizeF
 import android.widget.RemoteViews
 import org.json.JSONObject
 import java.util.Locale
@@ -68,6 +70,28 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             }
         }
 
+        private fun resolvePortraitWidgetSizeDp(options: Bundle?): Pair<Float, Float> {
+            if (options == null) return Pair(320f, 240f)
+
+            // Trên Android 12+ (API 31+), OPTION_APPWIDGET_SIZES trả về danh sách kích thước thực tế (Portrait & Landscape)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                @Suppress("DEPRECATION")
+                val sizes = options.getParcelableArrayList<SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)
+                if (!sizes.isNullOrEmpty()) {
+                    // Chọn kích thước ứng với màn hình dọc (Portrait: chiều rộng nhỏ hơn hoặc phần tử đầu tiên)
+                    val portrait = sizes.minByOrNull { it.width } ?: sizes[0]
+                    if (portrait.width > 0f && portrait.height > 0f) {
+                        return Pair(portrait.width, portrait.height)
+                    }
+                }
+            }
+
+            val minW = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0).takeIf { it > 0 } ?: 320
+            val minH = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0).takeIf { it > 0 } ?: 200
+            val maxH = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0).takeIf { it > 0 } ?: minH
+            return Pair(minW.toFloat(), max(minH, maxH).toFloat())
+        }
+
         fun updateSingleWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
@@ -75,39 +99,48 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             options: Bundle?
         ) {
             val views = RemoteViews(context.packageName, R.layout.rn_live_widget_host)
-            val baseDensity = context.resources.displayMetrics.density.coerceAtLeast(2.0f)
+            val screenDensity = context.resources.displayMetrics.density.coerceAtLeast(2.0f)
 
-            // Trên Android Launcher ở chế độ dọc (Portrait):
-            // Chiều rộng thực tế là OPTION_APPWIDGET_MIN_WIDTH, chiều cao thực tế là OPTION_APPWIDGET_MAX_HEIGHT
-            val minW = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)?.takeIf { it > 0 } ?: 320
-            val maxW = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0)?.takeIf { it > 0 } ?: minW
-            val minH = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)?.takeIf { it > 0 } ?: 240
-            val maxH = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)?.takeIf { it > 0 } ?: minH
+            val (rawWidthDp, rawHeightDp) = resolvePortraitWidgetSizeDp(options)
+            val widgetWidthDp = rawWidthDp.coerceIn(110f, 460f)
+            val widgetHeightDp = rawHeightDp.coerceIn(110f, 520f)
 
-            val widgetWidthDp = minW.coerceIn(150, 440)
-            val widgetHeightDp = max(minH, maxH).coerceIn(130, 460)
-
+            // Phân loại kích thước (small / medium / large) chuẩn xác theo ô lưới người dùng kéo trên Android:
+            // - Bề ngang <= 2 ô (widgetWidthDp < 245dp) -> Luôn hiển thị giao diện "small" (giống .systemSmall trên iOS)
+            // - Bề ngang >= 3 ô và chiều cao <= 2 ô (widgetHeightDp < 235dp) -> Giao diện "medium" (giống .systemMedium)
+            // - Bề ngang >= 3 ô và chiều cao >= 3 ô -> Giao diện "large" (giống .systemLarge)
             val family = when {
-                widgetWidthDp < 200 && widgetHeightDp < 200 -> "small"
-                widgetHeightDp < 215 -> "medium"
+                widgetWidthDp < 245f -> "small"
+                widgetHeightDp < 235f -> "medium"
                 else -> "large"
             }
 
             val rawJson = DynamicWidgetStateStore.resolveLayoutJsonWithVariables(context, "main")
             val activeNode = selectActiveNode(context, rawJson, family)
 
-            // Khung vẽ chuẩn theo đúng tỷ lệ thực của Widget trên màn hình để chữ KHÔNG BAO GIỜ bị kéo giãn (fitXY)
-            // Nếu người dùng để widget hơi vuông, ta đảm bảo bề ngang tối thiểu đủ rộng (tương đương 320dp chuẩn iOS)
-            // và nhân tỷ lệ đồng nhất cho cả chiều rộng lẫn chiều cao.
-            val targetLogicalWidthDp = max(widgetWidthDp.toFloat(), 310f)
-            val aspectRatio = widgetHeightDp.toFloat() / widgetWidthDp.toFloat()
-            val targetLogicalHeightDp = (targetLogicalWidthDp * aspectRatio).coerceIn(150f, 460f)
+            // Hệ quy chiếu chiều rộng chuẩn (logical width) giống hệt iOS WidgetKit:
+            // - small: ~162pt (để chữ và vòng tròn 52pt to rõ đúng chuẩn ô 2x2 của iOS)
+            // - medium: ~330pt
+            // - large: ~340pt
+            val logicalWidthDp = when (family) {
+                "small" -> 164f
+                "medium" -> 330f
+                else -> 340f
+            }
+            val aspectRatio = when (family) {
+                "small" -> 1.02f
+                "medium" -> (widgetHeightDp / widgetWidthDp).coerceIn(0.45f, 0.62f)
+                else -> (widgetHeightDp / widgetWidthDp).coerceIn(0.78f, 1.15f)
+            }
+            val logicalHeightDp = logicalWidthDp * aspectRatio
 
-            val widthPx = (targetLogicalWidthDp * baseDensity).roundToInt()
-            val heightPx = (targetLogicalHeightDp * baseDensity).roundToInt()
+            // Độ phân giải vẽ Bitmap sắc nét (High-DPI)
+            val renderDensity = max(screenDensity, (widgetWidthDp * screenDensity) / logicalWidthDp)
+            val widthPx = (logicalWidthDp * renderDensity).roundToInt().coerceAtLeast(320)
+            val heightPx = (logicalHeightDp * renderDensity).roundToInt().coerceAtLeast(220)
 
             val bindings = mutableListOf<ButtonActionBinding>()
-            val bmp = renderWidgetBitmap(context, activeNode, widthPx, heightPx, baseDensity, bindings)
+            val bmp = renderWidgetBitmap(context, activeNode, widthPx, heightPx, renderDensity, family, bindings)
             views.setImageViewBitmap(R.id.rn_widget_canvas, bmp)
 
             bindHitZones(context, views, appWidgetId, bindings)
@@ -213,12 +246,19 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             )
         }
 
+        private fun isFlexibleSpacer(node: JSONObject?): Boolean {
+            if (node == null || node.optString("type") != "Spacer") return false
+            val props = node.optJSONObject("props") ?: return true
+            return !props.has("minLength")
+        }
+
         private fun renderWidgetBitmap(
             context: Context,
             rootNode: JSONObject?,
             widthPx: Int,
             heightPx: Int,
             baseDensity: Float,
+            family: String,
             bindings: MutableList<ButtonActionBinding>
         ): Bitmap {
             val bmp = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
@@ -229,26 +269,23 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                 ?.ifEmpty { "#FFFFFF" } ?: "#FFFFFF"
             paint.color = parseHexColor(rootBgHex, Color.WHITE)
             val cardRect = RectF(0f, 0f, widthPx.toFloat(), heightPx.toFloat())
-            val outerRadius = 24f * baseDensity
+            val outerRadius = (if (family == "small") 22f else 24f) * baseDensity
             canvas.drawRoundRect(cardRect, outerRadius, outerRadius, paint)
 
             if (rootNode == null) {
                 paint.color = Color.parseColor("#0F172A")
-                paint.textSize = 16f * baseDensity
-                paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                paint.textSize = 15f * baseDensity
+                paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
                 paint.textAlign = Paint.Align.CENTER
                 canvas.drawText("Live Widgets", widthPx / 2f, heightPx / 2f - 6f * baseDensity, paint)
 
                 paint.color = Color.parseColor("#64748B")
-                paint.textSize = 12f * baseDensity
-                paint.typeface = Typeface.DEFAULT
-                canvas.drawText("Chọn 1 mẫu UI trong app để hiển thị", widthPx / 2f, heightPx / 2f + 16f * baseDensity, paint)
+                paint.textSize = 11f * baseDensity
+                paint.typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+                canvas.drawText("Chọn 1 mẫu UI trong app", widthPx / 2f, heightPx / 2f + 14f * baseDensity, paint)
                 return bmp
             }
 
-            // Tự động đo chiều cao tự nhiên của toàn bộ cây giao diện.
-            // Nếu nội dung cao hơn chiều cao khung Widget hiện tại, tự động thu nhỏ tỷ lệ đồng nhất (fitScale)
-            // để 100% nội dung (bao gồm card trắng và dòng dưới cùng) luôn nằm gọn bên trong mà KHÔNG BỊ CẮT!
             val naturalH = measureNodeHeight(context, rootNode, widthPx.toFloat(), baseDensity)
             val fitScale = if (naturalH > heightPx * 0.96f && naturalH > 0f) {
                 ((heightPx * 0.95f) / naturalH).coerceIn(0.62f, 1.0f)
@@ -256,15 +293,34 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                 1.0f
             }
             val effectiveDensity = baseDensity * fitScale
+            val scaledNaturalH = measureNodeHeight(context, rootNode, widthPx.toFloat(), effectiveDensity)
+
+            // Nếu widget (đặc biệt là cỡ small hoặc medium) không có Spacer co giãn ở cấp Root và chiều cao khung
+            // lớn hơn chiều cao nội dung, tự động căn giữa nội dung theo chiều dọc giống hệt SwiftUI
+            var hasRootFlexSpacer = false
+            val rootChildren = rootNode.optJSONArray("children")
+            if (rootChildren != null) {
+                for (i in 0 until rootChildren.length()) {
+                    if (isFlexibleSpacer(rootChildren.optJSONObject(i))) {
+                        hasRootFlexSpacer = true
+                        break
+                    }
+                }
+            }
+            val startTop = if (!hasRootFlexSpacer && heightPx > scaledNaturalH) {
+                ((heightPx - scaledNaturalH) / 2f).coerceAtLeast(0f)
+            } else {
+                0f
+            }
 
             drawNode(
                 context = context,
                 canvas = canvas,
                 node = rootNode,
                 left = 0f,
-                top = 0f,
+                top = startTop,
                 availWidth = widthPx.toFloat(),
-                availHeight = heightPx.toFloat(),
+                availHeight = (heightPx - startTop).coerceAtLeast(scaledNaturalH),
                 totalHeight = heightPx.toFloat(),
                 density = effectiveDensity,
                 isRoot = true,
@@ -302,7 +358,6 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                     val children = node.optJSONArray("children")
                     val innerW = (availWidth - pad * 2).coerceAtLeast(10f)
                     val measuredH = measureNodeHeight(context, node, availWidth, density)
-                    // Không bao giờ cắt cụt chiều cao của card con bên trong (boxH = measuredH)
                     val boxH = if (isRoot) max(availHeight, measuredH) else measuredH
 
                     if (!isRoot && bgHex.isNotEmpty()) {
@@ -319,12 +374,10 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                         }
                     }
 
-                    // Tính toán khoảng trống dư (extraSpace) cho các Spacer() co giãn ở cấp Root (giống SwiftUI)
                     var flexSpacerCount = 0
                     if (isRoot && children != null && availHeight > measuredH) {
                         for (i in 0 until children.length()) {
-                            val c = children.optJSONObject(i) ?: continue
-                            if (c.optString("type") == "Spacer" && c.optJSONObject("props")?.has("minLength") != true) {
+                            if (isFlexibleSpacer(children.optJSONObject(i))) {
                                 flexSpacerCount++
                             }
                         }
@@ -342,7 +395,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                             if (childType == "Spacer") {
                                 val cProps = child.optJSONObject("props")
                                 val minLen = (cProps?.optDouble("minLength", 4.0) ?: 4.0).toFloat() * density
-                                val isFlex = isRoot && cProps?.has("minLength") != true
+                                val isFlex = isRoot && isFlexibleSpacer(child)
                                 curY += minLen + (if (isFlex) extraPerSpacer else 0f)
                                 if (i < count - 1) curY += spacing
                             } else {
@@ -389,30 +442,32 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                     if (children != null && children.length() > 0) {
                         val innerW = (availWidth - pad * 2).coerceAtLeast(10f)
                         val innerH = (rowH - pad * 2).coerceAtLeast(10f)
-                        var spacerIndex = -1
+
+                        // Chỉ coi UI.Spacer() KHÔNG truyền minLength là Spacer đẩy lề phải (flexible spacer).
+                        // Còn UI.Spacer(8) có truyền minLength=8 sẽ là khoảng cách cố định 8dp giữa 2 phần tử!
+                        var flexSpacerIndex = -1
                         for (i in 0 until children.length()) {
-                            if (children.optJSONObject(i)?.optString("type") == "Spacer") {
-                                spacerIndex = i
+                            if (isFlexibleSpacer(children.optJSONObject(i))) {
+                                flexSpacerIndex = i
                                 break
                             }
                         }
 
-                        if (spacerIndex >= 0 && children.length() >= 2) {
-                            // 1. Đo trước tổng chiều rộng của nhóm bên phải Spacer
-                            var rightTotalW = 0f
+                        if (flexSpacerIndex >= 0 && children.length() >= 2) {
                             val rightWidths = mutableMapOf<Int, Float>()
-                            for (i in children.length() - 1 downTo spacerIndex + 1) {
+                            for (i in children.length() - 1 downTo flexSpacerIndex + 1) {
                                 val c = children.optJSONObject(i) ?: continue
-                                val w = measureNodeWidth(context, c, innerW, density)
-                                rightWidths[i] = w
-                                rightTotalW += w
-                                if (i > spacerIndex + 1) rightTotalW += spacing
+                                rightWidths[i] = measureNodeWidth(context, c, innerW, density)
                             }
 
-                            // 2. Vẽ nhóm bên phải từ sát mép phải sang trái (căn giữa theo chiều dọc)
                             var curRight = left + availWidth - pad
-                            for (i in children.length() - 1 downTo spacerIndex + 1) {
+                            for (i in children.length() - 1 downTo flexSpacerIndex + 1) {
                                 val c = children.optJSONObject(i) ?: continue
+                                if (c.optString("type") == "Spacer") {
+                                    val gapW = (c.optJSONObject("props")?.optDouble("minLength", 6.0) ?: 6.0).toFloat() * density
+                                    curRight -= gapW + spacing
+                                    continue
+                                }
                                 val w = rightWidths[i] ?: 0f
                                 val childH = measureNodeHeight(context, c, w, density)
                                 val childTop = top + pad + ((innerH - childH) / 2f).coerceAtLeast(0f)
@@ -421,13 +476,17 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                                 curRight -= spacing
                             }
 
-                            // 3. Vẽ nhóm bên trái Spacer (cho phép VStack ở sát trước Spacer co giãn chiếm phần còn lại)
                             val maxLeftAreaW = (curRight - (left + pad)).coerceAtLeast(30f)
                             var curLeft = left + pad
-                            for (i in 0 until spacerIndex) {
+                            for (i in 0 until flexSpacerIndex) {
                                 val c = children.optJSONObject(i) ?: continue
+                                if (c.optString("type") == "Spacer") {
+                                    val gapW = (c.optJSONObject("props")?.optDouble("minLength", 6.0) ?: 6.0).toFloat() * density
+                                    curLeft += gapW + spacing
+                                    continue
+                                }
                                 val remainingForLeft = (left + pad + maxLeftAreaW - curLeft).coerceAtLeast(20f)
-                                val w = if (i == spacerIndex - 1 && c.optString("type") == "VStack") {
+                                val w = if (i == flexSpacerIndex - 1 && c.optString("type") == "VStack") {
                                     remainingForLeft
                                 } else {
                                     min(remainingForLeft, measureNodeWidth(context, c, maxLeftAreaW, density))
@@ -438,10 +497,15 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                                 curLeft += w + spacing
                             }
                         } else {
-                            // HStack không có Spacer (ví dụ: [Image, VStack] hoặc hàng nút bấm)
+                            // HStack không có flexible Spacer (ví dụ: [CircularProgress, UI.Spacer(8), VStack(420 / Kcal đốt)])
                             var curLeft = left + pad
                             for (i in 0 until children.length()) {
                                 val c = children.optJSONObject(i) ?: continue
+                                if (c.optString("type") == "Spacer") {
+                                    val gapW = (c.optJSONObject("props")?.optDouble("minLength", 6.0) ?: 6.0).toFloat() * density
+                                    curLeft += gapW
+                                    continue
+                                }
                                 val remainingW = (left + availWidth - pad - curLeft).coerceAtLeast(20f)
                                 val w = if (i == children.length() - 1 && c.optString("type") in listOf("VStack", "Progress", "Text")) {
                                     remainingW
@@ -500,9 +564,11 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                     val value = (props?.optDouble("value", 0.75) ?: 0.75).toFloat().coerceIn(0f, 1f)
                     val tintHex = props?.optString("tintColor", "#2563EB") ?: "#2563EB"
                     val trackHex = props?.optString("trackColor", "#CBD5E1") ?: "#CBD5E1"
+                    val pctColorHex = props?.optString("percentageColor", "")?.ifEmpty { tintHex } ?: tintHex
                     val showPct = props?.optBoolean("showPercentage", false) ?: false
                     val tintColor = parseHexColor(tintHex, Color.BLUE)
                     val trackColor = parseHexColor(trackHex, Color.LTGRAY)
+                    val pctColor = parseHexColor(pctColorHex, tintColor)
 
                     when (style) {
                         "circular" -> {
@@ -525,6 +591,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
 
                             if (showPct) {
                                 paint.style = Paint.Style.FILL
+                                paint.color = pctColor
                                 paint.textSize = size * 0.24f
                                 paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
                                 paint.textAlign = Paint.Align.CENTER
@@ -565,7 +632,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                                 )
                             }
                             if (showPct) {
-                                paint.color = tintColor
+                                paint.color = pctColor
                                 paint.textAlign = Paint.Align.RIGHT
                                 val fm = paint.fontMetrics
                                 val centerY = barTop + h / 2f - (fm.ascent + fm.descent) / 2f
@@ -598,7 +665,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                                 paint
                             )
                             if (showPct) {
-                                paint.color = tintColor
+                                paint.color = pctColor
                                 paint.textAlign = Paint.Align.RIGHT
                                 val fm = paint.fontMetrics
                                 val centerY = barTop + h / 2f - (fm.ascent + fm.descent) / 2f
@@ -783,6 +850,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                     if (children != null) {
                         for (i in 0 until children.length()) {
                             val c = children.optJSONObject(i) ?: continue
+                            if (c.optString("type") == "Spacer") continue
                             maxChildH = max(maxChildH, measureNodeHeight(context, c, availWidth, density))
                         }
                     }
@@ -823,7 +891,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                     val fs = ((props?.optDouble("fontSize", 13.0) ?: 13.0).toFloat() * density)
                     paint.textSize = fs
                     paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
-                    min(availWidth * 0.78f, paint.measureText(text) + 2f * density)
+                    min(availWidth, paint.measureText(text) + 2f * density)
                 }
                 "Timer" -> {
                     val formatted = formatTimerString(props)
@@ -847,6 +915,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                     paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
                     paint.measureText(title) + padH * 2
                 }
+                "Spacer" -> ((props?.optDouble("minLength", 4.0) ?: 4.0).toFloat() * density)
                 "VStack" -> {
                     val pad = ((props?.optDouble("padding", 0.0) ?: 0.0).toFloat() * density)
                     val children = node.optJSONArray("children")
