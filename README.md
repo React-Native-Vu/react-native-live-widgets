@@ -3,7 +3,7 @@
 <div align="center">
 
 [![npm version](https://img.shields.io/badge/npm-v1.0.0-blue.svg?style=for-the-badge&logo=npm)](https://www.npmjs.com/package/react-native-live-widgets)
-[![Platforms](https://img.shields.io/badge/Platforms-iOS%2016.1+%20|%20Android%2016-orange.svg?style=for-the-badge)](https://github.com/vu-tran/react-native-live-widgets)
+[![Platforms](https://img.shields.io/badge/Platforms-iOS%2016.1+%20|%20Android%2016-orange.svg?style=for-the-badge)](https://github.com/React-Native-Vu/react-native-live-widgets)
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-3178C6.svg?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 

@@ -6,11 +6,11 @@ Pod::Spec.new do |s|
   s.name         = "react-native-live-widgets"
   s.version      = package["version"]
   s.summary      = package["description"]
-  s.homepage     = "https://github.com/vu-tran/react-native-live-widgets"
+  s.homepage     = "https://github.com/React-Native-Vu/react-native-live-widgets"
   s.license      = package["license"]
   s.authors      = "vu-tran"
   s.platforms    = { :ios => "16.1" }
-  s.source       = { :git => "https://github.com/vu-tran/react-native-live-widgets.git", :tag => "#{s.version}" }
+  s.source       = { :git => "https://github.com/React-Native-Vu/react-native-live-widgets.git", :tag => "#{s.version}" }
   s.swift_version = "5.0"
 
   s.default_subspecs = ["Widget", "Bridge"]
