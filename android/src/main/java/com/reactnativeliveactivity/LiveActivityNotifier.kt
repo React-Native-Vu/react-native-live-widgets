@@ -1,17 +1,18 @@
 package com.reactnativeliveactivity
 
 import android.app.AlarmManager
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
 import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import org.json.JSONObject
+import kotlin.math.roundToInt
 
 data class ProgressData(
     val style: String = "bar",
@@ -28,20 +29,27 @@ data class ProgressData(
     val showPercentage: Boolean = false
 )
 
+data class NotificationButtonData(
+    val title: String,
+    val actionId: String
+)
+
 object LiveActivityNotifier {
     const val CHANNEL_ID = "live_activity_channel"
     private const val PREFS = "rn_live_widgets_prefs"
     private const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
-    private const val TICK_MILLIS = 30_000L // 30s vẽ lại tiến trình trên Android
+    private const val TICK_MILLIS = 30_000L
 
     fun start(context: Context, activityId: String, payloadJson: String) {
         prefs(context).edit().putString(activityId, payloadJson).apply()
+        DynamicWidgetImageCache.prefetchUrlsSync(context, payloadJson)
         showNotification(context, activityId, payloadJson)
         scheduleNextRefresh(context, activityId, payloadJson)
     }
 
     fun update(context: Context, activityId: String, payloadJson: String) {
         prefs(context).edit().putString(activityId, payloadJson).apply()
+        DynamicWidgetImageCache.prefetchUrlsSync(context, payloadJson)
         showNotification(context, activityId, payloadJson)
         scheduleNextRefresh(context, activityId, payloadJson)
     }
@@ -65,26 +73,60 @@ object LiveActivityNotifier {
         scheduleNextRefresh(context, activityId, json)
     }
 
+    fun refreshAllActive(context: Context) {
+        val all = prefs(context).all
+        for ((actId, value) in all) {
+            val json = value as? String ?: continue
+            showNotification(context, actId, json)
+        }
+    }
+
     private fun showNotification(context: Context, activityId: String, payloadJson: String) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         ensureChannel(manager)
 
         val json = JSONObject(payloadJson)
         val lockScreen = json.optJSONObject("lockScreen")
-        val alertTitle = json.optString("alertTitle", "Live Activity")
+        val alertTitle = json.optString("alertTitle", "")
         val alertBody = json.optString("alertBody", "")
 
-        var titleText = alertTitle
-        var bodyText = alertBody
+        val textLines = mutableListOf<String>()
         var targetTimestamp: Double? = null
         var progressData: ProgressData? = null
+        var largeBitmap: Bitmap? = null
+        val buttons = mutableListOf<NotificationButtonData>()
 
-        extractData(lockScreen,
-            onTitle = { t -> titleText = t },
-            onBody = { b -> bodyText = b },
+        extractData(
+            context = context,
+            node = lockScreen,
+            onText = { t -> textLines.add(t) },
             onTimer = { ts -> targetTimestamp = ts },
-            onProgress = { p -> progressData = p }
+            onProgress = { p -> progressData = p },
+            onImage = { bmp -> if (largeBitmap == null) largeBitmap = bmp },
+            onButton = { btn -> if (buttons.size < 3) buttons.add(btn) }
         )
+
+        val titleText = when {
+            alertTitle.isNotEmpty() -> alertTitle
+            textLines.isNotEmpty() -> textLines.first()
+            else -> "Live Activity"
+        }
+
+        val bodyText = when {
+            alertBody.isNotEmpty() -> alertBody
+            textLines.size > 1 -> textLines.drop(1).joinToString(" • ")
+            else -> ""
+        }
+
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        val contentPendingIntent = if (launchIntent != null) {
+            PendingIntent.getActivity(
+                context,
+                activityId.hashCode(),
+                launchIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else null
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(context.applicationInfo.icon)
@@ -93,6 +135,18 @@ object LiveActivityNotifier {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+
+        if (bodyText.length > 42) {
+            builder.setStyle(NotificationCompat.BigTextStyle().bigText(bodyText))
+        }
+
+        if (contentPendingIntent != null) {
+            builder.setContentIntent(contentPendingIntent)
+        }
+
+        if (largeBitmap != null) {
+            builder.setLargeIcon(largeBitmap)
+        }
 
         // 1. Đồng hồ Chronometer tự đếm trên phần cứng
         if (targetTimestamp != null && targetTimestamp!! > 0) {
@@ -107,9 +161,28 @@ object LiveActivityNotifier {
         val now = System.currentTimeMillis() / 1000.0
         if (progressData != null) {
             applyProgressToNotification(builder, progressData!!, now)
+            progressData?.tintColor?.let { hex ->
+                runCatching { builder.setColor(Color.parseColor(hex)) }
+            }
         }
 
-        // 3. Android 16+ Promoted Ongoing Notification (Live Update)
+        // 3. Các nút bấm tương tác (UI.Button) ngay trên thông báo Live Update
+        buttons.forEachIndexed { idx, btn ->
+            val actionIntent = Intent(context, LiveActivityReceiver::class.java).apply {
+                action = LiveActivityReceiver.ACTION_WIDGET_ACTION
+                putExtra("actionId", btn.actionId)
+                putExtra("activityId", activityId)
+            }
+            val pi = PendingIntent.getBroadcast(
+                context,
+                (activityId + "_" + btn.actionId + "_" + idx).hashCode(),
+                actionIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(0, btn.title, pi)
+        }
+
+        // 4. Android 16+ Promoted Ongoing Notification (Live Update)
         if (Build.VERSION.SDK_INT >= 36) {
             builder.addExtras(android.os.Bundle().apply {
                 putBoolean(EXTRA_REQUEST_PROMOTED_ONGOING, true)
@@ -126,8 +199,12 @@ object LiveActivityNotifier {
     ) {
         when (progress.style) {
             "segmented" -> {
-                val totalSegments = progress.segments ?: 4
-                val current = (progress.currentSegment ?: 1).coerceIn(0, totalSegments)
+                val totalSegments = (progress.segments ?: 4).coerceAtLeast(1)
+                val current = when {
+                    progress.currentSegment != null -> progress.currentSegment.coerceIn(0, totalSegments)
+                    progress.value != null -> (progress.value * totalSegments).roundToInt().coerceIn(0, totalSegments)
+                    else -> 1
+                }
                 builder.setProgress(totalSegments, current, false)
             }
             "circular", "bar" -> {
@@ -137,7 +214,7 @@ object LiveActivityNotifier {
                     val finalVal = if (progress.countsDown) (totalSeconds - elapsed) else elapsed
                     builder.setProgress(totalSeconds, finalVal, false)
                 } else if (progress.value != null) {
-                    val pct = (progress.value * 100).toInt().coerceIn(0, 100)
+                    val pct = (progress.value * 100).roundToInt().coerceIn(0, 100)
                     builder.setProgress(100, pct, false)
                 }
             }
@@ -154,7 +231,6 @@ object LiveActivityNotifier {
 
         var nextTrigger: Double? = null
 
-        // 1. Kiểm tra mốc đổi pha (State Machine)
         if (phases != null) {
             for (i in 0 until phases.length()) {
                 val phase = phases.getJSONObject(i)
@@ -167,14 +243,21 @@ object LiveActivityNotifier {
             }
         }
 
-        // 2. Nếu có thanh tiến trình theo thời gian, hẹn lịch tick 30s để thanh chạy đều
         val lockScreen = json.optJSONObject("lockScreen")
         var hasTimeProgress = false
-        extractData(lockScreen, onTitle = {}, onBody = {}, onTimer = {}, onProgress = { p ->
-            if (p.targetTimestamp != null && p.targetTimestamp > now) {
-                hasTimeProgress = true
-            }
-        })
+        extractData(
+            context = context,
+            node = lockScreen,
+            onText = {},
+            onTimer = {},
+            onProgress = { p ->
+                if (p.targetTimestamp != null && p.targetTimestamp > now) {
+                    hasTimeProgress = true
+                }
+            },
+            onImage = {},
+            onButton = {}
+        )
 
         if (hasTimeProgress) {
             val tickTrigger = now + (TICK_MILLIS / 1000.0)
@@ -223,56 +306,80 @@ object LiveActivityNotifier {
     }
 
     private fun extractData(
+        context: Context,
         node: JSONObject?,
-        onTitle: (String) -> Unit,
-        onBody: (String) -> Unit,
+        onText: (String) -> Unit,
         onTimer: (Double) -> Unit,
-        onProgress: (ProgressData) -> Unit
+        onProgress: (ProgressData) -> Unit,
+        onImage: (Bitmap) -> Unit,
+        onButton: (NotificationButtonData) -> Unit
     ) {
         if (node == null) return
         val type = node.optString("type")
         val props = node.optJSONObject("props")
 
-        if (type == "Text" && props != null) {
-            val text = props.optString("text")
-            if (text.isNotEmpty()) onTitle(text)
-        } else if (type == "Timer" && props != null) {
-            val ts = props.optDouble("targetTimestamp", 0.0)
-            if (ts > 0) onTimer(ts)
-        } else if (type == "Progress" && props != null) {
-            val startTs = props.optDouble("startTimestamp", -1.0).takeIf { it > 0 }
-            val targetTs = props.optDouble("targetTimestamp", -1.0).takeIf { it > 0 }
-            val valDouble = props.optDouble("value", -1.0).takeIf { it >= 0 }
-            val style = props.optString("style", "bar")
-            val countsDown = props.optBoolean("countsDown", false)
-            val segments = props.optInt("segments", -1).takeIf { it > 0 }
-            val currentSeg = props.optInt("currentSegment", -1).takeIf { it > 0 }
-            val tint = props.optString("tintColor", null)
-            val track = props.optString("trackColor", null)
-            val warnSecs = props.optDouble("warningSeconds", -1.0).takeIf { it > 0 }
-            val warnTint = props.optString("warningTintColor", null)
-            val showPct = props.optBoolean("showPercentage", false)
+        when {
+            type == "Text" && props != null -> {
+                val text = props.optString("text")
+                if (text.isNotEmpty()) onText(text)
+            }
+            type == "Timer" && props != null -> {
+                val ts = props.optDouble("targetTimestamp", 0.0)
+                if (ts > 0) onTimer(ts)
+            }
+            type == "Progress" && props != null -> {
+                val startTs = props.optDouble("startTimestamp", -1.0).takeIf { it > 0 }
+                val targetTs = props.optDouble("targetTimestamp", -1.0).takeIf { it > 0 }
+                val valDouble = props.optDouble("value", -1.0).takeIf { it >= 0 }
+                val style = props.optString("style", "bar")
+                val countsDown = props.optBoolean("countsDown", false)
+                val segments = props.optInt("segments", -1).takeIf { it > 0 }
+                val currentSeg = props.optInt("currentSegment", -1).takeIf { it > 0 }
+                val tint = props.optString("tintColor", null)
+                val track = props.optString("trackColor", null)
+                val warnSecs = props.optDouble("warningSeconds", -1.0).takeIf { it > 0 }
+                val warnTint = props.optString("warningTintColor", null)
+                val showPct = props.optBoolean("showPercentage", false)
 
-            onProgress(ProgressData(
-                style = style,
-                startTimestamp = startTs,
-                targetTimestamp = targetTs,
-                value = valDouble,
-                countsDown = countsDown,
-                tintColor = tint,
-                trackColor = track,
-                warningSeconds = warnSecs,
-                warningTintColor = warnTint,
-                segments = segments,
-                currentSegment = currentSeg,
-                showPercentage = showPct
-            ))
+                onProgress(
+                    ProgressData(
+                        style = style,
+                        startTimestamp = startTs,
+                        targetTimestamp = targetTs,
+                        value = valDouble,
+                        countsDown = countsDown,
+                        tintColor = tint,
+                        trackColor = track,
+                        warningSeconds = warnSecs,
+                        warningTintColor = warnTint,
+                        segments = segments,
+                        currentSegment = currentSeg,
+                        showPercentage = showPct
+                    )
+                )
+            }
+            type == "Image" && props != null -> {
+                DynamicWidgetImageCache.resolveNodeBitmap(context, props)?.let { onImage(it) }
+            }
+            type == "Button" && props != null -> {
+                val rawTitle = props.optString("title", "Action")
+                val actionId = props.optString("actionId", "")
+                if (actionId.isNotEmpty()) {
+                    val isToggled = if (actionId.startsWith("toggle:")) {
+                        DynamicWidgetStateStore.isToggled(context, actionId.removePrefix("toggle:"))
+                    } else false
+                    val displayTitle = if (isToggled) {
+                        props.optString("checkedTitle", rawTitle).ifEmpty { rawTitle }
+                    } else rawTitle
+                    onButton(NotificationButtonData(title = displayTitle, actionId = actionId))
+                }
+            }
         }
 
         val children = node.optJSONArray("children")
         if (children != null) {
             for (i in 0 until children.length()) {
-                extractData(children.optJSONObject(i), onTitle, onBody, onTimer, onProgress)
+                extractData(context, children.optJSONObject(i), onText, onTimer, onProgress, onImage, onButton)
             }
         }
     }

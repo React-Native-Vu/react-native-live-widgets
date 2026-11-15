@@ -1,14 +1,33 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.reactnativeliveactivity">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application>
+        <!-- Receiver xử lý Live Update, Background API Sync & Interactive Widget Actions -->
         <receiver
             android:name=".LiveActivityReceiver"
-            android:exported="false" />
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.reactnativeliveactivity.ACTION_REFRESH" />
+                <action android:name="com.reactnativeliveactivity.ACTION_WIDGET_ACTION" />
+                <action android:name="com.reactnativeliveactivity.ACTION_WIDGET_SYNC" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Home Screen AppWidgetProvider tự động tích hợp cho Android -->
+        <receiver
+            android:name=".DynamicHomeScreenWidgetProvider"
+            android:label="Live Widgets"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/rn_live_widget_info" />
+        </receiver>
     </application>
 </manifest>
-

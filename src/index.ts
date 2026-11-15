@@ -83,10 +83,10 @@ export const LiveActivity = {
   },
 
   /**
-   * Đăng ký và lấy APNs Device Token của thiết bị (64-hex chars trên iOS).
+   * Đăng ký và lấy Push Token của thiết bị (APNs Device Token trên iOS / FCM Device Token trên Android).
    */
   getDevicePushToken: async (): Promise<string | undefined> => {
-    if (Platform.OS !== 'ios' || !LiveActivityModule?.getDevicePushToken) {
+    if (!LiveActivityModule?.getDevicePushToken) {
       return undefined;
     }
     try {
@@ -98,10 +98,10 @@ export const LiveActivity = {
   },
 
   /**
-   * Lấy APNs Push-to-Start token (iOS 17.2+) để backend kích hoạt mở mới Live Activity từ xa.
+   * Lấy Push-to-Start token để backend kích hoạt mở mới Live Activity / Live Update từ xa.
    */
   getPushToStartToken: async (): Promise<string | undefined> => {
-    if (Platform.OS !== 'ios' || !LiveActivityModule?.getPushToStartToken) {
+    if (!LiveActivityModule?.getPushToStartToken) {
       return undefined;
     }
     try {
@@ -113,11 +113,11 @@ export const LiveActivity = {
   },
 
   /**
-   * Lấy APNs Update Token của một phiên Live Activity đang chạy (theo activityId)
-   * để backend gửi APNs cập nhật ("event": "update") hoặc kết thúc ("event": "end").
+   * Lấy Update Push Token của một phiên Live Activity / Live Update đang chạy (theo activityId)
+   * để backend gửi bản cập nhật ("event": "update") hoặc kết thúc ("event": "end").
    */
   getActivityPushToken: async (activityId: string): Promise<string | undefined> => {
-    if (Platform.OS !== 'ios' || !LiveActivityModule?.getActivityPushToken) {
+    if (!LiveActivityModule?.getActivityPushToken) {
       return undefined;
     }
     try {
@@ -129,10 +129,10 @@ export const LiveActivity = {
   },
 
   /**
-   * Lấy trọn bộ cả 3 loại APNs Token trong 1 lần gọi:
-   * - `devicePushToken`: Token APNs của máy
-   * - `pushToStartToken`: Token APNs mở mới Live Activity từ xa (iOS 17.2+)
-   * - `activityUpdateToken`: Token APNs cập nhật phiên Live Activity đang chạy
+   * Lấy trọn bộ cả 3 loại Push Token trong 1 lần gọi (hỗ trợ cả iOS APNs & Android):
+   * - `devicePushToken`: Token của máy
+   * - `pushToStartToken`: Token mở mới Live Activity / Live Update từ xa
+   * - `activityUpdateToken`: Token cập nhật phiên Live Activity đang chạy
    */
   getAllPushTokens: async (activityId?: string): Promise<LiveActivityPushTokens> => {
     const empty: LiveActivityPushTokens = {
@@ -141,7 +141,7 @@ export const LiveActivity = {
       activityUpdateToken: null,
       allActivityUpdateTokens: {},
     };
-    if (Platform.OS !== 'ios' || !LiveActivityModule?.getAllPushTokens) {
+    if (!LiveActivityModule?.getAllPushTokens) {
       return empty;
     }
     try {
@@ -158,31 +158,31 @@ export const LiveActivity = {
   },
 
   /**
-   * Lắng nghe khi iOS cấp mới hoặc thay đổi Device APNs Token của máy.
+   * Lắng nghe khi hệ điều hành cấp mới hoặc thay đổi Device Push Token của máy.
    */
   onDevicePushTokenChange: (listener: (token: string) => void): (() => void) => {
-    if (Platform.OS !== 'ios' || !liveActivityEmitter) return () => {};
+    if (!liveActivityEmitter) return () => {};
     const sub = liveActivityEmitter.addListener(DEVICE_TOKEN_CHANGED_EVENT, listener);
     return () => sub.remove();
   },
 
   /**
-   * Lắng nghe khi iOS cấp hoặc xoay Push-to-Start Token mới.
+   * Lắng nghe khi hệ điều hành cấp hoặc xoay Push-to-Start Token mới.
    */
   onPushToStartTokenChange: (listener: (token: string) => void): (() => void) => {
-    if (Platform.OS !== 'ios' || !liveActivityEmitter) return () => {};
+    if (!liveActivityEmitter) return () => {};
     const sub = liveActivityEmitter.addListener(TOKEN_CHANGED_EVENT, listener);
     return () => sub.remove();
   },
 
   /**
-   * Lắng nghe khi iOS cấp hoặc xoay APNs Update Token cho một Live Activity cụ thể.
+   * Lắng nghe khi hệ điều hành cấp hoặc xoay Update Token cho một Live Activity cụ thể.
    * Trả về `{ activityId, token }` để gửi ngay lên Backend.
    */
   onActivityUpdateTokenChange: (
     listener: (event: { activityId: string; token: string }) => void
   ): (() => void) => {
-    if (Platform.OS !== 'ios' || !liveActivityEmitter) return () => {};
+    if (!liveActivityEmitter) return () => {};
     const sub = liveActivityEmitter.addListener(UPDATE_TOKEN_CHANGED_EVENT, listener);
     return () => sub.remove();
   },
@@ -226,10 +226,10 @@ export const Widget = {
   },
 
   /**
-   * Yêu cầu vẽ lại một Widget cụ thể theo kind (chỉ áp dụng iOS).
+   * Yêu cầu vẽ lại một Widget cụ thể theo kind (hỗ trợ cả iOS và Android).
    */
   reload: async (kind: string): Promise<boolean> => {
-    if (Platform.OS !== 'ios' || !LiveActivityModule?.reloadWidget) return false;
+    if (!LiveActivityModule?.reloadWidget) return false;
     try {
       return await LiveActivityModule.reloadWidget(kind);
     } catch (error) {
