@@ -300,6 +300,14 @@ export interface EqualizerProps {
     barWidth?: number;
     /** Khoảng cách giữa các thanh (mặc định: 2) */
     spacing?: number;
+    /**
+     * Frame sóng nhạc (số nguyên tăng dần). iOS không cho Live Activity / Widget tự chạy animation lặp,
+     * nên app cần cập nhật `phase` định kỳ (vd. mỗi ~1s khi đang phát) — renderer sẽ animate chuyển tiếp
+     * độ cao các thanh giữa 2 frame. Bỏ trống = hiển thị icon sóng tĩnh.
+     */
+    phase?: number;
+    /** Mức âm lượng thực tế từng thanh (0..1). Nếu truyền, ưu tiên hơn `phase`. */
+    levels?: number[];
 }
 export interface EqualizerNode extends BaseNode {
     type: 'Equalizer';

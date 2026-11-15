@@ -76,10 +76,12 @@ public enum DynamicWidgetImageCache {
     return false
   }
 
-  public static func prefetchUrls(in jsonString: String) async {
-    guard jsonString.contains("http") else { return }
+  /// - Returns: true nếu có ít nhất 1 ảnh mới được tải về (chưa có trong cache trước đó).
+  @discardableResult
+  public static func prefetchUrls(in jsonString: String) async -> Bool {
+    guard jsonString.contains("http") else { return false }
     let pattern = #""url"\s*:\s*"(https?://[^"]+)""#
-    guard let regex = try? NSRegularExpression(pattern: pattern) else { return }
+    guard let regex = try? NSRegularExpression(pattern: pattern) else { return false }
     let nsRange = NSRange(jsonString.startIndex..<jsonString.endIndex, in: jsonString)
     let matches = regex.matches(in: jsonString, range: nsRange)
 
@@ -91,20 +93,25 @@ public enum DynamicWidgetImageCache {
       }
     }
 
-    guard !urls.isEmpty else { return }
+    let missing = urls.filter { cachedImage(for: $0) == nil }
+    guard !missing.isEmpty else { return false }
 
-    await withTaskGroup(of: Void.self) { group in
-      for urlStr in urls {
-        if cachedImage(for: urlStr) != nil { continue }
+    return await withTaskGroup(of: Bool.self) { group in
+      for urlStr in missing {
         guard let url = URL(string: urlStr) else { continue }
         group.addTask {
           var req = URLRequest(url: url)
           req.timeoutInterval = 2.0
           if let (data, _) = try? await URLSession.shared.data(for: req), !data.isEmpty {
             saveImageData(data, for: urlStr)
+            return true
           }
+          return false
         }
       }
+      var any = false
+      for await ok in group where ok { any = true }
+      return any
     }
   }
 

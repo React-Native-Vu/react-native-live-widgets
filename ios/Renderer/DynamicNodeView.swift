@@ -810,41 +810,16 @@ public struct DynamicNodeView: View {
     let phase = node.props?["phase"]?.doubleValue
     let levels: [Double]? = node.props?["levels"]?.doubleArrayValue
 
-    if phase != nil || (levels?.isEmpty == false) {
-      // Frame-driven: app đẩy phase/levels mới định kỳ, SwiftUI animate chuyển tiếp giữa 2 frame
-      PhaseEqualizerView(
-        isPlaying: isPlaying,
-        phase: Int(phase ?? 0),
-        levels: levels,
-        barCount: barCount,
-        tintColor: tint,
-        maxHeight: maxHeight,
-        barWidth: barWidth,
-        spacing: spacing
-      )
-    } else if #available(iOS 17.0, *) {
-      Image(systemName: "waveform")
-        .font(.system(size: maxHeight, weight: .bold))
-        .foregroundColor(isPlaying ? tint : tint.opacity(0.5))
-        .frame(height: maxHeight)
-    } else if #available(iOS 15.0, *) {
-      AnimatedEqualizerView(
-        isPlaying: isPlaying,
-        barCount: barCount,
-        tintColor: tint,
-        maxHeight: maxHeight,
-        barWidth: barWidth,
-        spacing: spacing
-      )
-    } else {
-      StaticEqualizerView(
-        barCount: barCount,
-        tintColor: tint,
-        maxHeight: maxHeight,
-        barWidth: barWidth,
-        spacing: spacing
-      )
-    }
+    PhaseEqualizerView(
+      isPlaying: isPlaying,
+      phase: Int(phase ?? 0),
+      levels: levels,
+      barCount: barCount,
+      tintColor: tint,
+      maxHeight: maxHeight,
+      barWidth: barWidth,
+      spacing: spacing
+    )
   }
 
   @ViewBuilder
@@ -1007,14 +982,14 @@ struct PhaseEqualizerView: View {
   }
 
   var body: some View {
-    HStack(alignment: .center, spacing: spacing) {
+    HStack(alignment: .bottom, spacing: spacing) {
       ForEach(0..<barCount, id: \.self) { idx in
         RoundedRectangle(cornerRadius: barWidth / 2)
           .fill(isPlaying ? tintColor : tintColor.opacity(0.5))
           .frame(width: barWidth, height: max(barWidth, maxHeight * ratio(for: idx)))
       }
     }
-    .frame(height: maxHeight)
+    .frame(height: maxHeight, alignment: .bottom)
     .animation(.easeInOut(duration: 0.6), value: phase)
     .animation(.easeInOut(duration: 0.3), value: isPlaying)
   }
