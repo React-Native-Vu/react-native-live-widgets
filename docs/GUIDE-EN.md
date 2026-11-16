@@ -502,6 +502,12 @@ UI.Button({
 })
 ```
 
+> [!IMPORTANT]
+> **Architectural Recommendation for Terminated (Force-Killed) Apps:**
+> - **iOS:** When the main app is force-killed by the user, the JavaScript engine (Hermes/JSC) is terminated. Widget button taps are handled natively by Swift (`AppIntent`) and stored in App Groups. JavaScript callbacks (`registerActionHandler`) **cannot run** until the app is reopened.
+> - **Android:** While `HeadlessJsTaskService` can wake the JS runtime in the background, aggressive OEM battery savers (MIUI, ColorOS, OneUI) may delay or suppress headless execution.
+> - **Production Rule:** For mission-critical actions (e.g., employee attendance check-ins or financial authorizations), adopt an **Offline-First & Local State Queue** pattern: Native widgets record the action in `SharedStorage`, and `App.tsx` reads and synchronizes the queue when the app is next launched.
+
 ### `UI.ZStack`, `UI.Grid` & `UI.Divider` (Advanced Layout Containers)
 ```typescript
 // 1. ZStack: Overlay layers on top of each other
@@ -609,6 +615,11 @@ UI.Custom('WeatherCard', { city: 'Ho Chi Minh City', temp: '31°C' })
 ---
 
 ## 5. Dynamic Island Configuration (iPhone 14 Pro, 15, 16, 17)
+
+> [!NOTE]
+> **Platform Differences: iOS Dynamic Island vs. Android Live Updates:**
+> - **iOS:** The `dynamicIsland` configuration maps directly to Apple's hardware Dynamic Island pill (iPhone 14 Pro+) via ActivityKit and SwiftUI (`compactLeading`, `compactTrailing`, `minimal`, `expanded`).
+> - **Android:** Because standard Android devices do not feature Apple's hardware island cutout, this configuration is mapped to an **Ongoing Promoted Notification (`Notification.ProgressStyle`)** with an avatar icon, progress segments, and action buttons on the notification bar.
 
 ```typescript
 dynamicIsland: {
@@ -749,6 +760,13 @@ await Widget.setRemoteConfig({
   - **iOS**: `DynamicWidgetProvider` performs an asynchronous HTTP request during its WidgetKit timeline reload (or immediately when the user taps a button with `actionId: 'refresh'`), flattens the JSON response, and injects values into `{{fieldName}}` placeholders across your UI tree.
   - **Android**: `AlarmManager` schedules `LiveActivityReceiver` (`ACTION_WIDGET_SYNC`), fetches fresh JSON in the background (`goAsync()`), updates `SharedPreferences`, and redraws `DynamicHomeScreenWidgetProvider`.
   - The built-in `{{_lastSyncTime}}` placeholder automatically resolves to the latest sync timestamp (`HH:mm:ss`).
+
+> [!NOTE]
+> **Understanding Polling Intervals & OS Widget Budget:**
+> - The `intervalMinutes: 15` option specifies the *desired* refresh cadence. Both iOS and Android apply strict battery and resource policies:
+>   - **iOS WidgetKit Budget:** Apple enforces a daily budget (~40 to 70 reloads per day). If the device is in Low Power Mode or the daily quota is exhausted, reloads may be delayed.
+>   - **Android Doze Mode:** Batches recurring background alarms to preserve battery health.
+> - **Recommendation:** If your application requires precise, second-by-second updates (e.g., driver location or emergency shifts), always rely on **Server Push Notifications (APNs / FCM)** as the primary transport and treat background polling as a fallback.
 
 ---
 
