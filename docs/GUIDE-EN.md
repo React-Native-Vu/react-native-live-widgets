@@ -1,15 +1,19 @@
 # REACT-NATIVE-LIVE-WIDGETS — COMPLETE SETUP & DEVELOPER GUIDE 🚀
 
-> 🌐 **Language:** [Tiếng Việt (GUIDE-VI.md)](./GUIDE-VI.md) | **English**
+> 🌐 **Language:** [Tiếng Việt (GUIDE-VI.md)](./GUIDE-VI.md) | **English** • [⚡ Dedicated Expo Guide (EXPO-GUIDE-EN.md)](./EXPO-GUIDE-EN.md)
 
 Comprehensive guide covering installation, native setup (iOS & Android), and building 100% JavaScript/TypeScript declarative layouts for **Live Activities (Dynamic Island / Lock Screen / Android Live Updates)** and **Interactive Multi-Page Home Screen Widgets**.
+
+> [!TIP]
+> **Using Expo (SDK 50, 51, 52, 58+)?** Check out the [Dedicated Expo Integration Guide (EXPO-GUIDE-EN.md)](./EXPO-GUIDE-EN.md) for full details on Expo Config Plugins and EAS Build!
 
 ---
 
 ## TABLE OF CONTENTS
 1. [Overview & Architecture](#1-overview--architecture)
 2. [Installation & Project Setup](#2-installation--project-setup)
-   - [Package Installation](#package-installation)
+   - [For Expo Projects](#for-expo-projects)
+   - [Package Installation (Bare React Native)](#package-installation)
    - [iOS Setup (Xcode & Widget Extension)](#ios-setup-xcode--widget-extension)
    - [Android Setup (Gradle, Manifest, MainApplication & Permissions)](#android-setup-gradle-manifest-mainapplication--permissions)
    - [Native Directory Architecture (`ios/` & `android/`)](#native-directory-architecture-ios--android)
@@ -50,7 +54,24 @@ Comprehensive guide covering installation, native setup (iOS & Android), and bui
 
 ## 2. Installation & Project Setup
 
-### Package Installation
+### For Expo Projects
+If you are using **Expo**, the library provides an **Expo Config Plugin (`app.plugin.js`)** and **CLI Wizard** out of the box.
+👉 **See the dedicated step-by-step guide: [Expo Integration Guide (EXPO-GUIDE-EN.md)](./EXPO-GUIDE-EN.md)**
+
+```bash
+# 1. Install package
+npx expo install react-native-live-widgets
+
+# 2. Add plugin to app.json & generate native projects
+npx expo prebuild
+
+# 3. Automatically link and configure Widget Extension
+npx react-native-live-widgets init --group group.com.yourcompany.app
+```
+
+---
+
+### Package Installation (Bare React Native CLI)
 From the root directory of your React Native project:
 ```bash
 npm install react-native-live-widgets

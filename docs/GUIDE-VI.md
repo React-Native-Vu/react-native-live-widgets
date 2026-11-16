@@ -1,15 +1,19 @@
 # HƯỚNG DẪN SỬ DỤNG VÀ THIẾT LẬP THƯ VIỆN REACT-NATIVE-LIVE-WIDGETS 🚀
 
-> 🌐 **Language:** **Tiếng Việt** | [English (GUIDE-EN.md)](./GUIDE-EN.md)
+> 🌐 **Language:** **Tiếng Việt** | [English (GUIDE-EN.md)](./GUIDE-EN.md) • [⚡ Hướng dẫn riêng cho Expo (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md)
 
 Tài liệu hướng dẫn toàn diện từ cài đặt, thiết lập native (iOS/Android), xây dựng giao diện động bằng JavaScript/TypeScript cho cả **Live Activities (Dynamic Island / Lock Screen / Android Live Update)** và **Home Screen Widgets (Tiện ích màn hình chính tương tác đa trang)**.
+
+> [!TIP]
+> **Bạn đang dùng Expo (SDK 50, 51, 52, 58+)?** Hãy đọc ngay [Hướng dẫn Tích hợp Expo Chuyên sâu (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md) để sử dụng Expo Config Plugin và EAS Build một cách tối ưu nhất!
 
 ---
 
 ## MỤC LỤC
 1. [Giới thiệu và Kiến trúc](#1-giới-thiệu-và-kiến-trúc)
 2. [Cài đặt và Thiết lập Dự án](#2-cài-đặt-và-thiết-lập-dự-án)
-   - [Cài đặt package](#cài-đặt-package)
+   - [Dành cho dự án Expo](#dành-cho-dự-án-expo)
+   - [Cài đặt package (Bare React Native)](#cài-đặt-package)
    - [Thiết lập iOS (Xcode & Widget Extension)](#thiết-lập-ios-xcode--widget-extension)
    - [Thiết lập Android (Gradle, Manifest, MainApplication & Permissions)](#thiết-lập-android-gradle-manifest-mainapplication--permissions)
    - [Cấu trúc Thư mục Native của Thư viện (`ios/` & `android/`)](#cấu-trúc-thư-mục-native-của-thư-viện-ios--android)
@@ -50,7 +54,24 @@ Thư viện **`react-native-live-widgets`** là giải pháp All-in-One cho phé
 
 ## 2. Cài đặt và Thiết lập Dự án
 
-### Cài đặt package
+### Dành cho dự án Expo
+Nếu bạn sử dụng **Expo**, thư viện hỗ trợ sẵn **Expo Config Plugin (`app.plugin.js`)** và **CLI Wizard**.
+👉 **Xem hướng dẫn chi tiết từng bước tại: [Tài liệu Expo Tích hợp (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md)**
+
+```bash
+# 1. Cài đặt
+npx expo install react-native-live-widgets
+
+# 2. Thêm plugin vào app.json và sinh mã native
+npx expo prebuild
+
+# 3. Tự động liên kết target Widget Extension
+npx react-native-live-widgets init --group group.com.yourcompany.app
+```
+
+---
+
+### Cài đặt package (Dành cho Bare React Native CLI)
 Trong thư mục gốc của dự án React Native:
 ```bash
 npm install react-native-live-widgets

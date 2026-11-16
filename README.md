@@ -12,7 +12,7 @@
 
 *Write 100% Declarative TypeScript. Render dynamically to Native SwiftUI (WidgetKit) & Android 2D Canvas without touching Xcode or Android Studio.*
 
-[📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Hướng dẫn Tiếng Việt](docs/GUIDE-VI.md) • [📱 Bare RN Demo](https://github.com/React-Native-Vu/LiveWidgetsExample) • [⚡ Expo Demo](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo) • [✨ Tính năng](#-key-features) • [⚡ Cài đặt](#-quick-start) • [☕ Ủng hộ tác giả](#-sponsor--donate-ủng-hộ-tác-giả)
+[📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Hướng dẫn Tiếng Việt](docs/GUIDE-VI.md) • [⚡ Expo Guide](docs/EXPO-GUIDE-VI.md) • [📱 Bare RN Demo](https://github.com/React-Native-Vu/LiveWidgetsExample) • [⚡ Expo Demo](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo) • [✨ Tính năng](#-key-features) • [⚡ Cài đặt](#-quick-start) • [☕ Ủng hộ tác giả](#-sponsor--donate-ủng-hộ-tác-giả)
 
 ---
 
@@ -184,11 +184,18 @@ Add `react-native-live-widgets` to your `app.json` or `app.config.js`:
 Then generate native projects or run with Expo Dev Client:
 
 ```bash
+# 1. Generate native folders
 npx expo prebuild
-# Run on iOS & Android:
+
+# 2. Automatically scaffold & link Xcode Widget Extension target
+npx react-native-live-widgets init --group group.com.yourcompany.app
+
+# 3. Run on iOS Simulator & Android Emulator:
 npx expo run:ios
 npx expo run:android
 ```
+
+> 📖 **Detailed Step-by-Step Expo Guide**: [English](docs/EXPO-GUIDE-EN.md) • [Tiếng Việt](docs/EXPO-GUIDE-VI.md)
 
 #### B. If using Bare React Native CLI
 
