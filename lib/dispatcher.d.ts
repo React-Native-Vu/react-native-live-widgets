@@ -3,12 +3,19 @@ export type ActionHandler = (event: {
     activityId?: string;
     [key: string]: any;
 }) => Promise<any> | any;
+export type GlobalActionHandler = (actionId: string, payload?: any) => Promise<any> | any;
 export declare const actionHandlers: Map<string, ActionHandler>;
+export declare const globalActionHandlers: Set<GlobalActionHandler>;
 /**
  * Đăng ký một hàm xử lý logic TypeScript khi người dùng bấm nút có `actionId` tương ứng ngoài Widget/Live Activity.
  * Trả về hàm hủy đăng ký (unsubscribe).
  */
 export declare function registerAction(actionId: string, handler: ActionHandler): () => void;
+/**
+ * Đăng ký hàm lắng nghe toàn bộ các sự kiện bấm nút từ Widget hoặc Live Activity.
+ * Trả về hàm hủy đăng ký (unsubscribe).
+ */
+export declare function registerActionHandler(handler: GlobalActionHandler): () => void;
 /**
  * Hủy đăng ký action handler.
  */

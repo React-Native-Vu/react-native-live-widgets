@@ -289,7 +289,11 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
                     val wKey = key.removePrefix("widget_remote_config_")
                     runCatching {
                         val cfg = JSONObject(value)
-                        val mins = cfg.optInt("refreshIntervalMinutes", 15).coerceAtLeast(1)
+                        val mins = if (cfg.has("refreshIntervalMinutes")) {
+                            cfg.optInt("refreshIntervalMinutes", 15)
+                        } else {
+                            cfg.optInt("intervalMinutes", 15)
+                        }.coerceAtLeast(1)
                         DynamicWidgetStateStore.scheduleBackgroundWidgetSync(reactContext, wKey, mins)
                     }
                 }

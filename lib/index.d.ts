@@ -1,7 +1,8 @@
 import { ActiveActivityInfo, EndActivityOptions, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig } from './types';
-import { ActionHandler, registerAction, unregisterAction } from './dispatcher';
-export type { ActionHandler };
-export { registerAction, unregisterAction };
+import { ActionHandler, GlobalActionHandler, registerAction, registerActionHandler, unregisterAction } from './dispatcher';
+export type { ActionHandler, GlobalActionHandler };
+export { registerAction, registerActionHandler, unregisterAction };
+export * from './hooks';
 export declare const LiveActivity: {
     /**
      * Khởi động một Live Activity (iOS) hoặc Live Update / Ongoing Notification (Android).
@@ -62,6 +63,11 @@ export declare const LiveActivity: {
      */
     registerAction: (actionId: string, handler: ActionHandler) => (() => void);
     /**
+     * Đăng ký hàm lắng nghe toàn cục tất cả các sự kiện bấm nút từ Live Activity hoặc Widget.
+     * Nhận `(actionId, payload)`. Trả về hàm hủy đăng ký (unsubscribe).
+     */
+    registerActionHandler: (handler: GlobalActionHandler) => (() => void);
+    /**
      * Hủy đăng ký action handler theo `actionId`.
      */
     unregisterAction: (actionId: string) => void;
@@ -103,9 +109,16 @@ export declare const Widget: {
     reload: (kind: string) => Promise<boolean>;
     /**
      * Thiết lập layout động cho Home Screen Widget (hỗ trợ small, medium, large).
-     * Tự động lưu vào Shared Storage và yêu cầu vẽ lại.
+     * Hỗ trợ gọi 2 hoặc 3 tham số:
+     * - `Widget.setLayout('main', layoutConfig, appGroup?)`
+     * - `Widget.setLayout(layoutConfig, appGroup?)` (tự động gán widgetKey = 'main')
+     * Tự động lưu vào Shared Storage và yêu cầu OS vẽ lại.
      */
-    setLayout: (widgetKey: string, layoutConfig: WidgetLayoutConfig, appGroup?: string) => Promise<boolean>;
+    setLayout: (widgetKeyOrConfig: string | WidgetLayoutConfig, layoutConfigOrAppGroup?: WidgetLayoutConfig | string, maybeAppGroup?: string) => Promise<boolean>;
+    /**
+     * Cập nhật layout động cho Widget (Alias tiện ích cho `Widget.setLayout`).
+     */
+    update: (widgetKeyOrConfig: string | WidgetLayoutConfig, layoutConfigOrAppGroup?: WidgetLayoutConfig | string, maybeAppGroup?: string) => Promise<boolean>;
     /**
      * Thiết lập dòng thời gian tự động (Timeline Entries) cho Widget.
      * Hệ điều hành iOS/Android sẽ tự động chuyển đổi giữa các layout theo từng mốc thời gian
@@ -129,8 +142,18 @@ export declare const Widget: {
      * Cấu hình Endpoint API để bản thân Widget Extension tự chạy ngầm lấy dữ liệu mới
      * theo chu kỳ (`getTimeline`) hoặc khi bấm nút `actionId: 'refresh'` trên mặt Widget,
      * kể cả khi người dùng đã vuốt tắt (Kill) hoàn toàn ứng dụng chính!
+     *
+     * Hỗ trợ gọi linh hoạt:
+     * - `Widget.setRemoteConfig('main', { url, refreshIntervalMinutes }, appGroup?)`
+     * - `Widget.setRemoteConfig({ url, intervalMinutes }, appGroup?)` (tự động gán widgetKey = 'main')
      */
-    setRemoteConfig: (widgetKey: string, remoteConfig: WidgetRemoteConfig, appGroup?: string) => Promise<boolean>;
+    setRemoteConfig: (widgetKeyOrConfig: string | WidgetRemoteConfig, remoteConfigOrAppGroup?: WidgetRemoteConfig | string, maybeAppGroup?: string) => Promise<boolean>;
+    /** Đăng ký lắng nghe tương tác nút bấm từ Widget theo `actionId` */
+    registerAction: typeof registerAction;
+    /** Đăng ký lắng nghe toàn cục tất cả tương tác nút bấm từ Widget (alias) */
+    onWidgetAction: typeof registerActionHandler;
+    /** Đăng ký lắng nghe toàn cục tất cả tương tác nút bấm từ Widget */
+    registerActionHandler: typeof registerActionHandler;
     /**
      * (Android 8.0+) Mở hộp thoại hệ thống cho phép người dùng ghim trực tiếp Tiện ích ra màn hình chính ngay từ trong ứng dụng.
      * Trên iOS, hàm trả về false vì Apple chỉ cho phép người dùng tự thêm tiện ích từ thư viện Widget của hệ điều hành.

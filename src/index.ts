@@ -31,9 +31,18 @@ const TOKEN_CHANGED_EVENT = 'LiveActivityTokenChanged';
 const UPDATE_TOKEN_CHANGED_EVENT = 'LiveActivityUpdateTokenChanged';
 const ACTION_CLICKED_EVENT = 'LiveActivityActionClicked';
 
-import { ActionHandler, actionHandlers, registerAction, unregisterAction } from './dispatcher';
-export type { ActionHandler };
-export { registerAction, unregisterAction };
+import {
+  ActionHandler,
+  GlobalActionHandler,
+  actionHandlers,
+  globalActionHandlers,
+  registerAction,
+  registerActionHandler,
+  unregisterAction,
+} from './dispatcher';
+export type { ActionHandler, GlobalActionHandler };
+export { registerAction, registerActionHandler, unregisterAction };
+export * from './hooks';
 
 // Tự động lắng nghe action event từ Native để dispatch tới các hàm TypeScript đã đăng ký
 if (liveActivityEmitter) {
@@ -46,6 +55,13 @@ if (liveActivityEmitter) {
         await handler({ actionId, activityId });
       } catch (e) {
         console.warn(`[react-native-live-widgets] Error executing action '${actionId}':`, e);
+      }
+    }
+    for (const globalHandler of globalActionHandlers) {
+      try {
+        await globalHandler(actionId, { actionId, activityId });
+      } catch (e) {
+        console.warn(`[react-native-live-widgets] Error in global action handler for '${actionId}':`, e);
       }
     }
   });
@@ -250,6 +266,14 @@ export const LiveActivity = {
   },
 
   /**
+   * Đăng ký hàm lắng nghe toàn cục tất cả các sự kiện bấm nút từ Live Activity hoặc Widget.
+   * Nhận `(actionId, payload)`. Trả về hàm hủy đăng ký (unsubscribe).
+   */
+  registerActionHandler: (handler: GlobalActionHandler): (() => void) => {
+    return registerActionHandler(handler);
+  },
+
+  /**
    * Hủy đăng ký action handler theo `actionId`.
    */
   unregisterAction: (actionId: string): void => {
@@ -346,6 +370,13 @@ export const LiveActivity = {
             if (registered) {
               await registered({ actionId, activityId });
             }
+            for (const globalHandler of globalActionHandlers) {
+              try {
+                await globalHandler(actionId, { actionId, activityId });
+              } catch (e) {
+                console.warn('[react-native-live-widgets] background globalHandler error:', e);
+              }
+            }
           }
         );
       } catch (e) {
@@ -386,14 +417,30 @@ export const Widget = {
 
   /**
    * Thiết lập layout động cho Home Screen Widget (hỗ trợ small, medium, large).
-   * Tự động lưu vào Shared Storage và yêu cầu vẽ lại.
+   * Hỗ trợ gọi 2 hoặc 3 tham số:
+   * - `Widget.setLayout('main', layoutConfig, appGroup?)`
+   * - `Widget.setLayout(layoutConfig, appGroup?)` (tự động gán widgetKey = 'main')
+   * Tự động lưu vào Shared Storage và yêu cầu OS vẽ lại.
    */
   setLayout: async (
-    widgetKey: string,
-    layoutConfig: WidgetLayoutConfig,
-    appGroup?: string
+    widgetKeyOrConfig: string | WidgetLayoutConfig,
+    layoutConfigOrAppGroup?: WidgetLayoutConfig | string,
+    maybeAppGroup?: string
   ): Promise<boolean> => {
     try {
+      let widgetKey = 'main';
+      let layoutConfig: WidgetLayoutConfig;
+      let appGroup: string | undefined;
+
+      if (typeof widgetKeyOrConfig === 'string') {
+        widgetKey = widgetKeyOrConfig;
+        layoutConfig = layoutConfigOrAppGroup as WidgetLayoutConfig;
+        appGroup = maybeAppGroup;
+      } else {
+        layoutConfig = widgetKeyOrConfig;
+        appGroup = typeof layoutConfigOrAppGroup === 'string' ? layoutConfigOrAppGroup : undefined;
+      }
+
       const saved = await SharedStorage.set(`widget_layout_${widgetKey}`, layoutConfig, appGroup);
       if (!saved) return false;
       return await Widget.reloadAll();
@@ -401,6 +448,17 @@ export const Widget = {
       console.warn('[react-native-live-widgets] setLayout error:', error);
       return false;
     }
+  },
+
+  /**
+   * Cập nhật layout động cho Widget (Alias tiện ích cho `Widget.setLayout`).
+   */
+  update: async (
+    widgetKeyOrConfig: string | WidgetLayoutConfig,
+    layoutConfigOrAppGroup?: WidgetLayoutConfig | string,
+    maybeAppGroup?: string
+  ): Promise<boolean> => {
+    return (Widget.setLayout as any)(widgetKeyOrConfig, layoutConfigOrAppGroup, maybeAppGroup);
   },
 
   /**
@@ -490,13 +548,36 @@ export const Widget = {
    * Cấu hình Endpoint API để bản thân Widget Extension tự chạy ngầm lấy dữ liệu mới
    * theo chu kỳ (`getTimeline`) hoặc khi bấm nút `actionId: 'refresh'` trên mặt Widget,
    * kể cả khi người dùng đã vuốt tắt (Kill) hoàn toàn ứng dụng chính!
+   *
+   * Hỗ trợ gọi linh hoạt:
+   * - `Widget.setRemoteConfig('main', { url, refreshIntervalMinutes }, appGroup?)`
+   * - `Widget.setRemoteConfig({ url, intervalMinutes }, appGroup?)` (tự động gán widgetKey = 'main')
    */
   setRemoteConfig: async (
-    widgetKey: string,
-    remoteConfig: WidgetRemoteConfig,
-    appGroup?: string
+    widgetKeyOrConfig: string | WidgetRemoteConfig,
+    remoteConfigOrAppGroup?: WidgetRemoteConfig | string,
+    maybeAppGroup?: string
   ): Promise<boolean> => {
     try {
+      let widgetKey = 'main';
+      let remoteConfig: WidgetRemoteConfig;
+      let appGroup: string | undefined;
+
+      if (typeof widgetKeyOrConfig === 'string') {
+        widgetKey = widgetKeyOrConfig;
+        remoteConfig = remoteConfigOrAppGroup as WidgetRemoteConfig;
+        appGroup = maybeAppGroup;
+      } else {
+        remoteConfig = widgetKeyOrConfig;
+        appGroup = typeof remoteConfigOrAppGroup === 'string' ? remoteConfigOrAppGroup : undefined;
+      }
+
+      if (remoteConfig.intervalMinutes !== undefined && remoteConfig.refreshIntervalMinutes === undefined) {
+        remoteConfig.refreshIntervalMinutes = remoteConfig.intervalMinutes;
+      } else if (remoteConfig.refreshIntervalMinutes !== undefined && remoteConfig.intervalMinutes === undefined) {
+        remoteConfig.intervalMinutes = remoteConfig.refreshIntervalMinutes;
+      }
+
       const saved = await SharedStorage.set(
         `widget_remote_config_${widgetKey}`,
         remoteConfig,
@@ -509,6 +590,15 @@ export const Widget = {
       return false;
     }
   },
+
+  /** Đăng ký lắng nghe tương tác nút bấm từ Widget theo `actionId` */
+  registerAction: registerAction,
+
+  /** Đăng ký lắng nghe toàn cục tất cả tương tác nút bấm từ Widget (alias) */
+  onWidgetAction: registerActionHandler,
+
+  /** Đăng ký lắng nghe toàn cục tất cả tương tác nút bấm từ Widget */
+  registerActionHandler: registerActionHandler,
 
   /**
    * (Android 8.0+) Mở hộp thoại hệ thống cho phép người dùng ghim trực tiếp Tiện ích ra màn hình chính ngay từ trong ứng dụng.

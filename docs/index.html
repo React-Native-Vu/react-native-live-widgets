@@ -316,8 +316,13 @@ Widget.reload('main', {
   })
 });
 
-// Lắng nghe khi người dùng bấm nút trên mặt Widget
-LiveActivity.registerActionHandler((actionId) => {
+// Cách 1: Dùng React Hook (Khuyến nghị - An toàn tuyệt đối với Fast Refresh)
+useWidgetAction('INCREMENT', () => {
+  setCounter(c => c + 1);
+});
+
+// Cách 2: Lắng nghe toàn cục Imperative
+Widget.onWidgetAction((actionId) => {
   if (actionId === 'INCREMENT') {
     setCounter(c => c + 1);
   }

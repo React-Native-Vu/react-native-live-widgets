@@ -113,17 +113,32 @@ Until now, adding **Live Activities** or **Home Screen Widgets** to a React Nati
 - **Checklist & Toggles**: Toggle checkboxes and switch states without opening the app (`actionId: "toggle:<key>"`).
 - **Dark & Light Mode**: Declarative color tokens `{ light: '#FFF', dark: '#0F172A' }`.
 
-### 3. ⚡ Bi-directional Action Dispatcher (TypeScript + Native)
-- Tap a widget button outside on the Home Screen to trigger a registered TypeScript function:
-  ```ts
-  LiveActivity.registerAction('action_checkin', async (payload) => {
-    // Runs inside React Native JS engine!
+### 3. ⚡ React Hooks & Fast Refresh Resilient
+- **`useWidgetAction(actionId, callback)`**: Automatically registers and cleans up widget button tap listeners on unmount. 100% resilient to React Native Fast Refresh / Hot Reloading!
+  ```tsx
+  useWidgetAction('action_checkin', async (payload) => {
     console.log('Action triggered from Home Screen Widget:', payload);
   });
   ```
-- **App-Killed Protection**: Native fallback ensures UI responds instantly and persists data even if the main app is terminated.
+- **`useLiveActivity()`**: Track activity state, push tokens, and control start / update / end directly in React components.
+- **`useWidgetState(key, initialValue)`**: Synchronize local component state with Widget Shared Storage and trigger instant OS re-renders.
 
-### 4. 🌐 Background Remote API Sync (Zero Code Backend)
+### 4. ⚡ Bi-directional Action Dispatcher (TypeScript + Native)
+- Imperative action registration for background services:
+  ```ts
+  LiveActivity.registerAction('action_checkin', async (payload) => {
+    console.log('Action triggered:', payload);
+  });
+  // Or listen globally to all widget actions:
+  Widget.onWidgetAction((actionId, payload) => {
+    console.log(`Action ${actionId} received`, payload);
+  });
+  ```
+- **App-Killed Background Support**:
+  - **Android**: Supports `LiveActivity.registerBackgroundActionHandler()` via Headless JS tasks and instant native state persistence in `DynamicWidgetStateStore`.
+  - **iOS**: Apple sandboxes widget extensions when the main app is force-killed. Button taps update native App Group state directly; JavaScript callbacks resume automatically when the app is reopened.
+
+### 5. 🌐 Background Remote API Sync (Zero Code Backend)
 - Configure an API endpoint with `Widget.setRemoteConfig`:
   ```ts
   await Widget.setRemoteConfig('main', {
@@ -251,7 +266,7 @@ await LiveActivity.start({
     )
   },
   lockScreen: UI.VStack(
-    { padding: 16, backgroundColor: '#0F172A', cornerRadius: 16 },
+    { padding: 16, backgroundColor: '#0F172A', borderRadius: 16 },
     UI.HStack(
       { justifyContent: 'spaceBetween' },
       UI.Text('KPI Quý 4: Đạt 86% mục tiêu', { fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' }),
@@ -282,7 +297,7 @@ await SharedStorage.set('revenue_month', '4.85 Tỷ đ', APP_GROUP);
 // Build Declarative Layout
 await Widget.setLayout('main', {
   large: UI.VStack(
-    { padding: 16, backgroundColor: '#0B132B', cornerRadius: 20 },
+    { padding: 16, backgroundColor: '#0B132B', borderRadius: 20 },
     UI.HStack(
       { justifyContent: 'spaceBetween' },
       UI.Text('TỔNG QUAN ĐIỀU HÀNH (KPI & BIỂU ĐỒ)', { fontSize: 11, color: '#38BDF8', fontWeight: 'bold' }),

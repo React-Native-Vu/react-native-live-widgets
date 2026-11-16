@@ -135,22 +135,14 @@ const APP_GROUP = 'group.com.yourcompany.app';
 export function useLiveWidgetCounter() {
   const [count, setCount] = useState(0);
 
-  useEffect(() => {
-    SharedStorage.setAppGroup(APP_GROUP);
-
-    // Register two-way action dispatcher from widget buttons
-    const unsubscribe = LiveActivity.registerActionHandler((actionId) => {
-      if (actionId === 'INCREMENT') {
-        setCount((prev) => {
-          const next = prev + 1;
-          renderWidget(next);
-          return next;
-        });
-      }
+  // Fast Refresh resilient hook for widget button interactions:
+  useWidgetAction('INCREMENT', () => {
+    setCount((prev) => {
+      const next = prev + 1;
+      renderWidget(next);
+      return next;
     });
-
-    return () => unsubscribe();
-  }, []);
+  });
 
   const renderWidget = (val: number) => {
     Widget.reload('main', {

@@ -32,19 +32,35 @@ Write 100% Declarative TypeScript (`UI.*`) in your React Native code. Automatica
 - `UI.Timer(timestampMs, { mode: 'countdown'|'timer'|'relative', color, fontSize })`: Zero-battery native hardware clock.
 - `UI.Progress(options)`: Supports `style: 'bar' | 'segmented' | 'circular'`, `value` (0.0 to 1.0), `tintColor`, `trackColor`.
 - `UI.Equalizer({ isPlaying: true, barCount: 4, tintColor, height })`: Realtime animated audio waveform on Dynamic Island & lock screen.
-- `UI.Image({ url, base64, systemName, width, height, cornerRadius, contentMode })`: Auto-cached remote images, base64 data, or SF Symbols.
-- `UI.Button({ title, actionId, backgroundColor, color, fontSize })`: Interactive widget button triggering `AppIntents` (iOS 17+) and `BroadcastReceiver` (Android).
+- `UI.Image({ url, base64, systemName, width, height, borderRadius, contentMode })`: Auto-cached remote images, base64 data, or SF Symbols (supports `cornerRadius` as alias).
+- `UI.Button('Title', { actionId, ... })` or `UI.Button({ title, actionId, ... })`: Interactive widget button triggering `AppIntents` (iOS 17+) and `BroadcastReceiver` (Android).
+- `UI.Badge('Text', { ... })` or `UI.Badge({ text, ... })`: Metric badges.
 - `UI.Gauge(value, { size, tintColor, trackColor, label, valueText })`: 240° KPI circular gauge.
 - `UI.Chart(dataPoints, { style: 'bar'|'line', labels, tintColor, height })`: Lightweight trend sparklines.
 
-### Bidirectional Two-Way Action Handling
+### React Hooks (Fast Refresh Resilient)
 ```typescript
-import { LiveActivity, Widget } from 'react-native-live-widgets';
+import { useWidgetAction, useLiveActivity, useWidgetState } from 'react-native-live-widgets';
 
-// Listen to widget button interactions inside App.tsx
-const unsubscribe = LiveActivity.registerActionHandler((actionId, payload) => {
+// 1. Hook: Listen to widget button interactions (safe with Fast Refresh)
+useWidgetAction('INCREMENT', () => {
+  setCount(c => c + 1);
+});
+
+// 2. Hook: Manage Live Activity lifecycle
+const { activityId, isActive, start, update, end } = useLiveActivity();
+
+// 3. Hook: Two-way state sync with Widget SharedStorage
+const [counter, setCounter] = useWidgetState('widget_counter', 0);
+```
+
+### Imperative Action Handling
+```typescript
+import { Widget, LiveActivity } from 'react-native-live-widgets';
+
+// Listen to widget button interactions imperatively
+const unsubscribe = Widget.onWidgetAction((actionId, payload) => {
   if (actionId === 'INCREMENT') {
-    // Update local state and trigger widget redraw
     Widget.reload('main');
   }
 });

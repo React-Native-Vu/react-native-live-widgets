@@ -2,6 +2,14 @@
 
 All notable changes to `react-native-live-widgets` will be documented in this file.
 
+## [1.1.2] - 2026-11-16
+### Added
+- **React Hooks (Fast Refresh Resilient)**: Added `useWidgetAction`, `useLiveActivity`, and `useWidgetState` hooks with automatic lifecycle cleanup and Hot Reload resilience.
+- **API Overload & Aliases**: Added `Widget.onWidgetAction`, `LiveActivity.registerActionHandler`, `Widget.update`, `cornerRadius` alias for `borderRadius`, and normalized `intervalMinutes` <-> `refreshIntervalMinutes` across TypeScript, Android (Kotlin), and iOS (Swift).
+
+### Documentation
+- **Complete Documentation Synchronization**: Standardized function signatures, props, and code snippets across `README.md`, `GUIDE-VI.md`, `GUIDE-EN.md`, `docs/index.html`, `llms.txt`, and Agent Skill.
+
 ## [1.1.1] - 2026-11-16
 ### Fixed
 - **Android Widget Interaction Crash**: Added `android.permission.WAKE_LOCK` and safely wrapped `HeadlessJsTaskService` wake lock acquisition to prevent `SecurityException` on widget tap events.

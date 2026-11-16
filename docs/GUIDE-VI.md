@@ -68,7 +68,7 @@ git clone https://github.com/React-Native-Vu/LiveWidgetsExampleExpo.git
 cd LiveWidgetsExampleExpo
 npm install
 npx expo prebuild
-npm run setup:widgets
+npx react-native-live-widgets init
 npx expo run:ios # hoặc npx expo run:android
 ```
 
@@ -237,7 +237,7 @@ async function ensureAndroidNotificationPermission() {
 ```
 
 #### 5. Bước 4: Cách thêm và kéo giãn Home Screen Widget trên Android (`small` / `medium` / `large`)
-1. Sau khi gọi `Widget.update('main', { small, medium, large })` trong app, ra màn hình chính (Home Screen) của Android.
+1. Sau khi gọi `Widget.setLayout('main', { small, medium, large })` (hoặc alias `Widget.update(...)`) trong app, ra màn hình chính (Home Screen) của Android.
 2. **Nhấn giữ vào khoảng trống** trên màn hình chính -> Chọn **Widgets (Tiện ích)** -> Tìm ứng dụng của bạn -> Kéo **Live Widgets** ra màn hình.
 3. **Thay đổi kích thước tự động (Responsive Sizing):** Nhấn giữ vào Widget trên màn hình chính rồi thả tay ra để xuất hiện khung viền 4 chấm tròn:
    - Kéo thu nhỏ về **2×2 ô** (`chiều rộng < 210dp`): Tự động hiển thị giao diện **`small`** (tỷ lệ vuông 1:1).
@@ -744,17 +744,24 @@ if (isSupported) {
 
 ## 7. Đồng bộ API Ngầm cho Widget kể cả khi Kill App (`Widget.setRemoteConfig`)
 
-Khi ứng dụng bị người dùng vuốt tắt hoàn toàn (Kill App), JavaScript thread của React Native sẽ dừng. Để Widget vẫn luôn có dữ liệu mới từ Server:
+Khi ứng dụng bị người dùng vuốt tắt hoàn toàn (Kill App), JavaScript thread của React Native sẽ dừng. Để Widget vẫn luôn tự động gọi API lấy dữ liệu mới từ Server:
 
 ```typescript
-await Widget.setRemoteConfig({
+// Cú pháp tiêu chuẩn đầy đủ:
+await Widget.setRemoteConfig('main', {
   url: 'https://api.yourcompany.com/v1/widget-summary',
   method: 'GET',
   headers: {
     Authorization: `Bearer ${accessToken}`,
   },
-  intervalMinutes: 15, // Tự động đồng bộ mỗi 15 phút ở tầng OS (WidgetKit Timeline / Android AlarmManager)
-});
+  refreshIntervalMinutes: 15, // Chu kỳ gọi ngầm ở tầng OS (alias: intervalMinutes)
+}, APP_GROUP);
+
+// Hoặc cú pháp ngắn gọn (mặc định widgetKey = 'main'):
+await Widget.setRemoteConfig({
+  url: 'https://api.yourcompany.com/v1/widget-summary',
+  refreshIntervalMinutes: 15,
+}, APP_GROUP);
 ```
 
 - **Cách hoạt động:**

@@ -68,7 +68,7 @@ git clone https://github.com/React-Native-Vu/LiveWidgetsExampleExpo.git
 cd LiveWidgetsExampleExpo
 npm install
 npx expo prebuild
-npm run setup:widgets
+npx react-native-live-widgets init
 npx expo run:ios # or npx expo run:android
 ```
 
@@ -237,7 +237,7 @@ async function ensureAndroidNotificationPermission() {
 ```
 
 #### 5. Step 4: Adding & Resizing Home Screen Widgets on Android (`small` / `medium` / `large`)
-1. After calling `Widget.update('main', { small, medium, large })` in your app, go to the Android Home Screen.
+1. After calling `Widget.setLayout('main', { small, medium, large })` (or alias `Widget.update(...)`) in your app, go to the Android Home Screen.
 2. **Long-press an empty area** on the Home Screen -> Tap **Widgets** -> Find your app -> Drag **Live Widgets** onto the Home Screen.
 3. **Responsive Family Switching (`small` / `medium` / `large`):** Long-press the placed widget and release to show the resize handles:
    - Resize to **2×2 cells** (`width < 210dp`): Automatically renders the **`small`** layout (1:1 square aspect ratio).
@@ -746,14 +746,21 @@ if (isSupported) {
 When the user swipes away (force-kills) the main app, the React Native JS thread stops. To keep your Widget updated with live server data autonomously:
 
 ```typescript
-await Widget.setRemoteConfig({
+// Full standard signature:
+await Widget.setRemoteConfig('main', {
   url: 'https://api.yourcompany.com/v1/widget-summary',
   method: 'GET',
   headers: {
     Authorization: `Bearer ${accessToken}`,
   },
-  intervalMinutes: 15, // OS-scheduled background sync every 15 minutes
-});
+  refreshIntervalMinutes: 15, // OS-scheduled background sync (alias: intervalMinutes)
+}, APP_GROUP);
+
+// Or convenient shorthand (defaults to widgetKey = 'main'):
+await Widget.setRemoteConfig({
+  url: 'https://api.yourcompany.com/v1/widget-summary',
+  refreshIntervalMinutes: 15,
+}, APP_GROUP);
 ```
 
 - **How it works:**

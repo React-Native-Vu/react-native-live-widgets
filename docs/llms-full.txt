@@ -67,14 +67,21 @@ export interface WidgetRemoteConfig {
 - `LiveActivity.start(options: StartActivityOptions): Promise<string>`: Starts an activity, returns `activityId`.
 - `LiveActivity.update(options: { activityId?: string; layout?: WidgetNode; dynamicIsland?: ... }): Promise<void>`
 - `LiveActivity.end(options: { activityId?: string; dismissalPolicy?: 'immediate'|'default' }): Promise<void>`
-- `LiveActivity.endAll(): Promise<void>`
-- `LiveActivity.getAllPushTokens(): Promise<{ devicePushToken: string; pushToStartToken: string; activityUpdateToken: string }>`
+- `LiveActivity.endAll(): Promise<boolean>`
+- `LiveActivity.getAllPushTokens(activityId?: string): Promise<LiveActivityPushTokens>`
+- `LiveActivity.registerAction(actionId: string, handler: ActionHandler): () => void`
 - `LiveActivity.registerActionHandler(handler: (actionId: string, payload?: any) => void): () => void`
-- `Widget.setLayout(widgetKey: string, config: WidgetLayoutConfig, appGroup?: string): Promise<void>`
-- `Widget.reload(widgetKey?: string): Promise<void>`
-- `Widget.reloadAll(): Promise<void>`
-- `Widget.setRemoteConfig(config: WidgetRemoteConfig, widgetKey?: string, appGroup?: string): Promise<void>`
+- `Widget.setLayout(widgetKey: string, config: WidgetLayoutConfig, appGroup?: string): Promise<boolean>` (alias: `Widget.update`)
+- `Widget.reload(widgetKey?: string): Promise<boolean>`
+- `Widget.reloadAll(): Promise<boolean>`
+- `Widget.setRemoteConfig(widgetKey: string, config: WidgetRemoteConfig, appGroup?: string): Promise<boolean>` (supports shorthand `Widget.setRemoteConfig(config, appGroup?)`)
+- `Widget.onWidgetAction(handler: (actionId: string, payload?: any) => void): () => void`
 - `Widget.requestPin(): Promise<boolean>`: Android only.
+
+### React Hooks (Fast Refresh Resilient)
+- `useWidgetAction(actionIdOrCallback: string | ((actionId: string, payload?: any) => void), handler?: ActionHandler): void`
+- `useLiveActivity(initialActivityId?: string): UseLiveActivityResult`
+- `useWidgetState<T>(key: string, initialValue: T, appGroup?: string): [T, (val: T | ((prev: T) => T)) => Promise<void>, () => Promise<void>]`
 - `SharedStorage.setAppGroup(appGroup: string): void`
 - `SharedStorage.set(key: string, value: string, appGroup?: string): Promise<void>`
 - `SharedStorage.get(key: string, appGroup?: string): Promise<string | null>`

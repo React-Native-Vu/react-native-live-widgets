@@ -64,6 +64,15 @@ function isLayoutNode(item: any): item is LayoutNode {
   return item && typeof item === 'object' && typeof item.type === 'string';
 }
 
+function normalizeProps<P extends object>(props?: P): P | undefined {
+  if (!props) return undefined;
+  const p = { ...props } as any;
+  if (p.cornerRadius !== undefined && p.borderRadius === undefined) {
+    p.borderRadius = p.cornerRadius;
+  }
+  return p as P;
+}
+
 function parseContainerArgs<P extends object>(
   first?: StyleProp<P> | LayoutNode | LayoutNode[],
   rest?: LayoutNode[]
@@ -76,12 +85,12 @@ function parseContainerArgs<P extends object>(
       return { props: undefined, children: first as LayoutNode[] };
     }
     const flattened = flattenStyle<P>(first as StyleProp<P>);
-    return { props: flattened, children: rest || [] };
+    return { props: normalizeProps(flattened), children: rest || [] };
   }
   if (isLayoutNode(first)) {
     return { props: undefined, children: [first, ...(rest || [])] };
   }
-  return { props: first as P, children: rest || [] };
+  return { props: normalizeProps(first as P), children: rest || [] };
 }
 
 /**
@@ -154,15 +163,15 @@ export const UI = {
     if (typeof valueOrOptions === 'number') {
       return {
         type: 'Progress',
-        props: {
+        props: normalizeProps({
           value: valueOrOptions,
           ...options,
-        },
+        })!,
       };
     }
     return {
       type: 'Progress',
-      props: valueOrOptions,
+      props: normalizeProps(valueOrOptions)!,
     };
   },
 
@@ -175,19 +184,19 @@ export const UI = {
       const isBase64 = urlOrOptions.startsWith('data:image/');
       return {
         type: 'Image',
-        props: {
+        props: normalizeProps({
           ...(isHttp
             ? { url: urlOrOptions }
             : isBase64
             ? { base64: urlOrOptions }
             : { systemName: urlOrOptions }),
           ...options,
-        },
+        })!,
       };
     }
     return {
       type: 'Image',
-      props: urlOrOptions,
+      props: normalizeProps(urlOrOptions)!,
     };
   },
 
@@ -201,16 +210,17 @@ export const UI = {
     options?: Omit<ButtonNode['props'], 'title'>
   ): ButtonNode => {
     if (typeof titleOrProps === 'object' && titleOrProps !== null) {
-      if (titleOrProps.onPress && !titleOrProps.actionId) {
+      const normalized = normalizeProps(titleOrProps)!;
+      if (normalized.onPress && !normalized.actionId) {
         autoActionCounter += 1;
-        titleOrProps.actionId = `act_${Date.now()}_${autoActionCounter}`;
-        registerAction(titleOrProps.actionId, titleOrProps.onPress);
-      } else if (titleOrProps.onPress && titleOrProps.actionId) {
-        registerAction(titleOrProps.actionId, titleOrProps.onPress);
+        normalized.actionId = `act_${Date.now()}_${autoActionCounter}`;
+        registerAction(normalized.actionId, normalized.onPress);
+      } else if (normalized.onPress && normalized.actionId) {
+        registerAction(normalized.actionId, normalized.onPress);
       }
       return {
         type: 'Button',
-        props: titleOrProps,
+        props: normalized,
       };
     }
 
@@ -225,11 +235,11 @@ export const UI = {
 
     return {
       type: 'Button',
-      props: {
+      props: normalizeProps({
         title: titleOrProps,
         ...options,
         actionId: finalActionId,
-      },
+      })!,
     };
   },
 
@@ -350,15 +360,15 @@ export const UI = {
     if (typeof textOrOptions === 'string') {
       return {
         type: 'Badge',
-        props: {
+        props: normalizeProps({
           text: textOrOptions,
           ...options,
-        },
+        })!,
       };
     }
     return {
       type: 'Badge',
-      props: textOrOptions,
+      props: normalizeProps(textOrOptions)!,
     };
   },
 
