@@ -67,6 +67,9 @@
   ],
   "author": "vu-tran",
   "license": "MIT",
+  "dependencies": {
+    "xcode": "^3.0.1"
+  },
   "peerDependencies": {
     "react": "*",
     "react-native": "*",
