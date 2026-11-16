@@ -13,11 +13,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "jsx": "react",
-    "baseUrl": ".",
-    "paths": {
-      "react": ["../LiveWidgetsExample/node_modules/@types/react"]
-    }
+    "jsx": "react"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "lib", "example", "ios", "android"]

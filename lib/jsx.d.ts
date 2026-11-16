@@ -1,4 +1,3 @@
-import React from 'react';
 import { LayoutNode, ButtonNode, BadgeNode, ProgressNode, TimerNode, ImageNode, DividerNode, GaugeNode, ChartNode, ContainerProps, TextStyle, ZStackProps, GridProps, LinkProps, EqualizerProps, StyleProp } from './types';
 export declare function extractPropsAndStyle<T extends object>(props: any): any;
 export interface VStackProps extends ContainerProps {

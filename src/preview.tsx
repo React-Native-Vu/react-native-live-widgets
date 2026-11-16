@@ -129,7 +129,8 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
     }
   }
 
-  const dim = SIZE_DIMENSIONS[activeSize];
+  const dim =
+    SIZE_DIMENSIONS[(activeSize as WidgetPreviewSize) || 'medium'] || SIZE_DIMENSIONS.medium;
 
   return (
     <View style={[styles.container, style]}>

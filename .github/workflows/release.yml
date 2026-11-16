@@ -35,7 +35,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Install TypeScript compiler
-        run: npm install --no-save typescript
+        run: npm install --no-save typescript @types/react
 
       - name: Compile TypeScript -> JavaScript + Type Definitions (.d.ts)
         run: npm run build
