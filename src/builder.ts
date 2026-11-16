@@ -105,6 +105,26 @@ function normalizeProps<P extends object>(props?: P): P | undefined {
     if (p.fontWeight === undefined) p.fontWeight = typo.fontWeight;
   }
 
+  // Trợ năng / Accessibility Semantics Fallback (Phase 1):
+  if (p.accessible === undefined) {
+    if (p.text !== undefined || p.title !== undefined || p.actionId !== undefined) {
+      p.accessible = true;
+    }
+  }
+
+  if (p.accessibilityLabel === undefined) {
+    if (p.text !== undefined) p.accessibilityLabel = String(p.text);
+    else if (p.title !== undefined) p.accessibilityLabel = String(p.title);
+  }
+
+  if (p.accessibilityRole === undefined) {
+    if (p.title !== undefined || p.actionId !== undefined) {
+      p.accessibilityRole = 'button';
+    } else if (p.typography && (p.typography.startsWith('title') || p.typography === 'largeTitle' || p.typography === 'headline')) {
+      p.accessibilityRole = 'header';
+    }
+  }
+
   return p as P;
 }
 

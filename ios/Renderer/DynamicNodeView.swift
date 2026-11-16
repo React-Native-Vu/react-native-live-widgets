@@ -19,6 +19,7 @@ public struct DynamicNodeView: View {
         node.props?["privacySensitive"]?.boolValue == true,
         isRedacted: node.props?["redacted"]?.boolValue == true
       )
+      .modifier(DynamicNodeAccessibilityModifier(props: node.props))
   }
 
   @ViewBuilder
@@ -905,6 +906,49 @@ public struct DynamicNodeView: View {
     case "semibold": return .semibold
     case "medium": return .medium
     default: return .regular
+    }
+  }
+}
+
+// ♿ Accessibility Semantics & Fallback Modifier (Phase 1)
+struct DynamicNodeAccessibilityModifier: ViewModifier {
+  let props: [String: AnyCodable]?
+
+  func body(content: Content) -> some View {
+    let accessible = props?["accessible"]?.boolValue
+    let label = props?["accessibilityLabel"]?.stringValue
+    let hint = props?["accessibilityHint"]?.stringValue
+    let value = props?["accessibilityValue"]?.stringValue
+    let role = props?["accessibilityRole"]?.stringValue
+
+    if accessible == false {
+      content.accessibilityHidden(true)
+    } else if label != nil || hint != nil || value != nil || role != nil {
+      var view = AnyView(content)
+      if let label = label {
+        view = AnyView(view.accessibilityLabel(Text(label)))
+      }
+      if let hint = hint {
+        view = AnyView(view.accessibilityHint(Text(hint)))
+      }
+      if let value = value {
+        view = AnyView(view.accessibilityValue(Text(value)))
+      }
+      if let role = role {
+        switch role {
+        case "header":
+          view = AnyView(view.accessibilityAddTraits(.isHeader))
+        case "button":
+          view = AnyView(view.accessibilityAddTraits(.isButton))
+        case "image":
+          view = AnyView(view.accessibilityAddTraits(.isImage))
+        default:
+          break
+        }
+      }
+      return AnyView(view)
+    } else {
+      return AnyView(content)
     }
   }
 }

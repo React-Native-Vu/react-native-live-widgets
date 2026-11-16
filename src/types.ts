@@ -84,11 +84,47 @@ export type TypographyStyle =
 
 export type FontDesign = 'default' | 'monospaced' | 'rounded' | 'serif';
 
+/**
+ * ♿ Vai trò ngữ nghĩa cho Trợ năng (Accessibility Semantic Role).
+ * Giúp các công cụ đọc màn hình (TalkBack trên Android, VoiceOver trên iOS, Screen Readers)
+ * phát âm chính xác bản chất của phần tử thay vì coi tất cả là hình ảnh raster.
+ */
+export type AccessibilityRole =
+  | 'none'
+  | 'button'
+  | 'header'
+  | 'text'
+  | 'image'
+  | 'progressbar'
+  | 'timer'
+  | 'switch'
+  | 'checkbox'
+  | 'summary'
+  | 'alert';
+
+/**
+ * ♿ Thuộc tính Trợ năng (Accessibility & Semantics Layer).
+ * Tách biệt hoàn toàn tầng ngữ nghĩa khỏi tầng vẽ đồ họa (Canvas/SwiftUI),
+ * cho phép TalkBack và VoiceOver tiếp cận dữ liệu chính xác ngay cả khi render bằng Canvas.
+ */
+export interface AccessibilityProps {
+  /** Cho phép công cụ trợ năng (TalkBack/VoiceOver) tiếp cận thành phần này (mặc định true; đặt false cho các icon/hình trang trí decorative) */
+  accessible?: boolean;
+  /** Mô tả âm thanh phát âm cho người dùng khi TalkBack/VoiceOver lướt tới phần tử */
+  accessibilityLabel?: string;
+  /** Hướng dẫn hành động bổ sung (ví dụ: "Chạm hai lần để xác nhận chấm công") */
+  accessibilityHint?: string;
+  /** Vai trò ngữ nghĩa của phần tử (header, button, progressbar, ...) */
+  accessibilityRole?: AccessibilityRole;
+  /** Giá trị trạng thái đọc lên (ví dụ: "86%", "Đang vận chuyển", "Đã bật") */
+  accessibilityValue?: string | number;
+}
+
 export interface BaseNode {
   type: LayoutNodeType;
 }
 
-export interface ContainerProps extends ShadowProps {
+export interface ContainerProps extends ShadowProps, AccessibilityProps {
   padding?: number;
   paddingHorizontal?: number;
   paddingVertical?: number;
@@ -143,7 +179,7 @@ export type FontWeight =
   | (string & {})
   | string;
 
-export interface TextStyle extends ShadowProps {
+export interface TextStyle extends ShadowProps, AccessibilityProps {
   color?: DynamicColor;
   fontSize?: number;
   fontWeight?: FontWeight;
@@ -191,7 +227,7 @@ export interface TextNode extends BaseNode {
 
 export interface TimerNode extends BaseNode {
   type: 'Timer';
-  props: {
+  props: AccessibilityProps & {
     /** Epoch timestamp tính bằng giây để đếm tới (hoặc đếm từ) */
     targetTimestamp: number;
     /** 'countdown': đếm ngược tới mốc; 'countup': đếm tiến từ mốc */
@@ -206,7 +242,7 @@ export interface TimerNode extends BaseNode {
 
 export interface ProgressNode extends BaseNode {
   type: 'Progress';
-  props: {
+  props: AccessibilityProps & {
     // ── 1. Nguồn dữ liệu tiến trình ─────────────────────────────
     /** Mốc bắt đầu (epoch giây) nếu dùng timer interval tự chạy */
     startTimestamp?: number;
@@ -265,7 +301,7 @@ export interface ProgressNode extends BaseNode {
 
 export interface ImageNode extends BaseNode {
   type: 'Image';
-  props: {
+  props: AccessibilityProps & {
     /** URL ảnh từ mạng (https://...) - Tự động tải, nén tối ưu RAM và cache vào App Group cho Widget & Live Activity */
     url?: string;
     /** Chuỗi ảnh Base64 (có thể kèm tiền tố data:image/png;base64,... hoặc chuỗi raw base64) */
@@ -310,7 +346,7 @@ export interface SpacerNode extends BaseNode {
 
 export interface ButtonNode extends BaseNode {
   type: 'Button';
-  props: ShadowProps & {
+  props: ShadowProps & AccessibilityProps & {
     title: string;
     /**
      * Mã hành động chạy ngầm ngay trên Widget (iOS 17+ AppIntent, không mở App):
@@ -397,7 +433,7 @@ export interface DividerNode extends BaseNode {
 
 export interface GaugeNode extends BaseNode {
   type: 'Gauge';
-  props: {
+  props: AccessibilityProps & {
     /** Giá trị tiến độ từ 0.0 đến 1.0 */
     value: number;
     /** Chuỗi hiển thị chính giữa đồng hồ (vd "85%", "120 km/h", "420") */
@@ -730,4 +766,6 @@ export interface WidgetCapabilities {
   supportsTintedMode: boolean;
   /** Hỗ trợ hiệu ứng Odometer số lật (iOS 16+ numericText) */
   supportsNumericAnimation: boolean;
+  /** Hỗ trợ lớp Trợ năng phân cấp (Accessibility Fallback Layer: VoiceOver & TalkBack contentDescription) */
+  supportsAccessibility: boolean;
 }

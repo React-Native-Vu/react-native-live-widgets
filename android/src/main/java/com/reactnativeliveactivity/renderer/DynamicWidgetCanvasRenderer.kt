@@ -24,7 +24,10 @@ data class ButtonActionBinding(
     val zone: String = "mid", // "top", "mid", "bot"
     val xFraction: Float = 0.5f,
     val yFraction: Float = 0.5f,
-    val widthFraction: Float = 1.0f
+    val widthFraction: Float = 1.0f,
+    val title: String = "",
+    val accessibilityLabel: String? = null,
+    val accessibilityHint: String? = null
 )
 
 object DynamicWidgetCanvasRenderer {
@@ -33,6 +36,104 @@ object DynamicWidgetCanvasRenderer {
         if (node == null || node.optString("type") != "Spacer") return false
         val props = node.optJSONObject("props") ?: return true
         return !props.has("minLength")
+    }
+
+    /**
+     * ♿ Trích xuất bản tóm tắt Trợ năng (Accessibility Summary) từ cây JSON DSL.
+     * Cho phép TalkBack của Android đọc đầy đủ các nhãn, con số, trạng thái và nút bấm
+     * ngay cả khi toàn bộ giao diện đang được render bằng Canvas 2D Bitmap.
+     */
+    fun extractAccessibilitySummary(node: JSONObject?): String {
+        if (node == null) return ""
+        val parts = mutableListOf<String>()
+        traverseAccessibility(node, parts)
+        return parts.distinct().joinToString(". ")
+    }
+
+    private fun traverseAccessibility(node: JSONObject, parts: MutableList<String>) {
+        val props = node.optJSONObject("props")
+        val accessible = props?.optBoolean("accessible", true) ?: true
+        if (!accessible) return
+
+        val customLabel = props?.optString("accessibilityLabel", "")?.trim() ?: ""
+        val customValue = props?.optString("accessibilityValue", "")?.trim() ?: ""
+        val customHint = props?.optString("accessibilityHint", "")?.trim() ?: ""
+
+        val type = node.optString("type")
+        when (type) {
+            "Text" -> {
+                val text = props?.optString("text", "")?.trim() ?: ""
+                val content = when {
+                    customLabel.isNotEmpty() -> customLabel
+                    text.isNotEmpty() -> text
+                    else -> ""
+                }
+                if (content.isNotEmpty()) parts.add(content)
+            }
+            "Button" -> {
+                val title = props?.optString("title", "")?.trim() ?: ""
+                val btnName = if (customLabel.isNotEmpty()) customLabel else title
+                val fullBtn = if (customHint.isNotEmpty()) "Nút $btnName, $customHint" else "Nút $btnName"
+                if (btnName.isNotEmpty()) parts.add(fullBtn)
+            }
+            "Progress" -> {
+                val label = if (customLabel.isNotEmpty()) customLabel else "Tiến độ"
+                val value = when {
+                    customValue.isNotEmpty() -> customValue
+                    props != null && props.has("value") -> "${(props.optDouble("value", 0.0) * 100).toInt()}%"
+                    else -> ""
+                }
+                parts.add(if (value.isNotEmpty()) "$label $value" else label)
+            }
+            "Gauge" -> {
+                val label = if (customLabel.isNotEmpty()) customLabel else (props?.optString("label", "")?.trim() ?: "Chỉ số")
+                val valText = props?.optString("valueText", "")?.trim() ?: ""
+                val value = when {
+                    customValue.isNotEmpty() -> customValue
+                    valText.isNotEmpty() -> valText
+                    props != null && props.has("value") -> "${(props.optDouble("value", 0.0) * 100).toInt()}%"
+                    else -> ""
+                }
+                parts.add(if (value.isNotEmpty()) "$label: $value" else label)
+            }
+            "Timer" -> {
+                val label = if (customLabel.isNotEmpty()) customLabel else "Đồng hồ"
+                parts.add(label)
+            }
+            "Badge" -> {
+                val text = props?.optString("text", "")?.trim() ?: ""
+                val label = if (customLabel.isNotEmpty()) customLabel else text
+                if (label.isNotEmpty()) parts.add(label)
+            }
+            "Toggle" -> {
+                val label = props?.optString("label", "")?.trim() ?: ""
+                val isChecked = props?.optBoolean("isChecked", false) ?: false
+                val desc = if (customLabel.isNotEmpty()) customLabel else label
+                if (desc.isNotEmpty()) {
+                    parts.add("$desc: " + if (isChecked) "Đã chọn" else "Chưa chọn")
+                }
+            }
+            "Image" -> {
+                if (customLabel.isNotEmpty()) {
+                    parts.add("Ảnh $customLabel")
+                }
+            }
+            else -> {
+                if (customLabel.isNotEmpty()) {
+                    parts.add(customLabel)
+                }
+            }
+        }
+
+        val children = node.optJSONArray("children")
+        if (children != null) {
+            for (i in 0 until children.length()) {
+                val child = children.optJSONObject(i)
+                if (child != null) {
+                    traverseAccessibility(child, parts)
+                }
+            }
+        }
     }
 
     fun renderWidgetBitmap(
@@ -651,7 +752,10 @@ object DynamicWidgetCanvasRenderer {
                             zone = zone,
                             xFraction = xF,
                             yFraction = yF,
-                            widthFraction = if (fullWidth) 1.0f else wF
+                            widthFraction = if (fullWidth) 1.0f else wF,
+                            title = title,
+                            accessibilityLabel = props?.optString("accessibilityLabel", "").takeIf { it.isNotEmpty() },
+                            accessibilityHint = props?.optString("accessibilityHint", "").takeIf { it.isNotEmpty() }
                         )
                     )
                 }
@@ -935,7 +1039,16 @@ object DynamicWidgetCanvasRenderer {
                     top > totalHeight * 0.76f -> "bot"
                     else -> "mid"
                 }
-                bindings.add(ButtonActionBinding(actionId = normalizedActionId, deepLink = null, zone = zone))
+                bindings.add(
+                    ButtonActionBinding(
+                        actionId = normalizedActionId,
+                        deepLink = null,
+                        zone = zone,
+                        title = label,
+                        accessibilityLabel = props?.optString("accessibilityLabel", "").takeIf { it.isNotEmpty() } ?: label,
+                        accessibilityHint = if (isChecked) "Đã chọn, bấm để bỏ chọn" else "Chưa chọn, bấm để chọn"
+                    )
+                )
                 rowH + 2f * density
             }
 
@@ -998,7 +1111,10 @@ object DynamicWidgetCanvasRenderer {
                             zone = zone,
                             xFraction = xF,
                             yFraction = yF,
-                            widthFraction = 1.0f
+                            widthFraction = 1.0f,
+                            title = props?.optString("accessibilityLabel", "").takeIf { it.isNotEmpty() } ?: "Liên kết",
+                            accessibilityLabel = props?.optString("accessibilityLabel", "").takeIf { it.isNotEmpty() },
+                            accessibilityHint = props?.optString("accessibilityHint", "").takeIf { it.isNotEmpty() }
                         )
                     )
                 }

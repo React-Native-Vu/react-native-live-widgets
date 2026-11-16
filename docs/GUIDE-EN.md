@@ -1027,12 +1027,58 @@ Rather than making unverified claims of "100% parity", the engine provides an ex
 | **Dashed / Dotted Borders** | ✅ StrokeStyle | ✅ StrokeStyle | ⚠️ Solid | ✅ `DashPathEffect` | Automatically falls back to solid border |
 | **Dynamic Type (Accessibility)** | ✅ Native | ✅ Native | ✅ `fontScale` | ✅ `fontScale` | Automatically scales with OS font multiplier |
 | **RTL Layout Mirroring** | ✅ Native | ✅ Native | ✅ RTL | ✅ RTL | Reverses flex order and flips text alignment |
+| **Accessibility (TalkBack / VoiceOver)** | ✅ Native VoiceOver | ✅ Native VoiceOver | ✅ Notification Text | ✅ A11y Summary + Hit-Zones | Aggregated semantic `contentDescription` ensures full screen-reader readability |
 | **iOS 18 Tinted Mode** | ✅ Accentable | N/A | N/A | ✅ Material You | Resolves `tinted` key on iOS 18; falls back to dark/light color |
 | **Interactive Background Intents** | ✅ iOS 17+ | ✅ iOS 17+ | ✅ PendingIntent | ✅ PendingIntent | Updates local Shared Storage and refreshes timeline |
 
 ---
 
-### 12.3. Programmatic Capability Inspection (`Widget.getCapabilities`)
+### 12.3. ♿ Accessibility & Semantics (Phase 1 Fallback Layer)
+
+To ensure users with visual impairments or screen-reader users (**VoiceOver on iOS**, **TalkBack on Android**) receive full context, the engine provides standard accessibility props:
+
+```tsx
+<VStack padding={16} backgroundColor="#0F172A">
+  {/* Header with semantic role */}
+  <Text
+    typography="title2"
+    accessibilityRole="header"
+    accessibilityLabel="Shift Attendance Dashboard"
+  >
+    ATTENDANCE DASHBOARD
+  </Text>
+
+  {/* Progress gauge with spoken percentage */}
+  <Progress
+    value={0.86}
+    accessibilityLabel="Shift completion progress"
+    accessibilityValue="86 percent"
+  />
+
+  {/* Interactive button with action hint */}
+  <Button
+    title="Clock In"
+    actionId="CLOCK_IN"
+    accessibilityRole="button"
+    accessibilityLabel="Clock in to shift"
+    accessibilityHint="Double tap to confirm attendance"
+  />
+
+  {/* Decorative element hidden from screen readers */}
+  <Image systemName="sparkles" accessible={false} />
+</VStack>
+```
+
+#### How Phase 1 Accessibility Works:
+1. **iOS (SwiftUI)**: Maps directly to native `.accessibilityLabel()`, `.accessibilityHint()`, `.accessibilityValue()`, and `.accessibilityAddTraits()`. Elements with `accessible={false}` receive `.accessibilityHidden(true)`.
+2. **Android (Canvas 2D)**:
+   - Recursively extracts an intelligent text summary (`extractAccessibilitySummary`) and binds it to the canvas `ImageView`'s `contentDescription`.
+   - Each interactive hit-zone receives its own `contentDescription` and action hint so TalkBack speaks each button individually when focused.
+3. **In-App Preview**: Maps to React Native Web/Mobile accessibility props.
+
+---
+
+### 12.4. Programmatic Capability Inspection (`Widget.getCapabilities`)
 ```typescript
 const caps = await Widget.getCapabilities();
 console.log(`Running on: ${caps.platform} (OS: ${caps.osVersion})`);

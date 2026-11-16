@@ -428,6 +428,10 @@ function renderPreviewNode(
       };
       return (
         <RNText
+          accessible={p.accessible !== false}
+          accessibilityLabel={p.accessibilityLabel || p.text}
+          accessibilityHint={p.accessibilityHint}
+          accessibilityRole={p.accessibilityRole as any}
           numberOfLines={p.numberOfLines}
           style={[
             textStyle,
@@ -469,6 +473,10 @@ function renderPreviewNode(
 
       return (
         <TouchableOpacity
+          accessible={p.accessible !== false}
+          accessibilityLabel={p.accessibilityLabel || p.title}
+          accessibilityHint={p.accessibilityHint}
+          accessibilityRole="button"
           activeOpacity={0.7}
           onPress={() => {
             if (p.actionId && onAction) {

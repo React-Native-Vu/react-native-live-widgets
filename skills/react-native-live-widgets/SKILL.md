@@ -94,6 +94,7 @@ You can construct widget trees using **EITHER JSX components** (`<VStack>`, `<HS
 - **Dynamic Type**: `dynamicType={true}` automatically scales font with OS Accessibility text size settings.
 - **Light / Dark / Tinted Mode**: `backgroundColor={{ light: '#FFFFFF', dark: '#0F172A', tinted: '#1E293B' }}` (supports iOS 18 Tinted Home Screen & Android Material You).
 - **RTL / Bi-directional Support**: `direction="rtl"` or `isRTL={true}` (automatically reverses row order and aligns text).
+- **Accessibility & Semantics (Phase 1)**: `accessible={true}`, `accessibilityLabel="Label"`, `accessibilityHint="Hint"`, `accessibilityRole="button" | "header"`, `accessibilityValue="86%"`. (TalkBack on Android reads aggregated canvas summary + individual button hit-zones; VoiceOver on iOS maps to native traits).
 
 ### Interactivity & Preview
 - **Button**: `<Button title="Approve" actionId="APPROVE_TASK" backgroundColor="#2563EB" gradient={{ colors: ['#2563EB', '#1D4ED8'] }} />` or `UI.Button(...)`
@@ -132,6 +133,7 @@ console.log('Capabilities:', caps);
 | **Shadows** | Native `.shadow()` | `setShadowLayer` / Elevation | Native RN `shadow*` | Solid border / High-contrast border |
 | **Dashed / Dotted Borders** | Native `StrokeStyle(dash:)` | `DashPathEffect` | Solid border (`borderStyle`) | Solid border line |
 | **Dynamic Type** | Full native Dynamic Type | Responds to `fontScale` | System font size | Clamped standard pixel sizing |
+| **Accessibility (TalkBack / VoiceOver)** | Native VoiceOver traits | A11y Summary + Hit-Zones | RN accessibility props | Aggregated `contentDescription` on canvas |
 | **Tinted Mode** | iOS 18 Tinted Home Screen | Material You dynamic theme | Preview toggle | Uses `dark` or `light` theme color |
 | **RTL Layout** | Native `layoutDirection` | Flow reversed (`row-reverse`) | `row-reverse` / `rtl` | Left-to-right default |
 

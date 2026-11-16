@@ -1025,12 +1025,58 @@ Thay vì tuyên bố chung chung "100% parity", engine phân định rõ ràng c
 | **Viền nét đứt (Dashed / Dotted)** | ✅ StrokeStyle | ✅ StrokeStyle | ⚠️ Nét liền | ✅ `DashPathEffect` | Tự động hiển thị viền nét liền `solid` |
 | **Dynamic Type (Cỡ chữ Trợ năng)** | ✅ Native | ✅ Native | ✅ `fontScale` | ✅ `fontScale` | Tự động nhân tỉ lệ fontScale của hệ điều hành |
 | **Đảo chiều RTL (Ả Rập, Hebrew)** | ✅ Native | ✅ Native | ✅ RTL | ✅ RTL | Tự động đảo thứ tự hàng ngang sang `row-reverse` |
+| **Accessibility (TalkBack / VoiceOver)** | ✅ Native VoiceOver | ✅ Native VoiceOver | ✅ Notification Text | ✅ A11y Summary + Hit-Zones | Tổng hợp ngữ nghĩa toàn cây gán vào `contentDescription` |
 | **Chế độ Tinted (iOS 18+)** | ✅ Accentable | Không áp dụng | Không áp dụng | ✅ Material You | Tự động dùng màu `dark`/`light` trên iOS 17 trở xuống |
 | **Nút bấm tương tác chạy ngầm** | ✅ iOS 17+ AppIntent | ✅ iOS 17+ | ✅ PendingIntent | ✅ PendingIntent | Lưu trạng thái SharedStorage và kích hoạt làm mới giao diện |
 
 ---
 
-### 12.3. Kiểm tra năng lực thiết bị qua code (`Widget.getCapabilities`)
+### 12.3. ♿ Lớp Trợ năng & Ngữ nghĩa (Accessibility Fallback Layer)
+
+Để đảm bảo người khiếm thị hoặc người sử dụng công cụ đọc màn hình (**VoiceOver trên iOS**, **TalkBack trên Android**) tiếp cận được đầy đủ thông tin trên Widget, engine cung cấp các thuộc tính Trợ năng chuẩn:
+
+```tsx
+<VStack padding={16} backgroundColor="#0F172A">
+  {/* Tiêu đề với vai trò Header */}
+  <Text
+    typography="title2"
+    accessibilityRole="header"
+    accessibilityLabel="Bảng điều khiển chấm công"
+  >
+    BẢNG ĐIỀU KHIỂN CHẤM CÔNG
+  </Text>
+
+  {/* Chỉ số tiến độ với nhãn và giá trị âm thanh */}
+  <Progress
+    value={0.86}
+    accessibilityLabel="Tiến độ hoàn thành ca làm việc"
+    accessibilityValue="86 phần trăm"
+  />
+
+  {/* Nút bấm với nhãn và gợi ý hành động */}
+  <Button
+    title="Check-in vào ca"
+    actionId="CHECK_IN"
+    accessibilityRole="button"
+    accessibilityLabel="Check-in vào ca"
+    accessibilityHint="Chạm hai lần để gửi yêu cầu chấm công"
+  />
+
+  {/* Phần tử trang trí (không đọc lên TalkBack/VoiceOver) */}
+  <Image systemName="sparkles" accessible={false} />
+</VStack>
+```
+
+#### Cơ chế hoạt động của Accessibility Fallback Layer (Phase 1):
+1. **Trên iOS**: Map trực tiếp sang SwiftUI `.accessibilityLabel()`, `.accessibilityHint()`, `.accessibilityValue()`, `.accessibilityAddTraits()`. Nếu `accessible={false}`, áp dụng `.accessibilityHidden(true)`.
+2. **Trên Android (Canvas 2D)**:
+   - Toàn bộ cây DSL được duyệt đệ quy để trích xuất một bản tóm tắt âm thanh thông minh (`extractAccessibilitySummary`) và gán vào `contentDescription` của Canvas `ImageView`.
+   - Các nút bấm tương tác (Hit-Zones) được gán `contentDescription` riêng rẽ kèm `accessibilityHint`, giúp TalkBack phát âm chuẩn xác khi người dùng chạm vào từng nút.
+3. **Trong In-App Preview**: Tự động ánh xạ sang `accessible`, `accessibilityLabel`, `accessibilityHint`, `accessibilityRole` của React Native Web/Mobile.
+
+---
+
+### 12.4. Kiểm tra năng lực thiết bị qua code (`Widget.getCapabilities`)
 ```typescript
 const caps = await Widget.getCapabilities();
 console.log(`Đang chạy trên: ${caps.platform} (OS: ${caps.osVersion})`);

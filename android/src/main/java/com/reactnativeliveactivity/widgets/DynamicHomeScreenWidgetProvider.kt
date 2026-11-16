@@ -123,6 +123,12 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             )
             views.setImageViewBitmap(R.id.rn_widget_canvas, bmp)
 
+            // ♿ Gán Accessibility Summary cho toàn bộ Canvas View để TalkBack đọc được (Phase 1)
+            val a11ySummary = DynamicWidgetCanvasRenderer.extractAccessibilitySummary(activeNode)
+            if (a11ySummary.isNotEmpty()) {
+                views.setContentDescription(R.id.rn_widget_canvas, a11ySummary)
+            }
+
             bindHitZones(context, views, appWidgetId, bindings)
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
@@ -217,6 +223,14 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                         viewId,
                         createPendingIntent(context, appWidgetId * 100 + requestIdx++, b)
                     )
+                    // ♿ Gán nhãn trợ năng riêng cho từng nút bấm / vùng tương tác
+                    if (b != null) {
+                        val btnLabel = if (!b.accessibilityLabel.isNullOrEmpty()) b.accessibilityLabel else b.title
+                        val fullDesc = if (!b.accessibilityHint.isNullOrEmpty()) "$btnLabel. ${b.accessibilityHint}" else btnLabel
+                        views.setContentDescription(viewId, fullDesc)
+                    } else {
+                        views.setContentDescription(viewId, null)
+                    }
                 }
             }
         }

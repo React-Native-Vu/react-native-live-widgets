@@ -172,6 +172,7 @@ Build deep, rich widgets with design system foundations across both platforms:
 - **🔤 Typography & Dynamic Type**: Semantic scale (`largeTitle`, `title`, `headline`, `subheadline`, `body`, `caption`, `footnote`) with auto-scaling for OS Accessibility font sizes.
 - **🌗 Light, Dark & Tinted Mode**: Support for iOS 18 Tinted Home Screen icons and Android Material You dynamic coloring via `{ light: '#FFF', dark: '#0F172A', tinted: '#38BDF8' }`.
 - **🌍 RTL Internationalization**: Automatic reverse row alignment (`direction: 'rtl'` or `isRTL: true`) for Arabic, Hebrew, and other RTL locales.
+- **♿ Accessibility & Semantics**: First-class TalkBack & VoiceOver support via `accessible`, `accessibilityLabel`, `accessibilityHint`, `accessibilityRole`, and `accessibilityValue`. Android Canvas generates an aggregated semantic summary on the canvas and individual `contentDescription` on interactive hit-zones.
 
 #### 📊 Platform Capability & Fallback Matrix
 
@@ -180,6 +181,7 @@ Rather than making unverified claims of "100% parity", the engine provides an ex
 | Feature / Modifier | iOS WidgetKit | iOS Live Activity | Android Ongoing Notification | Android Home Widget | Graceful Fallback Mechanism |
 | :--- | :---: | :---: | :---: | :---: | :--- |
 | **Declarative Layouts (`VStack`/`HStack`/`Grid`)** | ✅ Native | ✅ Native | ✅ Canvas | ✅ 2D Canvas | 100% pixel-aligned across all platforms |
+| **Accessibility (TalkBack / VoiceOver)** | ✅ Native VoiceOver | ✅ Native VoiceOver | ✅ Notification Text | ✅ A11y Summary + Hit-Zones | Aggregated `contentDescription` ensures full screen-reader readability |
 | **Linear / Radial Gradients** | ✅ SwiftUI | ✅ SwiftUI | ✅ Shader | ✅ Shader | Automatically falls back to dominant solid `backgroundColor` |
 | **Card & Text Shadows** | ✅ SwiftUI | ✅ SwiftUI | ⚠️ Text Only | ✅ `setShadowLayer` | Falls back to elevation or thin border stroke |
 | **Dashed / Dotted Borders** | ✅ StrokeStyle | ✅ StrokeStyle | ⚠️ Solid | ✅ `DashPathEffect` | Automatically falls back to solid border |
