@@ -2,6 +2,12 @@
 
 All notable changes to `react-native-live-widgets` will be documented in this file.
 
+## [1.2.0] - 2026-11-16
+### Added
+- **JSX / TSX Declarative DSL**: Support building Widgets and Live Activities directly using intuitive React JSX syntax (`<VStack>`, `<HStack>`, `<ZStack>`, `<Grid>`, `<Text>`, `<Button>`, `<Badge>`, `<Progress>`, `<Timer>`, `<Image>`, `<Spacer>`, `<Divider>`) instead of nested function calls `UI.VStack(...)`.
+- **In-App Widget Preview (`<WidgetPreview>` / `<VoltraWidgetPreview>`)**: Live component to render, preview, and test widget layouts and interactive button clicks directly inside your React Native screens with accurate device sizes (`small`, `medium`, `large`, `lockScreen`).
+- **Seamless JSX Auto-Conversion**: `Widget.setLayout(...)` and `LiveActivity.start(...)` now accept JSX elements directly and convert them automatically into native `LayoutNode` JSON trees.
+
 ## [1.1.2] - 2026-11-16
 ### Added
 - **React Hooks (Fast Refresh Resilient)**: Added `useWidgetAction`, `useLiveActivity`, and `useWidgetState` hooks with automatic lifecycle cleanup and Hot Reload resilience.

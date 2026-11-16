@@ -3,6 +3,8 @@ import { ActionHandler, GlobalActionHandler, registerAction, registerActionHandl
 export type { ActionHandler, GlobalActionHandler };
 export { registerAction, registerActionHandler, unregisterAction };
 export * from './hooks';
+export * from './jsx';
+export * from './preview';
 export declare const LiveActivity: {
     /**
      * Khởi động một Live Activity (iOS) hoặc Live Update / Ongoing Notification (Android).

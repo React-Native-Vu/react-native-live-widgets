@@ -1,3 +1,4 @@
+import React from 'react';
 import { AppRegistry, NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import {
   ActiveActivityInfo,
@@ -43,6 +44,9 @@ import {
 export type { ActionHandler, GlobalActionHandler };
 export { registerAction, registerActionHandler, unregisterAction };
 export * from './hooks';
+export * from './jsx';
+export * from './preview';
+import { renderToWidget } from './jsx';
 
 // Tự động lắng nghe action event từ Native để dispatch tới các hàm TypeScript đã đăng ký
 if (liveActivityEmitter) {
@@ -76,7 +80,11 @@ export const LiveActivity = {
   start: async (options: StartActivityOptions): Promise<boolean> => {
     if (!LiveActivityModule?.start) return false;
     try {
-      const payload = JSON.stringify(options);
+      const opts = { ...options } as any;
+      if (React.isValidElement(opts.lockScreen)) {
+        opts.lockScreen = renderToWidget(opts.lockScreen);
+      }
+      const payload = JSON.stringify(opts);
       return await LiveActivityModule.start(options.activityId, payload);
     } catch (error) {
       console.warn('[react-native-live-widgets] start error:', error);
@@ -90,7 +98,11 @@ export const LiveActivity = {
   update: async (options: UpdateActivityOptions): Promise<boolean> => {
     if (!LiveActivityModule?.update) return false;
     try {
-      const payload = JSON.stringify(options);
+      const opts = { ...options } as any;
+      if (React.isValidElement(opts.lockScreen)) {
+        opts.lockScreen = renderToWidget(opts.lockScreen);
+      }
+      const payload = JSON.stringify(opts);
       return await LiveActivityModule.update(options.activityId, payload);
     } catch (error) {
       console.warn('[react-native-live-widgets] update error:', error);
@@ -441,7 +453,21 @@ export const Widget = {
         appGroup = typeof layoutConfigOrAppGroup === 'string' ? layoutConfigOrAppGroup : undefined;
       }
 
-      const saved = await SharedStorage.set(`widget_layout_${widgetKey}`, layoutConfig, appGroup);
+      let finalLayout: any = layoutConfig;
+      if (React.isValidElement(finalLayout)) {
+        finalLayout = { medium: renderToWidget(finalLayout) };
+      } else if (finalLayout && typeof finalLayout === 'object') {
+        const c = { ...finalLayout };
+        if (React.isValidElement(c.small)) c.small = renderToWidget(c.small);
+        if (React.isValidElement(c.medium)) c.medium = renderToWidget(c.medium);
+        if (React.isValidElement(c.large)) c.large = renderToWidget(c.large);
+        if (React.isValidElement(c.accessoryRectangular)) c.accessoryRectangular = renderToWidget(c.accessoryRectangular);
+        if (React.isValidElement(c.accessoryCircular)) c.accessoryCircular = renderToWidget(c.accessoryCircular);
+        if (React.isValidElement(c.accessoryInline)) c.accessoryInline = renderToWidget(c.accessoryInline);
+        finalLayout = c;
+      }
+
+      const saved = await SharedStorage.set(`widget_layout_${widgetKey}`, finalLayout, appGroup);
       if (!saved) return false;
       return await Widget.reloadAll();
     } catch (error) {
