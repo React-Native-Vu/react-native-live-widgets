@@ -34,8 +34,8 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Install TypeScript compiler & React Native type definitions
-        run: npm install --no-save typescript @types/react @types/react-native
+      - name: Install TypeScript compiler
+        run: npm install --no-save typescript
 
       - name: Compile TypeScript -> JavaScript + Type Definitions (.d.ts)
         run: npm run build
