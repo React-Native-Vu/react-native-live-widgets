@@ -23,31 +23,44 @@ import {
   GridProps,
   LinkProps,
   EqualizerProps,
+  StyleProp,
 } from './types';
-import { UI } from './builder';
+import { UI, flattenStyle } from './builder';
 
 // ─── 1. JSX COMPONENT DEFINITIONS ────────────────────────────────────────────
 
+export function extractPropsAndStyle<T extends object>(props: any): any {
+  if (!props) return {};
+  const { style, children, ...rest } = props;
+  if (!style) return rest;
+  const flattened = flattenStyle(style);
+  return { ...flattened, ...rest };
+}
+
 export interface VStackProps extends ContainerProps {
   children?: React.ReactNode;
+  style?: StyleProp<ContainerProps>;
 }
 export const VStack: React.FC<VStackProps> = () => null;
 VStack.displayName = 'VStack';
 
 export interface HStackProps extends ContainerProps {
   children?: React.ReactNode;
+  style?: StyleProp<ContainerProps>;
 }
 export const HStack: React.FC<HStackProps> = () => null;
 HStack.displayName = 'HStack';
 
 export interface ZStackJSXProps extends ZStackProps {
   children?: React.ReactNode;
+  style?: StyleProp<ZStackProps>;
 }
 export const ZStack: React.FC<ZStackJSXProps> = () => null;
 ZStack.displayName = 'ZStack';
 
 export interface GridJSXProps extends GridProps {
   children?: React.ReactNode;
+  style?: StyleProp<GridProps>;
 }
 export const Grid: React.FC<GridJSXProps> = () => null;
 Grid.displayName = 'Grid';
@@ -55,29 +68,41 @@ Grid.displayName = 'Grid';
 export interface TextJSXProps extends TextStyle {
   children?: React.ReactNode;
   text?: string;
+  style?: StyleProp<TextStyle>;
 }
 export const Text: React.FC<TextJSXProps> = () => null;
 Text.displayName = 'Text';
 
 export type ButtonJSXProps = ButtonNode['props'] & {
   children?: React.ReactNode;
+  style?: StyleProp<ButtonNode['props']>;
 };
 export const Button: React.FC<ButtonJSXProps> = () => null;
 Button.displayName = 'Button';
 
 export type BadgeJSXProps = BadgeNode['props'] & {
   children?: React.ReactNode;
+  style?: StyleProp<BadgeNode['props']>;
 };
 export const Badge: React.FC<BadgeJSXProps> = () => null;
 Badge.displayName = 'Badge';
 
-export const Progress: React.FC<ProgressNode['props']> = () => null;
+export type ProgressJSXProps = ProgressNode['props'] & {
+  style?: StyleProp<ProgressNode['props']>;
+};
+export const Progress: React.FC<ProgressJSXProps> = () => null;
 Progress.displayName = 'Progress';
 
-export const Timer: React.FC<TimerNode['props']> = () => null;
+export type TimerJSXProps = TimerNode['props'] & {
+  style?: StyleProp<TimerNode['props']>;
+};
+export const Timer: React.FC<TimerJSXProps> = () => null;
 Timer.displayName = 'Timer';
 
-export const Image: React.FC<ImageNode['props']> = () => null;
+export type ImageJSXProps = ImageNode['props'] & {
+  style?: StyleProp<ImageNode['props']>;
+};
+export const Image: React.FC<ImageJSXProps> = () => null;
 Image.displayName = 'Image';
 
 export const Spacer: React.FC<{ minLength?: number }> = () => null;
@@ -88,6 +113,7 @@ Divider.displayName = 'Divider';
 
 export interface LinkJSXProps extends LinkProps {
   children?: React.ReactNode;
+  style?: StyleProp<LinkProps>;
 }
 export const Link: React.FC<LinkJSXProps> = () => null;
 Link.displayName = 'Link';
@@ -140,7 +166,8 @@ export function renderToWidget(element: any): LayoutNode | null {
   }
 
   const { type, props } = element as React.ReactElement<any>;
-  const { children, ...restProps } = props || {};
+  const restProps = extractPropsAndStyle(props);
+  const children = props?.children;
 
   const parsedChildren: LayoutNode[] = [];
   if (children !== undefined && children !== null) {

@@ -20,7 +20,7 @@ import {
   TimerNode,
   ImageNode,
 } from './types';
-import { renderToWidget } from './jsx';
+import { renderToWidget, extractPropsAndStyle } from './jsx';
 
 export type WidgetPreviewSize = 'small' | 'medium' | 'large' | 'lockScreen' | 'dynamicIsland';
 
@@ -179,7 +179,7 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
   switch (node.type) {
     case 'VStack': {
       const vnode = node as VStackNode;
-      const p = vnode.props || {};
+      const p = extractPropsAndStyle(vnode.props);
       const containerStyle: ViewStyle = {
         flexDirection: 'column',
         padding: p.padding ?? (p.paddingHorizontal || p.paddingVertical ? undefined : 0),
@@ -218,7 +218,7 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
 
     case 'HStack': {
       const hnode = node as HStackNode;
-      const p = hnode.props || {};
+      const p = extractPropsAndStyle(hnode.props);
       const containerStyle: ViewStyle = {
         flexDirection: 'row',
         padding: p.padding,
@@ -256,7 +256,7 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
 
     case 'Text': {
       const tnode = node as TextNode;
-      const p = tnode.props || {};
+      const p = extractPropsAndStyle(tnode.props);
       const textStyle: RNTextStyle = {
         color: parseDynamicColor(p.color) || '#FFFFFF',
         fontSize: p.fontSize ?? 14,
