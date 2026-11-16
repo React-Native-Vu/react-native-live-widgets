@@ -141,17 +141,41 @@ object DynamicWidgetCanvasRenderer {
                 val measuredH = measureNodeHeight(context, node, availWidth, density)
                 val boxH = if (isRoot) max(availHeight, measuredH) else (measuredH + 2f * density)
 
-                if (!isRoot && bgHex.isNotEmpty()) {
+                if (!isRoot && (bgHex.isNotEmpty() || props?.has("gradient") == true)) {
                     val rect = RectF(left, top, left + availWidth, top + boxH)
+                    val gradShader = createLinearGradient(props?.optJSONObject("gradient"), rect)
                     paint.style = Paint.Style.FILL
-                    paint.color = parseHexColor(bgHex, Color.TRANSPARENT)
+                    if (gradShader != null) {
+                        paint.shader = gradShader
+                    } else {
+                        paint.color = parseDynamicColor(props?.opt("backgroundColor") ?: bgHex, Color.TRANSPARENT)
+                    }
+
+                    val shadowColor = props?.optString("shadowColor", "")
+                    val shadowRad = (props?.optDouble("shadowRadius", 0.0) ?: 0.0).toFloat() * density
+                    if (!shadowColor.isNullOrEmpty() && shadowRad > 0f) {
+                        val sOff = props?.optJSONObject("shadowOffset")
+                        val sx = (sOff?.optDouble("x", 0.0) ?: 0.0).toFloat() * density
+                        val sy = (sOff?.optDouble("y", 2.0) ?: 2.0).toFloat() * density
+                        paint.setShadowLayer(shadowRad, sx, sy, parseHexColor(shadowColor, Color.BLACK))
+                    }
+
                     canvas.drawRoundRect(rect, radius, radius, paint)
+                    paint.clearShadowLayer()
+                    paint.shader = null
 
                     if (borderW > 0f && borderHex.isNotEmpty()) {
                         paint.style = Paint.Style.STROKE
                         paint.strokeWidth = borderW
                         paint.color = parseHexColor(borderHex, Color.LTGRAY)
+                        val borderStyle = props?.optString("borderStyle", "solid")
+                        if (borderStyle == "dashed") {
+                            paint.pathEffect = android.graphics.DashPathEffect(floatArrayOf(12f * density, 8f * density), 0f)
+                        } else if (borderStyle == "dotted") {
+                            paint.pathEffect = android.graphics.DashPathEffect(floatArrayOf(4f * density, 6f * density), 0f)
+                        }
                         canvas.drawRoundRect(rect, radius, radius, paint)
+                        paint.pathEffect = null
                     }
                 }
 
@@ -302,25 +326,63 @@ object DynamicWidgetCanvasRenderer {
 
             "Text" -> {
                 val text = props?.optString("text", "") ?: ""
-                val fontSize = (props?.optDouble("fontSize", 13.0) ?: 13.0).toFloat() * density
-                val weight = props?.optString("fontWeight", "regular") ?: "regular"
+                val fontScale = context.resources.configuration.fontScale
+                val dynamicType = props?.optBoolean("dynamicType", true) ?: true
+                val effectiveScale = if (dynamicType) fontScale else 1.0f
+
+                var fontSize = (props?.optDouble("fontSize", 13.0) ?: 13.0).toFloat() * density * effectiveScale
+                var weight = props?.optString("fontWeight", "regular") ?: "regular"
+
+                val typo = props?.optString("typography", "")
+                if (!typo.isNullOrEmpty()) {
+                    when (typo) {
+                        "largeTitle" -> { fontSize = 34f * density * effectiveScale; weight = "bold" }
+                        "title1", "title" -> { fontSize = 28f * density * effectiveScale; weight = "bold" }
+                        "title2" -> { fontSize = 22f * density * effectiveScale; weight = "bold" }
+                        "title3" -> { fontSize = 20f * density * effectiveScale; weight = "semibold" }
+                        "headline" -> { fontSize = 17f * density * effectiveScale; weight = "semibold" }
+                        "subheadline" -> { fontSize = 15f * density * effectiveScale }
+                        "body" -> { fontSize = 17f * density * effectiveScale }
+                        "callout" -> { fontSize = 16f * density * effectiveScale }
+                        "footnote" -> { fontSize = 13f * density * effectiveScale }
+                        "caption1", "caption" -> { fontSize = 12f * density * effectiveScale }
+                        "caption2" -> { fontSize = 11f * density * effectiveScale }
+                    }
+                }
+
                 val colorHex = props?.optString("color", "#0F172A") ?: "#0F172A"
                 val toggleKey = props?.optString("strikethroughWhenToggled", "") ?: ""
                 val isStruck = toggleKey.isNotEmpty() && DynamicWidgetStateStore.isToggled(context, toggleKey)
 
-                paint.color = if (isStruck) Color.parseColor("#94A3B8") else parseHexColor(colorHex, Color.BLACK)
+                paint.color = if (isStruck) Color.parseColor("#94A3B8") else parseDynamicColor(props?.opt("color") ?: colorHex, Color.BLACK)
                 paint.textSize = fontSize
                 paint.isStrikeThruText = isStruck
-                paint.typeface = when (weight) {
-                    "bold", "heavy" -> Typeface.create("sans-serif", Typeface.BOLD)
-                    "semibold", "medium" -> Typeface.create("sans-serif-medium", Typeface.NORMAL)
-                    else -> Typeface.create("sans-serif", Typeface.NORMAL)
+
+                val fontDesign = props?.optString("fontDesign", "default")
+                if (fontDesign == "monospaced") {
+                    paint.typeface = Typeface.create(Typeface.MONOSPACE, if (weight == "bold" || weight == "heavy") Typeface.BOLD else Typeface.NORMAL)
+                } else {
+                    paint.typeface = when (weight) {
+                        "bold", "heavy" -> Typeface.create("sans-serif", Typeface.BOLD)
+                        "semibold", "medium" -> Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                        else -> Typeface.create("sans-serif", Typeface.NORMAL)
+                    }
+                }
+
+                val shadowColor = props?.optString("shadowColor", "")
+                val shadowRad = (props?.optDouble("shadowRadius", 0.0) ?: 0.0).toFloat() * density
+                if (!shadowColor.isNullOrEmpty() && shadowRad > 0f) {
+                    val sOff = props?.optJSONObject("shadowOffset")
+                    val sx = (sOff?.optDouble("x", 0.0) ?: 0.0).toFloat() * density
+                    val sy = (sOff?.optDouble("y", 1.0) ?: 1.0).toFloat() * density
+                    paint.setShadowLayer(shadowRad, sx, sy, parseHexColor(shadowColor, Color.BLACK))
                 }
 
                 val display = ellipsizeText(text, paint, availWidth)
                 val fm = paint.fontMetrics
                 val textH = fm.descent - fm.ascent
                 canvas.drawText(display, left, top - fm.ascent, paint)
+                paint.clearShadowLayer()
                 textH + 1.5f * density
             }
 
@@ -1244,6 +1306,39 @@ object DynamicWidgetCanvasRenderer {
         } catch (_: Exception) {
             fallback
         }
+    }
+
+    private fun parseDynamicColor(raw: Any?, fallback: Int): Int {
+        if (raw == null) return fallback
+        if (raw is String) return parseHexColor(raw, fallback)
+        if (raw is JSONObject) {
+            val hex = raw.optString("dark", "")
+                .ifEmpty { raw.optString("light", "") }
+                .ifEmpty { raw.optString("tinted", "") }
+            if (hex.isNotEmpty()) return parseHexColor(hex, fallback)
+        }
+        return fallback
+    }
+
+    private fun createLinearGradient(
+        gradObj: JSONObject?,
+        rect: RectF
+    ): Shader? {
+        if (gradObj == null) return null
+        val colorsArr = gradObj.optJSONArray("colors") ?: return null
+        if (colorsArr.length() < 2) return null
+        val colors = IntArray(colorsArr.length())
+        for (i in 0 until colorsArr.length()) {
+            val item = colorsArr.opt(i)
+            colors[i] = parseDynamicColor(item, Color.TRANSPARENT)
+        }
+        val startPt = gradObj.optJSONObject("startPoint")
+        val endPt = gradObj.optJSONObject("endPoint")
+        val x0 = rect.left + rect.width() * (startPt?.optDouble("x", 0.0)?.toFloat() ?: 0f)
+        val y0 = rect.top + rect.height() * (startPt?.optDouble("y", 0.0)?.toFloat() ?: 0f)
+        val x1 = rect.left + rect.width() * (endPt?.optDouble("x", 1.0)?.toFloat() ?: 1f)
+        val y1 = rect.top + rect.height() * (endPt?.optDouble("y", 1.0)?.toFloat() ?: 1f)
+        return android.graphics.LinearGradient(x0, y0, x1, y1, colors, null, Shader.TileMode.CLAMP)
     }
 }
 

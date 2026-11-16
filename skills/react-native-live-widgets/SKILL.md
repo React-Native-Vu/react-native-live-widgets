@@ -79,17 +79,61 @@ You can construct widget trees using **EITHER JSX components** (`<VStack>`, `<HS
 - **Divider Line**: `<Divider color="#334155" thickness={1} />` or `UI.Divider(...)`
 
 ### Content & Visuals
-- **Text**: `<Text color="#FFFFFF" fontSize={16} fontWeight="bold">Heading</Text>` or `UI.Text(...)`
+- **Text**: `<Text color="#FFFFFF" fontSize={16} fontWeight="bold" typography="headline" fontDesign="rounded" dynamicType={true}>Heading</Text>` or `UI.Text(...)`
 - **Zero-Battery Hardware Clock**: `<Timer targetTimestamp={targetMs} mode="countdown" color="#38BDF8" fontSize={14} />` or `UI.Timer(...)`
 - **Progress Indicator**: `<Progress style="segmented" segments={4} value={0.75} tintColor="#38BDF8" height={6} />` or `UI.Progress(...)`
 - **Animated Waveform (Audio/Music)**: `<Equalizer isPlaying={true} barCount={4} tintColor="#38BDF8" height={14} />` or `UI.Equalizer(...)`
 - **Images (URL, Base64, SF Symbol)**: `<Image url="https://..." width={40} height={40} borderRadius={20} />` or `UI.Image(...)`
 - **KPI Gauge (240°)**: `<Gauge value={0.85} size={64} tintColor="#38BDF8" label="KPI" />` or `UI.Gauge(...)`
 
+### Styling Modifiers (Gradients, Shadows, Borders, Dynamic Colors & RTL)
+- **Linear Gradient**: `gradient={{ colors: ['#6366F1', '#EC4899'], startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } }}` (automatically falls back to `colors[0]` on legacy/unsupported targets).
+- **Shadows**: `shadowColor="#000000" shadowRadius={8} shadowOpacity={0.25} shadowOffset={{ x: 0, y: 4 }}` (maps to iOS SwiftUI shadow and Android `setShadowLayer`/elevation).
+- **Borders & Dashed Lines**: `borderWidth={1} borderColor="#38BDF8" borderStyle="dashed"` (`solid` | `dashed` | `dotted`).
+- **Typography Presets**: `typography="title2" fontDesign="rounded"` (`largeTitle`, `title1`-`3`, `headline`, `subheadline`, `body`, `callout`, `footnote`, `caption1`-`2`).
+- **Dynamic Type**: `dynamicType={true}` automatically scales font with OS Accessibility text size settings.
+- **Light / Dark / Tinted Mode**: `backgroundColor={{ light: '#FFFFFF', dark: '#0F172A', tinted: '#1E293B' }}` (supports iOS 18 Tinted Home Screen & Android Material You).
+- **RTL / Bi-directional Support**: `direction="rtl"` or `isRTL={true}` (automatically reverses row order and aligns text).
+
 ### Interactivity & Preview
-- **Button**: `<Button title="Approve" actionId="APPROVE_TASK" backgroundColor="#2563EB" />` or `UI.Button(...)`
+- **Button**: `<Button title="Approve" actionId="APPROVE_TASK" backgroundColor="#2563EB" gradient={{ colors: ['#2563EB', '#1D4ED8'] }} />` or `UI.Button(...)`
 - **Badge**: `<Badge text="+18%" backgroundColor="#064E3B" textColor="#6EE7B7" />` or `UI.Badge(...)`
 - **In-App Widget Preview**: `<WidgetPreview size="medium" showBadge interactiveSizeSwitch onAction={(id) => ...} />` (alias: `<VoltraWidgetPreview>`)
+
+---
+
+## 3. Runtime Capability Inspection & Graceful Fallbacks
+
+Before rendering platform-specific visual features, inspect available capabilities programmatically:
+
+```typescript
+import { Widget } from 'react-native-live-widgets';
+
+const caps = await Widget.getCapabilities();
+console.log('Capabilities:', caps);
+// Output:
+// {
+//   platform: 'ios' | 'android',
+//   osVersion: '18.1',
+//   supportsLiveActivities: true,
+//   supportsDynamicIsland: true,
+//   supportsInteractiveWidgets: true,
+//   supportsGradients: true,
+//   supportsShadows: true,
+//   supportsTintedMode: true,
+//   supportsDynamicType: true
+// }
+```
+
+### Platform Capability & Graceful Fallback Matrix:
+| Feature | iOS (WidgetKit / SwiftUI) | Android (RemoteViews / Canvas) | In-App Preview | Fallback Strategy |
+| :--- | :--- | :--- | :--- | :--- |
+| **Linear Gradients** | Full native `LinearGradient` | Native Canvas Shader | Full CSS / SVG / Solid | Solid background (`colors[0]`) |
+| **Shadows** | Native `.shadow()` | `setShadowLayer` / Elevation | Native RN `shadow*` | Solid border / High-contrast border |
+| **Dashed / Dotted Borders** | Native `StrokeStyle(dash:)` | `DashPathEffect` | Solid border (`borderStyle`) | Solid border line |
+| **Dynamic Type** | Full native Dynamic Type | Responds to `fontScale` | System font size | Clamped standard pixel sizing |
+| **Tinted Mode** | iOS 18 Tinted Home Screen | Material You dynamic theme | Preview toggle | Uses `dark` or `light` theme color |
+| **RTL Layout** | Native `layoutDirection` | Flow reversed (`row-reverse`) | `row-reverse` / `rtl` | Left-to-right default |
 
 ---
 

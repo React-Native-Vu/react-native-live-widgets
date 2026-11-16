@@ -28,6 +28,7 @@ declare module 'react' {
 declare module 'react-native' {
   export interface PlatformOSType {
     OS: 'ios' | 'android' | 'windows' | 'macos' | 'web';
+    Version: string | number;
     select<T>(specifics: { [platform in 'ios' | 'android' | 'default']?: T }): T;
   }
   export const Platform: PlatformOSType;

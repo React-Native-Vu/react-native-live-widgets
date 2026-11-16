@@ -7,39 +7,99 @@
  */
 export type LayoutNodeType = 'VStack' | 'HStack' | 'ZStack' | 'Grid' | 'Divider' | 'Text' | 'Timer' | 'Progress' | 'Gauge' | 'Chart' | 'Image' | 'Spacer' | 'Button' | 'Toggle' | 'Badge' | 'Link' | 'Equalizer' | 'Custom';
 /**
- * Định dạng màu hỗ trợ chuỗi Hex đơn (ví dụ '#0F172A')
- * hoặc Object Dynamic Color tự đổi theo chế độ Sáng / Tối (Dark Mode) của hệ điều hành.
+ * Định dạng màu hỗ trợ:
+ * - Chuỗi Hex đơn (ví dụ '#0F172A', '#38BDF8AA')
+ * - Object Dynamic Color tự đổi theo chế độ Sáng / Tối (Light / Dark Mode)
+ * - Chế độ Tinted / Accented trên iOS 18+ và Material You Android.
  */
 export type DynamicColor = string | {
     light: string;
     dark: string;
+    /** Màu hiển thị ở chế độ Tinted Home Screen trên iOS 18+ hoặc Material You Dynamic Theming Android */
+    tinted?: string;
 };
+export type BorderStyle = 'solid' | 'dashed' | 'dotted';
+/** Cấu hình đổ bóng (Shadow Modifier) cho Card, Button và Container */
+export interface ShadowProps {
+    /** Màu bóng đổ (hỗ trợ DynamicColor) */
+    shadowColor?: DynamicColor;
+    /** Bán kính mờ của bóng đổ (dp/pt) */
+    shadowRadius?: number;
+    /** Độ mờ đục từ 0.0 (trong suốt) đến 1.0 (đậm đặc) */
+    shadowOpacity?: number;
+    /** Độ dời vị trí bóng đổ theo trục X và Y */
+    shadowOffset?: {
+        x: number;
+        y: number;
+    };
+}
+/** Cấu hình dải màu chuyển sắc (Gradient Modifier) */
+export interface GradientProps {
+    /** Kiểu chuyển sắc: 'linear' (đường thẳng - mặc định) hoặc 'radial' (tâm tròn) */
+    type?: 'linear' | 'radial';
+    /** Danh sách các màu chuyển tiếp (hỗ trợ DynamicColor cho từng chặng) */
+    colors: DynamicColor[];
+    /** Điểm bắt đầu theo toạ độ tỉ lệ từ 0.0 đến 1.0 (mặc định { x: 0, y: 0 } top-left) */
+    startPoint?: {
+        x: number;
+        y: number;
+    };
+    /** Điểm kết thúc theo toạ độ tỉ lệ từ 0.0 đến 1.0 (mặc định { x: 1, y: 1 } bottom-right) */
+    endPoint?: {
+        x: number;
+        y: number;
+    };
+    /** Góc gradient theo độ (ví dụ 45, 90, 180) */
+    angle?: number;
+}
+export type TypographyStyle = 'largeTitle' | 'title1' | 'title2' | 'title3' | 'headline' | 'subheadline' | 'body' | 'callout' | 'footnote' | 'caption1' | 'caption2';
+export type FontDesign = 'default' | 'monospaced' | 'rounded' | 'serif';
 export interface BaseNode {
     type: LayoutNodeType;
 }
-export interface ContainerProps {
+export interface ContainerProps extends ShadowProps {
     padding?: number;
     paddingHorizontal?: number;
     paddingVertical?: number;
     spacing?: number;
+    /** Khoảng cách giữa các phần tử con (Alias chuẩn React Native Style cho spacing) */
+    gap?: number;
+    rowGap?: number;
+    columnGap?: number;
     backgroundColor?: DynamicColor;
+    /** Gradient màu nền (tự động graceful fallback sang backgroundColor nếu platform không hỗ trợ) */
+    gradient?: GradientProps;
     borderRadius?: number;
     /** Alias bo góc theo cú pháp SwiftUI (tự động ánh xạ sang borderRadius) */
     cornerRadius?: number;
     borderColor?: DynamicColor;
     borderWidth?: number;
-    alignment?: 'leading' | 'center' | 'trailing' | string;
-    justifyContent?: 'flexStart' | 'center' | 'flexEnd' | 'spaceBetween' | string;
+    borderStyle?: BorderStyle;
+    alignment?: 'leading' | 'center' | 'trailing' | 'top' | 'bottom' | 'firstTextBaseline' | 'lastTextBaseline' | string;
+    justifyContent?: 'flexStart' | 'center' | 'flexEnd' | 'spaceBetween' | 'spaceAround' | 'spaceEvenly' | string;
+    /** Chiều viết văn bản (Hỗ trợ quốc tế hoá RTL cho tiếng Ả Rập, Do Thái) */
+    direction?: 'ltr' | 'rtl' | 'auto';
+    /** Cờ bật RTL chủ động cho khối container này */
+    isRTL?: boolean;
     /** Tự động ẩn hoặc làm mờ nội dung khi thiết bị đang khóa màn hình (Bảo mật chuẩn Apple) */
     privacySensitive?: boolean;
     /** Chủ động che nội dung thành vệt khối mờ Placeholder (Skeleton Redaction) */
     redacted?: boolean;
 }
 export type FontWeight = 'regular' | 'medium' | 'semibold' | 'bold' | 'heavy' | 'light' | (string & {}) | string;
-export interface TextStyle {
+export interface TextStyle extends ShadowProps {
     color?: DynamicColor;
     fontSize?: number;
     fontWeight?: FontWeight;
+    /** Hệ thống phân cấp cỡ chữ chuẩn Apple Human Interface Guidelines / Material Design */
+    typography?: TypographyStyle;
+    /** Kiểu dáng họ font chữ hệ thống */
+    fontDesign?: FontDesign;
+    /** Tự động co giãn cỡ chữ theo cài đặt Trợ năng (Accessibility Dynamic Type) của hệ điều hành (mặc định true) */
+    dynamicType?: boolean;
+    textAlign?: 'left' | 'center' | 'right' | 'leading' | 'trailing' | 'auto';
+    lineHeight?: number;
+    letterSpacing?: number;
     numberOfLines?: number;
     strikethroughWhenToggled?: string;
     /** Tự động làm mờ hoặc ẩn chữ khi màn hình khóa (iOS Privacy Redacted) */
@@ -171,7 +231,7 @@ export interface SpacerNode extends BaseNode {
 }
 export interface ButtonNode extends BaseNode {
     type: 'Button';
-    props: {
+    props: ShadowProps & {
         title: string;
         /**
          * Mã hành động chạy ngầm ngay trên Widget (iOS 17+ AppIntent, không mở App):
@@ -185,14 +245,21 @@ export interface ButtonNode extends BaseNode {
         /** Mở App và điều hướng tới URL Deep Link cụ thể */
         deepLink?: string;
         backgroundColor?: DynamicColor;
+        /** Gradient màu nền nút bấm */
+        gradient?: GradientProps;
         textColor?: DynamicColor;
         fontSize?: number;
         fontWeight?: 'regular' | 'medium' | 'semibold' | 'bold';
+        typography?: TypographyStyle;
+        fontDesign?: FontDesign;
         padding?: number;
         paddingHorizontal?: number;
         paddingVertical?: number;
         borderRadius?: number;
         cornerRadius?: number;
+        borderColor?: DynamicColor;
+        borderWidth?: number;
+        borderStyle?: BorderStyle;
         fullWidth?: boolean;
         /** Tiêu đề hiển thị khi nút ở trạng thái đã tick (dùng với actionId 'toggle:<key>') */
         checkedTitle?: string;
@@ -493,5 +560,40 @@ export interface LiveActivityPushTokens {
 export interface ActiveActivityInfo {
     activityId: string;
     pushToken?: string;
+}
+/**
+ * 📊 Bảng tra cứu năng lực nền tảng (Platform Capability & Fallback Matrix).
+ * Cho phép ứng dụng kiểm tra tính năng được hỗ trợ thực tế trên thiết bị đang chạy
+ * thay vì phỏng đoán, đảm bảo UI hoạt động ổn định và graceful fallback mượt mà.
+ */
+export interface WidgetCapabilities {
+    /** Nền tảng hệ điều hành ('ios' hoặc 'android') */
+    platform: 'ios' | 'android';
+    /** Phiên bản OS (ví dụ '18.1', '17.2', '14.0' Android API 34) */
+    osVersion: string | number;
+    /** Hỗ trợ Live Activities trên Lock Screen (iOS 16.1+ / Android 8.0+ Ongoing Notification) */
+    supportsLiveActivities: boolean;
+    /** Hỗ trợ Dynamic Island (iPhone 14 Pro, 15, 16 series) */
+    supportsDynamicIsland: boolean;
+    /** Hỗ trợ Android 16+ Live Update thông báo kiểu tiến trình ProgressStyle */
+    supportsAndroidLiveUpdates: boolean;
+    /** Hỗ trợ ghim tiện ích Home Screen Widgets (iOS 14+ / Android 8.0+) */
+    supportsHomeWidgets: boolean;
+    /** Hỗ trợ tương tác bấm nút chạy ngầm không mở app (iOS 17+ AppIntent / Android PendingIntent) */
+    supportsInteractiveIntents: boolean;
+    /** Hỗ trợ dải màu chuyển tiếp Linear / Radial Gradient */
+    supportsGradients: boolean;
+    /** Hỗ trợ bóng đổ Elevation / Shadow layer */
+    supportsShadows: boolean;
+    /** Hỗ trợ viền nét đứt Dashed / Dotted Stroke */
+    supportsDashedBorders: boolean;
+    /** Hỗ trợ tự động co giãn cỡ chữ theo Trợ năng (Accessibility Dynamic Type) */
+    supportsDynamicType: boolean;
+    /** Hỗ trợ bố cục quốc tế hoá từ phải sang trái (RTL: Arabic, Hebrew, ...) */
+    supportsRTL: boolean;
+    /** Hỗ trợ chế độ màu Tinted / Accented Widgets (iOS 18+ / Android Material You) */
+    supportsTintedMode: boolean;
+    /** Hỗ trợ hiệu ứng Odometer số lật (iOS 16+ numericText) */
+    supportsNumericAnimation: boolean;
 }
 //# sourceMappingURL=types.d.ts.map

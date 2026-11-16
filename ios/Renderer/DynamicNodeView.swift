@@ -107,17 +107,48 @@ public struct DynamicNodeView: View {
     let fontWeightStr = node.props?["fontWeight"]?.stringValue ?? "regular"
     let numberOfLines = node.props?["numberOfLines"]?.doubleValue.map { Int($0) }
     let numericAnimation = node.props?["numericAnimation"]?.boolValue ?? false
+    let fontDesignStr = node.props?["fontDesign"]?.stringValue ?? "default"
+    let design: Font.Design = fontDesignStr == "monospaced" ? .monospaced : (fontDesignStr == "rounded" ? .rounded : (fontDesignStr == "serif" ? .serif : .default))
 
-    let textNode = Text(text)
-      .font(.system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr)))
+    let font: Font
+    if let typo = node.props?["typography"]?.stringValue {
+      switch typo {
+      case "largeTitle": font = .system(.largeTitle, design: design)
+      case "title1", "title": font = .system(.title, design: design)
+      case "title2": font = .system(.title2, design: design)
+      case "title3": font = .system(.title3, design: design)
+      case "headline": font = .system(.headline, design: design)
+      case "subheadline": font = .system(.subheadline, design: design)
+      case "body": font = .system(.body, design: design)
+      case "callout": font = .system(.callout, design: design)
+      case "footnote": font = .system(.footnote, design: design)
+      case "caption1", "caption": font = .system(.caption, design: design)
+      case "caption2": font = .system(.caption2, design: design)
+      default: font = .system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr), design: design)
+      }
+    } else {
+      font = .system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr), design: design)
+    }
+
+    var textNode = Text(text)
+      .font(font)
       .foregroundColor(color)
       .lineLimit(numberOfLines)
       .minimumScaleFactor(0.85)
 
+    let shadowColor = Color.resolve(from: node.props?["shadowColor"], colorScheme: colorScheme)
+    let shadowRad = node.props?["shadowRadius"]?.doubleValue.map { CGFloat($0) } ?? (shadowColor != nil ? 2 : 0)
+    let shadowOffsetDict = node.props?["shadowOffset"]?.value as? [String: Any]
+    let shadowX = (shadowOffsetDict?["x"] as? Double).map { CGFloat($0) } ?? 0
+    let shadowY = (shadowOffsetDict?["y"] as? Double).map { CGFloat($0) } ?? 1
+
     if #available(iOS 16.0, *), numericAnimation {
-      textNode.contentTransition(.numericText())
+      textNode
+        .contentTransition(.numericText())
+        .shadow(color: shadowColor ?? .clear, radius: shadowRad, x: shadowX, y: shadowY)
     } else {
       textNode
+        .shadow(color: shadowColor ?? .clear, radius: shadowRad, x: shadowX, y: shadowY)
     }
   }
 
@@ -878,7 +909,7 @@ public struct DynamicNodeView: View {
   }
 }
 
-// Container padding, background modifier
+// Container padding, background, gradient, border and shadow modifier
 struct ContainerStyleModifier: ViewModifier {
   @Environment(\.widgetFamily) var family
   @Environment(\.colorScheme) var colorScheme
@@ -891,22 +922,88 @@ struct ContainerStyleModifier: ViewModifier {
     return false
   }
 
+  @ViewBuilder
+  private func backgroundView(cornerRadius: CGFloat) -> some View {
+    if isAccessory {
+      EmptyView()
+    } else if let gradDict = props?["gradient"]?.value as? [String: Any],
+              let colorList = gradDict["colors"] as? [Any] {
+      let colors: [Color] = colorList.compactMap {
+        if let s = $0 as? String { return Color(hex: s) }
+        if let d = $0 as? [String: Any] {
+          let key = (colorScheme == .dark) ? "dark" : "light"
+          let hex = (d[key] as? String) ?? (d["light"] as? String) ?? (d["dark"] as? String) ?? (d["tinted"] as? String)
+          return hex.flatMap { Color(hex: $0) }
+        }
+        return nil
+      }
+      if colors.count >= 2 {
+        let startX = (gradDict["startPoint"] as? [String: Any])?["x"] as? Double ?? 0.0
+        let startY = (gradDict["startPoint"] as? [String: Any])?["y"] as? Double ?? 0.0
+        let endX = (gradDict["endPoint"] as? [String: Any])?["x"] as? Double ?? 1.0
+        let endY = (gradDict["endPoint"] as? [String: Any])?["y"] as? Double ?? 1.0
+        RoundedRectangle(cornerRadius: cornerRadius)
+          .fill(LinearGradient(
+            colors: colors,
+            startPoint: UnitPoint(x: startX, y: startY),
+            endPoint: UnitPoint(x: endX, y: endY)
+          ))
+      } else if let firstColor = colors.first {
+        RoundedRectangle(cornerRadius: cornerRadius).fill(firstColor)
+      } else if let color = Color.resolve(from: props?["backgroundColor"], colorScheme: colorScheme) {
+        RoundedRectangle(cornerRadius: cornerRadius).fill(color)
+      }
+    } else if let color = Color.resolve(from: props?["backgroundColor"], colorScheme: colorScheme) {
+      RoundedRectangle(cornerRadius: cornerRadius).fill(color)
+    }
+  }
+
+  @ViewBuilder
+  private func borderOverlay(cornerRadius: CGFloat) -> some View {
+    let borderWidth = props?["borderWidth"]?.doubleValue.map { CGFloat($0) } ?? 0
+    if borderWidth > 0, let borderColor = Color.resolve(from: props?["borderColor"], colorScheme: colorScheme) {
+      let borderStyle = props?["borderStyle"]?.stringValue ?? "solid"
+      let strokeStyle: StrokeStyle
+      if borderStyle == "dashed" {
+        strokeStyle = StrokeStyle(lineWidth: borderWidth, dash: [6, 4])
+      } else if borderStyle == "dotted" {
+        strokeStyle = StrokeStyle(lineWidth: borderWidth, dash: [2, 3])
+      } else {
+        strokeStyle = StrokeStyle(lineWidth: borderWidth)
+      }
+      RoundedRectangle(cornerRadius: cornerRadius)
+        .strokeBorder(borderColor, style: strokeStyle)
+    }
+  }
+
   func body(content: Content) -> some View {
     let rawPad = props?["padding"]?.doubleValue.map { CGFloat($0) } ?? 0
     let pad = isAccessory ? min(rawPad, 2) : rawPad
-    // Trên Lock Screen widgets, nền luôn trong suốt để hiển thị tự nhiên trên hình nền điện thoại
-    let bgColor = isAccessory ? nil : Color.resolve(from: props?["backgroundColor"], colorScheme: colorScheme)
-    let cornerRadius = props?["borderRadius"]?.doubleValue.map { CGFloat($0) } ?? 0
+    let cornerRadius = props?["borderRadius"]?.doubleValue.map { CGFloat($0) } ?? (props?["cornerRadius"]?.doubleValue.map { CGFloat($0) } ?? 0)
 
-    content
+    let isRTL = (props?["isRTL"]?.boolValue == true) || (props?["direction"]?.stringValue == "rtl")
+    let shadowColor = Color.resolve(from: props?["shadowColor"], colorScheme: colorScheme)
+    let shadowRadius = props?["shadowRadius"]?.doubleValue.map { CGFloat($0) } ?? (shadowColor != nil ? 4 : 0)
+    let shadowOpacity = props?["shadowOpacity"]?.doubleValue ?? 0.35
+    let offsetDict = props?["shadowOffset"]?.value as? [String: Any]
+    let shadowX = (offsetDict?["x"] as? Double).map { CGFloat($0) } ?? 0
+    let shadowY = (offsetDict?["y"] as? Double).map { CGFloat($0) } ?? 2
+
+    let styledContent = content
       .padding(pad)
-      .background(
-        Group {
-          if let color = bgColor {
-            RoundedRectangle(cornerRadius: cornerRadius).fill(color)
-          }
-        }
-      )
+      .background(backgroundView(cornerRadius: cornerRadius))
+      .overlay(borderOverlay(cornerRadius: cornerRadius))
+
+    let withShadow = Group {
+      if let sColor = shadowColor, shadowRadius > 0 {
+        styledContent.shadow(color: sColor.opacity(shadowOpacity), radius: shadowRadius, x: shadowX, y: shadowY)
+      } else {
+        styledContent
+      }
+    }
+
+    return withShadow
+      .environment(\.layoutDirection, isRTL ? .rightToLeft : .leftToRight)
   }
 }
 

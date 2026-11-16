@@ -1,7 +1,8 @@
-import { ActiveActivityInfo, EndActivityOptions, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig } from './types';
+import { ActiveActivityInfo, EndActivityOptions, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetCapabilities, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig } from './types';
 import { ActionHandler, GlobalActionHandler, registerAction, registerActionHandler, unregisterAction } from './dispatcher';
 export type { ActionHandler, GlobalActionHandler };
 export { registerAction, registerActionHandler, unregisterAction };
+export type { WidgetCapabilities, GradientProps, ShadowProps, BorderStyle, TypographyStyle, FontDesign, } from './types';
 export * from './hooks';
 export * from './jsx';
 export * from './preview';
@@ -165,6 +166,11 @@ export declare const Widget: {
      * Kiểm tra xem thiết bị hiện tại có hỗ trợ ghim Tiện ích trực tiếp từ trong ứng dụng hay không (Chỉ Android API 26+).
      */
     isPinSupported: () => Promise<boolean>;
+    /**
+     * 📊 Bảng tra cứu năng lực nền tảng (Platform Capability & Fallback Matrix).
+     * Giúp ứng dụng xác định chính xác tính năng nào được hỗ trợ thực tế trên thiết bị đang chạy.
+     */
+    getCapabilities: () => Promise<WidgetCapabilities>;
 };
 export declare const SharedStorage: {
     /**

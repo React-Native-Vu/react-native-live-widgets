@@ -57,11 +57,31 @@ const SIZE_DIMENSIONS: Record<WidgetPreviewSize, { width: number; height: number
   dynamicIsland: { width: 350, height: 160, label: 'Dynamic Island' },
 };
 
-function parseDynamicColor(c: any): string | undefined {
+function parseDynamicColor(c: any, mode: 'light' | 'dark' | 'tinted' = 'dark'): string | undefined {
   if (!c) return undefined;
   if (typeof c === 'string') return c;
-  if (typeof c === 'object') return c.dark || c.light;
+  if (typeof c === 'object') {
+    if (mode === 'tinted' && c.tinted) return c.tinted;
+    if (mode === 'light' && c.light) return c.light;
+    return c.dark || c.light || c.tinted;
+  }
   return undefined;
+}
+
+function extractShadowStyle(p: any): ViewStyle {
+  if (!p) return {};
+  const shadowColor = parseDynamicColor(p.shadowColor);
+  if (!shadowColor) return {};
+  const rad = p.shadowRadius ?? 4;
+  return {
+    shadowColor,
+    shadowOffset: p.shadowOffset
+      ? { width: p.shadowOffset.x ?? 0, height: p.shadowOffset.y ?? 2 }
+      : { width: 0, height: 2 },
+    shadowOpacity: p.shadowOpacity ?? 0.35,
+    shadowRadius: rad,
+    elevation: Math.min(8, Math.max(1, Math.round(rad))),
+  };
 }
 
 /**
@@ -203,20 +223,25 @@ function renderPreviewNode(
     case 'VStack': {
       const vnode = node as VStackNode;
       const p = extractPropsAndStyle(vnode.props);
+      const bg = p.gradient?.colors?.[0]
+        ? parseDynamicColor(p.gradient.colors[0])
+        : parseDynamicColor(p.backgroundColor) || 'transparent';
+
       const containerStyle: ViewStyle = {
         flexDirection: 'column',
         padding: p.padding ?? (p.paddingHorizontal || p.paddingVertical ? undefined : 0),
         paddingHorizontal: p.paddingHorizontal,
         paddingVertical: p.paddingVertical,
-        backgroundColor: parseDynamicColor(p.backgroundColor) || 'transparent',
+        backgroundColor: bg,
         borderRadius: p.borderRadius ?? p.cornerRadius ?? 0,
         borderWidth: p.borderWidth,
         borderColor: parseDynamicColor(p.borderColor),
+        borderStyle: p.borderStyle || 'solid',
         rowGap: p.spacing ?? 0,
         alignItems:
           p.alignment === 'center'
             ? 'center'
-            : p.alignment === 'trailing'
+            : p.alignment === 'trailing' || p.alignment === 'end'
             ? 'flex-end'
             : 'flex-start',
         justifyContent:
@@ -226,9 +251,12 @@ function renderPreviewNode(
             ? 'space-between'
             : p.justifyContent === 'spaceAround'
             ? 'space-around'
+            : p.justifyContent === 'spaceEvenly'
+            ? 'space-evenly'
             : p.justifyContent === 'flexEnd'
             ? 'flex-end'
             : 'flex-start',
+        ...extractShadowStyle(p),
       };
 
       if (isRoot) {
@@ -257,20 +285,26 @@ function renderPreviewNode(
     case 'HStack': {
       const hnode = node as HStackNode;
       const p = extractPropsAndStyle(hnode.props);
+      const isRtl = p.direction === 'rtl' || p.isRTL;
+      const bg = p.gradient?.colors?.[0]
+        ? parseDynamicColor(p.gradient.colors[0])
+        : parseDynamicColor(p.backgroundColor) || 'transparent';
+
       const containerStyle: ViewStyle = {
-        flexDirection: 'row',
+        flexDirection: isRtl ? 'row-reverse' : 'row',
         padding: p.padding,
         paddingHorizontal: p.paddingHorizontal,
         paddingVertical: p.paddingVertical,
-        backgroundColor: parseDynamicColor(p.backgroundColor) || 'transparent',
+        backgroundColor: bg,
         borderRadius: p.borderRadius ?? p.cornerRadius ?? 0,
         borderWidth: p.borderWidth,
         borderColor: parseDynamicColor(p.borderColor),
+        borderStyle: p.borderStyle || 'solid',
         columnGap: p.spacing ?? 0,
         alignItems:
           p.alignment === 'center'
             ? 'center'
-            : p.alignment === 'trailing'
+            : p.alignment === 'trailing' || p.alignment === 'bottom'
             ? 'flex-end'
             : p.alignment === 'top'
             ? 'flex-start'
@@ -282,9 +316,12 @@ function renderPreviewNode(
             ? 'space-between'
             : p.justifyContent === 'spaceAround'
             ? 'space-around'
+            : p.justifyContent === 'spaceEvenly'
+            ? 'space-evenly'
             : p.justifyContent === 'flexEnd'
             ? 'flex-end'
             : 'flex-start',
+        ...extractShadowStyle(p),
       };
 
       if (isRoot) {
@@ -365,6 +402,9 @@ function renderPreviewNode(
     case 'Text': {
       const tnode = node as TextNode;
       const p = extractPropsAndStyle(tnode.props);
+      const isRtl = p.direction === 'rtl' || p.isRTL;
+      const shadowColor = parseDynamicColor(p.shadowColor);
+
       const textStyle: RNTextStyle = {
         color: parseDynamicColor(p.color) || '#FFFFFF',
         fontSize: p.fontSize ?? 14,
@@ -376,7 +416,15 @@ function renderPreviewNode(
             : p.fontWeight === 'medium'
             ? '500'
             : 'normal',
-        textAlign: p.textAlign ?? 'left',
+        fontFamily: p.fontDesign === 'monospaced' ? 'monospace' : undefined,
+        textAlign: p.textAlign ?? (isRtl ? 'right' : 'left'),
+        lineHeight: p.lineHeight,
+        letterSpacing: p.letterSpacing,
+        textShadowColor: shadowColor,
+        textShadowOffset: p.shadowOffset
+          ? { width: p.shadowOffset.x ?? 0, height: p.shadowOffset.y ?? 1 }
+          : undefined,
+        textShadowRadius: p.shadowRadius,
       };
       return (
         <RNText
@@ -394,20 +442,29 @@ function renderPreviewNode(
     case 'Button': {
       const bnode = node as ButtonNode;
       const p = bnode.props;
+      const bg = p.gradient?.colors?.[0]
+        ? parseDynamicColor(p.gradient.colors[0])
+        : parseDynamicColor(p.backgroundColor) || '#2563EB';
+
       const btnStyle: ViewStyle = {
-        backgroundColor: parseDynamicColor(p.backgroundColor) || '#2563EB',
+        backgroundColor: bg,
         borderRadius: p.borderRadius ?? p.cornerRadius ?? 8,
+        borderWidth: p.borderWidth,
+        borderColor: parseDynamicColor(p.borderColor),
+        borderStyle: p.borderStyle || 'solid',
         paddingHorizontal: p.paddingHorizontal ?? p.padding ?? 12,
         paddingVertical: p.paddingVertical ?? p.padding ?? 6,
         alignItems: 'center',
         justifyContent: 'center',
         alignSelf: p.fullWidth ? 'stretch' : 'auto',
         width: p.fullWidth ? '100%' : undefined,
+        ...extractShadowStyle(p),
       };
       const textStyle: RNTextStyle = {
         color: parseDynamicColor(p.textColor) || '#FFFFFF',
         fontSize: p.fontSize ?? 12,
         fontWeight: (p.fontWeight as any) ?? '600',
+        fontFamily: p.fontDesign === 'monospaced' ? 'monospace' : undefined,
       };
 
       return (

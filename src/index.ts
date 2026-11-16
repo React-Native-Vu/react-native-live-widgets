@@ -6,6 +6,7 @@ import {
   LiveActivityPushTokens,
   StartActivityOptions,
   UpdateActivityOptions,
+  WidgetCapabilities,
   WidgetConfigOption,
   WidgetLayoutConfig,
   WidgetRemoteConfig,
@@ -43,6 +44,14 @@ import {
 } from './dispatcher';
 export type { ActionHandler, GlobalActionHandler };
 export { registerAction, registerActionHandler, unregisterAction };
+export type {
+  WidgetCapabilities,
+  GradientProps,
+  ShadowProps,
+  BorderStyle,
+  TypographyStyle,
+  FontDesign,
+} from './types';
 export * from './hooks';
 export * from './jsx';
 export * from './preview';
@@ -658,6 +667,44 @@ export const Widget = {
     } catch {
       return false;
     }
+  },
+
+  /**
+   * 📊 Bảng tra cứu năng lực nền tảng (Platform Capability & Fallback Matrix).
+   * Giúp ứng dụng xác định chính xác tính năng nào được hỗ trợ thực tế trên thiết bị đang chạy.
+   */
+  getCapabilities: async (): Promise<WidgetCapabilities> => {
+    const isIOS = Platform.OS === 'ios';
+    const isAndroid = Platform.OS === 'android';
+    const osVerNum = parseFloat(String(Platform.Version)) || 0;
+
+    let hasIsland = false;
+    if (isIOS) {
+      try {
+        hasIsland = LiveActivityModule?.isDynamicIslandSupported
+          ? await LiveActivityModule.isDynamicIslandSupported()
+          : osVerNum >= 16.1;
+      } catch {
+        hasIsland = osVerNum >= 16.1;
+      }
+    }
+
+    return {
+      platform: isIOS ? 'ios' : 'android',
+      osVersion: Platform.Version,
+      supportsLiveActivities: isIOS ? osVerNum >= 16.1 : osVerNum >= 26,
+      supportsDynamicIsland: hasIsland,
+      supportsAndroidLiveUpdates: isAndroid && osVerNum >= 36,
+      supportsHomeWidgets: isIOS ? osVerNum >= 14.0 : osVerNum >= 26,
+      supportsInteractiveIntents: isIOS ? osVerNum >= 17.0 : true,
+      supportsGradients: true,
+      supportsShadows: true,
+      supportsDashedBorders: true,
+      supportsDynamicType: true,
+      supportsRTL: true,
+      supportsTintedMode: isIOS ? osVerNum >= 18.0 : isAndroid,
+      supportsNumericAnimation: isIOS && osVerNum >= 16.0,
+    };
   },
 };
 

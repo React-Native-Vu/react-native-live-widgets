@@ -943,5 +943,108 @@ phases: [
 
 ---
 
+---
+
+## 12. Hệ thống Styling Modifiers & Bảng Năng lực Nền tảng (Capability & Fallback Matrix)
+
+### 12.1. Styling Modifiers nâng cao
+Bộ thuộc tính thiết kế nền tảng giúp Widget và Live Activity đạt chuẩn giao diện iOS & Android chuyên nghiệp:
+
+1. **🌈 Gradient (Dải màu chuyển sắc)**:
+   ```tsx
+   <VStack
+     gradient={{
+       colors: ['#1E3A8A', '#3B82F6'],
+       startPoint: { x: 0, y: 0 },
+       endPoint: { x: 1, y: 1 },
+       angle: 45
+     }}
+     padding={16}
+   >
+     <Text typography="headline" color="#FFFFFF">Thẻ chuyển sắc</Text>
+   </VStack>
+   ```
+   > [!TIP]
+   > **Graceful Fallback**: Nếu hệ điều hành hoặc thiết bị cũ không hỗ trợ vẽ gradient, engine tự động lấy màu đầu tiên trong danh sách `colors` làm màu nền đơn sắc (`backgroundColor`) thay thế, hoàn toàn không gây lỗi giao diện.
+
+2. **🔲 Border & Dashed Lines (Đường viền nét đứt)**:
+   ```tsx
+   <VStack
+     borderWidth={1.5}
+     borderColor="#38BDF8"
+     borderStyle="dashed"
+     borderRadius={12}
+     padding={12}
+   >
+     <Text fontSize={12} color="#94A3B8">Khu vực kéo thả hoặc ghi chú</Text>
+   </VStack>
+   ```
+
+3. **🌑 Shadow (Đổ bóng có chiều sâu)**:
+   ```tsx
+   <Button
+     title="Xác nhận"
+     backgroundColor="#2563EB"
+     shadowColor="#2563EB"
+     shadowRadius={6}
+     shadowOpacity={0.4}
+     shadowOffset={{ x: 0, y: 3 }}
+   />
+   ```
+
+4. **🔤 Typography & Dynamic Type (Cỡ chữ chuẩn & Trợ năng)**:
+   - Các bậc cỡ chữ chuẩn: `largeTitle` (34), `title1` (28), `title2` (22), `title3` (20), `headline` (17 bold), `body` (17 regular), `callout` (16), `subheadline` (15), `footnote` (13), `caption1` (12), `caption2` (11).
+   - `fontDesign`: `'default' | 'monospaced' | 'rounded' | 'serif'`.
+   - `dynamicType`: Mặc định `true` — tự động co giãn theo cỡ chữ Trợ năng mà người dùng cài đặt trong Cài đặt hệ thống (Accessibility Font Size).
+
+5. **🌗 Tinted / Dark Mode (Chế độ đổi màu iOS 18 & Material You)**:
+   ```tsx
+   <Text color={{ light: '#0F172A', dark: '#F8FAFC', tinted: '#38BDF8' }}>
+     Nội dung tự thích ứng màu sắc
+   </Text>
+   ```
+
+6. **🌍 Hỗ trợ bố cục quốc tế hoá RTL**:
+   ```tsx
+   <HStack direction="rtl" isRTL={true} spacing={8}>
+     <Text>مرحبا بك</Text>
+   </HStack>
+   ```
+
+---
+
+### 12.2. Bảng Tra cứu Năng lực Nền tảng (Platform Capability & Fallback Matrix)
+
+Thay vì tuyên bố chung chung "100% parity", engine phân định rõ ràng các tính năng thực tế được hỗ trợ trên từng hệ điều hành và cơ chế tự động chuyển đổi an toàn (Graceful Fallback):
+
+| Tính năng / Thuộc tính | iOS WidgetKit | iOS Live Activity | Android Ongoing Notification | Android Home Widget | Cơ chế Graceful Fallback khi không hỗ trợ |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **Bố cục Khai báo (`VStack`/`HStack`/`Grid`)** | ✅ SwiftUI | ✅ SwiftUI | ✅ Canvas | ✅ 2D Canvas | Tương thích pixel 100% hai hệ máy |
+| **Linear / Radial Gradient** | ✅ SwiftUI | ✅ SwiftUI | ✅ Shader | ✅ Shader | Tự động lấy màu đầu tiên trong `colors` làm màu nền đơn sắc |
+| **Bóng đổ Thẻ / Chữ (Shadow)** | ✅ SwiftUI | ✅ SwiftUI | ⚠️ Text Shadow | ✅ `setShadowLayer` | Tự động hạ cấp sang viền mỏng hoặc Android Elevation |
+| **Viền nét đứt (Dashed / Dotted)** | ✅ StrokeStyle | ✅ StrokeStyle | ⚠️ Nét liền | ✅ `DashPathEffect` | Tự động hiển thị viền nét liền `solid` |
+| **Dynamic Type (Cỡ chữ Trợ năng)** | ✅ Native | ✅ Native | ✅ `fontScale` | ✅ `fontScale` | Tự động nhân tỉ lệ fontScale của hệ điều hành |
+| **Đảo chiều RTL (Ả Rập, Hebrew)** | ✅ Native | ✅ Native | ✅ RTL | ✅ RTL | Tự động đảo thứ tự hàng ngang sang `row-reverse` |
+| **Chế độ Tinted (iOS 18+)** | ✅ Accentable | Không áp dụng | Không áp dụng | ✅ Material You | Tự động dùng màu `dark`/`light` trên iOS 17 trở xuống |
+| **Nút bấm tương tác chạy ngầm** | ✅ iOS 17+ AppIntent | ✅ iOS 17+ | ✅ PendingIntent | ✅ PendingIntent | Lưu trạng thái SharedStorage và kích hoạt làm mới giao diện |
+
+---
+
+### 12.3. Kiểm tra năng lực thiết bị qua code (`Widget.getCapabilities`)
+```typescript
+const caps = await Widget.getCapabilities();
+console.log(`Đang chạy trên: ${caps.platform} (OS: ${caps.osVersion})`);
+
+if (caps.supportsDynamicIsland) {
+  console.log('Thiết bị có Dynamic Island (iPhone 14 Pro/15/16)!');
+}
+
+if (caps.supportsTintedMode) {
+  console.log('Hỗ trợ chế độ Tinted Home Screen của iOS 18!');
+}
+```
+
+---
+
 ## 📄 License
 MIT © vu-tran
