@@ -8,21 +8,22 @@ Tài liệu này hướng dẫn chi tiết cách tích hợp **`react-native-liv
 
 ## MỤC LỤC
 1. [Hiểu về Kiến trúc Expo & Native Widgets](#1-hiểu-về-kiến-trúc-expo--native-widgets)
-2. [Cài đặt & Thiết lập Từng bước](#2-cài-đặt--thiết-lập-từng-bước)
+2. [Kho Mã Nguồn Demo Chính Thức (LiveWidgetsExampleExpo)](#2-kho-mã-nguồn-demo-chính-thức-livewidgetsexampleexpo)
+3. [Cài đặt & Thiết lập Từng bước](#3-cài-đặt--thiết-lập-từng-bước)
    - [Bước 1: Cài đặt package](#bước-1-cài-đặt-package)
    - [Bước 2: Cấu hình app.json (Expo Config Plugin)](#bước-2-cấu-hình-appjson-expo-config-plugin)
    - [Bước 3: Chạy Expo Prebuild](#bước-3-chạy-expo-prebuild)
    - [Bước 4: Chạy CLI Wizard cấu hình Widget Extension](#bước-4-chạy-cli-wizard-cấu-hình-widget-extension)
-3. [Chạy và Kiểm thử trên Thiết bị & Giả lập](#3-chạy-và-kiểm-thử-trên-thiết-bị--giả-lập)
+4. [Chạy và Kiểm thử trên Thiết bị & Giả lập](#4-chạy-và-kiểm-thử-trên-thiết-bị--giả-lập)
    - [Chạy trên iOS Simulator](#chạy-trên-ios-simulator)
    - [Chạy trên Android Emulator](#chạy-trên-android-emulator)
    - [Cách ghim Widget và bật Live Activity trên Simulator](#cách-ghim-widget-và-bật-live-activity-trên-simulator)
-4. [Cấu hình EAS Build (Expo Application Services)](#4-cấu-hình-eas-build-expo-application-services)
+5. [Cấu hình EAS Build (Expo Application Services)](#5-cấu-hình-eas-build-expo-application-services)
    - [Đăng ký App Group & Extension trên Apple Developer](#đăng-ký-app-group--extension-trên-apple-developer)
    - [Cấu hình eas.json](#cấu-hình-easjson)
    - [Cung cấp Provisioning Profile cho Extension](#cung-cấp-provisioning-profile-cho-extension)
-5. [Ví dụ Viết Widget & Live Activity bằng TypeScript trong Expo](#5-ví-dụ-viết-widget--live-activity-bằng-typescript-trong-expo)
-6. [Xử lý Sự cố Thường gặp trên Expo (Troubleshooting)](#6-xử-lý-sự-cố-thường-gặp-trên-expo-troubleshooting)
+6. [Ví dụ Viết Widget & Live Activity bằng TypeScript trong Expo](#6-ví-dụ-viết-widget--live-activity-bằng-typescript-trong-expo)
+7. [Xử lý Sự cố Thường gặp trên Expo (Troubleshooting)](#7-xử-lý-sự-cố-thường-gặp-trên-expo-troubleshooting)
 
 ---
 
@@ -43,7 +44,47 @@ Tài liệu này hướng dẫn chi tiết cách tích hợp **`react-native-liv
 
 ---
 
-## 2. Cài đặt & Thiết lập Từng bước
+## 2. Kho Mã Nguồn Demo Chính Thức (LiveWidgetsExampleExpo)
+
+Nếu bạn muốn trải nghiệm ngay một dự án mẫu Expo chuẩn mực đã được cấu hình sẵn 100%, hãy sử dụng kho mã nguồn:
+
+👉 **GitHub Repository:** **[https://github.com/React-Native-Vu/LiveWidgetsExampleExpo](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo)**
+
+### ✨ Các Tính Năng Đã Tích Hợp Sẵn trong Repo Demo:
+- 🚀 **Expo SDK 58 + React Native 0.88 + TypeScript 100%**.
+- 🛠️ **Cấu hình sẵn Config Plugin & App Groups**: `group.com.reactnativevu.livewidgetsexampleexpo`.
+- 🎨 **5 Mẫu Giao Diện Presets thực tế**:
+  1. **📊 Executive KPI Dashboard**: Vòng tròn tiến độ doanh thu, biểu đồ tuần và đồng bộ dữ liệu thời gian thực.
+  2. **☕ Coffee Delivery Tracker**: Đồng hồ đếm ngược giao hàng trên Dynamic Island và thẻ trạng thái Lock Screen.
+  3. **✅ Interactive Task Checklist**: Tương tác tick chọn hoàn thành công việc trực tiếp ngay trên mặt Widget mà không cần mở app.
+  4. **🎵 Music & Audio Player**: Sóng nhạc chuyển động liên tục (Equalizer Waveform) trên Dynamic Island.
+  5. **✈️ Flight Status**: Tiến trình chuyến bay, cổng khởi hành và đếm ngược giờ cất cánh.
+- 🔄 **Action Dispatcher 2 chiều**: Nhấn nút `[+]` hoặc `[-]` trên Home Widget để kích hoạt trực tiếp hàm TypeScript trong Expo App và render lại giao diện tức thì.
+
+### ⚡ Cách Clone và Chạy Thử Ngay Lập Tức:
+```bash
+# 1. Clone repository
+git clone https://github.com/React-Native-Vu/LiveWidgetsExampleExpo.git
+cd LiveWidgetsExampleExpo
+
+# 2. Cài đặt dependencies
+npm install
+
+# 3. Tạo thư mục native bằng Expo Prebuild
+npx expo prebuild
+
+# 4. Chạy script thiết lập Widget Extension tự động
+npm run setup:widgets
+
+# 5. Khởi chạy trên iOS Simulator hoặc Android Emulator
+npx expo run:ios
+# hoặc
+npx expo run:android
+```
+
+---
+
+## 3. Cài đặt & Thiết lập Từng bước
 
 ### Bước 1: Cài đặt package
 Tại thư mục gốc của dự án Expo:

@@ -8,21 +8,22 @@ This guide provides a comprehensive walkthrough for integrating **`react-native-
 
 ## TABLE OF CONTENTS
 1. [Understanding Expo & Native Widgets Architecture](#1-understanding-expo--native-widgets-architecture)
-2. [Step-by-Step Installation & Setup](#2-step-by-step-installation--setup)
+2. [Official Expo Demo Repository (LiveWidgetsExampleExpo)](#2-official-expo-demo-repository-livewidgetsexampleexpo)
+3. [Step-by-Step Installation & Setup](#3-step-by-step-installation--setup)
    - [Step 1: Install Package](#step-1-install-package)
    - [Step 2: Configure app.json (Expo Config Plugin)](#step-2-configure-appjson-expo-config-plugin)
    - [Step 3: Run Expo Prebuild](#step-3-run-expo-prebuild)
    - [Step 4: Run CLI Wizard for Widget Extension](#step-4-run-cli-wizard-for-widget-extension)
-3. [Running & Testing on Simulators & Devices](#3-running--testing-on-simulators--devices)
+4. [Running & Testing on Simulators & Devices](#4-running--testing-on-simulators--devices)
    - [Run on iOS Simulator](#run-on-ios-simulator)
    - [Run on Android Emulator](#run-on-android-emulator)
    - [Adding Home Widgets and Live Activities on Simulator](#adding-home-widgets-and-live-activities-on-simulator)
-4. [EAS Build Configuration (Expo Application Services)](#4-eas-build-configuration-expo-application-services)
+5. [EAS Build Configuration (Expo Application Services)](#5-eas-build-configuration-expo-application-services)
    - [Register App Groups & Extension on Apple Developer](#register-app-groups--extension-on-apple-developer)
    - [Configure eas.json](#configure-easjson)
    - [Provisioning Profiles for Extension](#provisioning-profiles-for-extension)
-5. [TypeScript Example for Expo (Widgets & Live Activity)](#5-typescript-example-for-expo-widgets--live-activity)
-6. [Troubleshooting Common Expo Issues](#6-troubleshooting-common-expo-issues)
+6. [TypeScript Example for Expo (Widgets & Live Activity)](#6-typescript-example-for-expo-widgets--live-activity)
+7. [Troubleshooting Common Expo Issues](#7-troubleshooting-common-expo-issues)
 
 ---
 
@@ -43,7 +44,47 @@ This guide provides a comprehensive walkthrough for integrating **`react-native-
 
 ---
 
-## 2. Step-by-Step Installation & Setup
+## 2. Official Expo Demo Repository (LiveWidgetsExampleExpo)
+
+To explore a 100% pre-configured, production-ready Expo showcase project, visit the official demo repository:
+
+👉 **GitHub Repository:** **[https://github.com/React-Native-Vu/LiveWidgetsExampleExpo](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo)**
+
+### ✨ What’s Inside the Demo:
+- 🚀 **Expo SDK 58 + React Native 0.88 + 100% TypeScript**.
+- 🛠️ **Pre-configured Expo Config Plugin**: App Groups `group.com.reactnativevu.livewidgetsexampleexpo`.
+- 🎨 **5 Real-World UI Presets**:
+  1. **📊 Executive KPI Dashboard**: Circular progress, weekly sales chart, and live syncing.
+  2. **☕ Coffee Delivery Tracker**: Dynamic Island countdown and lock screen order card.
+  3. **✅ Interactive Task Checklist**: Direct check-off interaction on your Home Screen widget without opening the app.
+  4. **🎵 Music & Audio Player**: Continuous animated audio waveform (Equalizer) on Dynamic Island.
+  5. **✈️ Flight Status**: Route trajectory bar, gate details, and departure countdown.
+- 🔄 **Bidirectional Action Dispatcher**: Tapping `[+]` or `[-]` on Home Screen widgets executes TypeScript callbacks in your app in real-time.
+
+### ⚡ Clone & Run in Under 2 Minutes:
+```bash
+# 1. Clone the repository
+git clone https://github.com/React-Native-Vu/LiveWidgetsExampleExpo.git
+cd LiveWidgetsExampleExpo
+
+# 2. Install dependencies
+npm install
+
+# 3. Generate native folders
+npx expo prebuild
+
+# 4. Run automated widget target injection
+npm run setup:widgets
+
+# 5. Launch on iOS Simulator or Android Emulator
+npx expo run:ios
+# or
+npx expo run:android
+```
+
+---
+
+## 3. Step-by-Step Installation & Setup
 
 ### Step 1: Install Package
 In your Expo project root:
