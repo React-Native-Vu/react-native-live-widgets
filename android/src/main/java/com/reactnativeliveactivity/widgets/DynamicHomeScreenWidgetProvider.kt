@@ -13,6 +13,7 @@ import android.util.SizeF
 import android.widget.RemoteViews
 import org.json.JSONObject
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
@@ -163,25 +164,60 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             appWidgetId: Int,
             bindings: List<ButtonActionBinding>
         ) {
-            val topIds = listOf(R.id.rn_hit_top_1, R.id.rn_hit_top_2, R.id.rn_hit_top_3, R.id.rn_hit_top_4)
-            val midIds = listOf(R.id.rn_hit_mid_1, R.id.rn_hit_mid_2, R.id.rn_hit_mid_3)
-            val botIds = listOf(R.id.rn_hit_bot_1, R.id.rn_hit_bot_2)
+            val gridIds = listOf(
+                listOf(R.id.rn_hit_r0_c0, R.id.rn_hit_r0_c1, R.id.rn_hit_r0_c2, R.id.rn_hit_r0_c3),
+                listOf(R.id.rn_hit_r1_c0, R.id.rn_hit_r1_c1, R.id.rn_hit_r1_c2),
+                listOf(R.id.rn_hit_r2_c0, R.id.rn_hit_r2_c1, R.id.rn_hit_r2_c2),
+                listOf(R.id.rn_hit_r3_c0, R.id.rn_hit_r3_c1, R.id.rn_hit_r3_c2),
+                listOf(R.id.rn_hit_r4_c0, R.id.rn_hit_r4_c1, R.id.rn_hit_r4_c2),
+                listOf(R.id.rn_hit_r5_c0, R.id.rn_hit_r5_c1, R.id.rn_hit_r5_c2)
+            )
 
-            val topBindings = bindings.filter { it.zone == "top" }
-            val midBindings = bindings.filter { it.zone == "mid" }
-            val botBindings = bindings.filter { it.zone == "bot" }
+            val cellBindings = mutableMapOf<Int, ButtonActionBinding>()
 
-            for (i in topIds.indices) {
-                val b = topBindings.getOrNull(i)
-                views.setOnClickPendingIntent(topIds[i], createPendingIntent(context, appWidgetId * 100 + i, b))
+            val topButtons = bindings.filter { it.zone == "top" || it.yFraction < 0.20f }
+            val otherButtons = bindings.filter { it !in topButtons }
+
+            val row0 = gridIds[0]
+            for (c in 0 until min(row0.size, topButtons.size)) {
+                cellBindings[row0[c]] = topButtons[c]
             }
-            for (i in midIds.indices) {
-                val b = midBindings.getOrNull(i)
-                views.setOnClickPendingIntent(midIds[i], createPendingIntent(context, appWidgetId * 100 + 20 + i, b))
+
+            for (b in otherButtons) {
+                val row = when {
+                    b.yFraction < 0.35f -> 1
+                    b.yFraction < 0.52f -> 2
+                    b.yFraction < 0.62f -> 3
+                    b.yFraction < 0.75f -> 4
+                    else -> 5
+                }
+
+                val rowCols = gridIds[row]
+                if (b.widthFraction > 0.50f) {
+                    for (viewId in rowCols) {
+                        cellBindings[viewId] = b
+                    }
+                } else {
+                    if (b.xFraction < 0.40f) {
+                        cellBindings[rowCols[0]] = b
+                        cellBindings[rowCols[1]] = b
+                    } else {
+                        cellBindings[rowCols[1]] = b
+                        cellBindings[rowCols[2]] = b
+                    }
+                }
             }
-            for (i in botIds.indices) {
-                val b = botBindings.getOrNull(i)
-                views.setOnClickPendingIntent(botIds[i], createPendingIntent(context, appWidgetId * 100 + 40 + i, b))
+
+            var requestIdx = 0
+            for (r in gridIds.indices) {
+                for (c in gridIds[r].indices) {
+                    val viewId = gridIds[r][c]
+                    val b = cellBindings[viewId]
+                    views.setOnClickPendingIntent(
+                        viewId,
+                        createPendingIntent(context, appWidgetId * 100 + requestIdx++, b)
+                    )
+                }
             }
         }
 

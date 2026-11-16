@@ -12,101 +12,91 @@
         android:scaleType="fitCenter"
         android:contentDescription="Live Widget Content" />
 
-    <!-- Lớp vùng bấm tương tác (Interactive Hit Zones) cho các UI.Button trên Widget -->
+    <!-- Lớp vùng bấm tương tác (Interactive Hit Zones: 6 Hàng x 3 Cột) cho mọi layout Widget -->
     <LinearLayout
+        android:id="@+id/rn_widget_grid_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:weightSum="100">
+        android:weightSum="6">
 
-        <!-- Hàng trên cùng (dành cho thanh Tab Bar chuyển trang: page:shift, page:todo, page:okr, page:next) -->
+        <!-- Row 0 (0% - 16.7%) -->
         <LinearLayout
-            android:id="@+id/rn_widget_row_top"
+            android:id="@+id/rn_grid_row_0"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="22"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/rn_hit_top_1"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="@android:color/transparent" />
-
-            <TextView
-                android:id="@+id/rn_hit_top_2"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="@android:color/transparent" />
-
-            <TextView
-                android:id="@+id/rn_hit_top_3"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="@android:color/transparent" />
-
-            <TextView
-                android:id="@+id/rn_hit_top_4"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="@android:color/transparent" />
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:weightSum="4">
+            <TextView android:id="@+id/rn_hit_r0_c0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r0_c1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r0_c2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r0_c3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
         </LinearLayout>
 
-        <!-- Vùng giữa (dành cho danh sách các nút bấm / Todo items: toggle:todo_1, toggle:todo_2, toggle:todo_3) -->
+        <!-- Row 1 (16.7% - 33.3%) -->
         <LinearLayout
-            android:id="@+id/rn_widget_row_mid"
+            android:id="@+id/rn_grid_row_1"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="58"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/rn_hit_mid_1"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:background="@android:color/transparent" />
-
-            <TextView
-                android:id="@+id/rn_hit_mid_2"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:background="@android:color/transparent" />
-
-            <TextView
-                android:id="@+id/rn_hit_mid_3"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:background="@android:color/transparent" />
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:weightSum="3">
+            <TextView android:id="@+id/rn_hit_r1_c0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r1_c1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r1_c2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
         </LinearLayout>
 
-        <!-- Hàng dưới cùng (dành cho nút Refresh API ngầm / Điều hướng: refresh, page:prev, page:next) -->
+        <!-- Row 2 (33.3% - 50.0%) -->
         <LinearLayout
-            android:id="@+id/rn_widget_row_bottom"
+            android:id="@+id/rn_grid_row_2"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="20"
-            android:orientation="horizontal">
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:weightSum="3">
+            <TextView android:id="@+id/rn_hit_r2_c0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r2_c1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r2_c2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+        </LinearLayout>
 
-            <TextView
-                android:id="@+id/rn_hit_bot_1"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="@android:color/transparent" />
+        <!-- Row 3 (50.0% - 66.7%) -->
+        <LinearLayout
+            android:id="@+id/rn_grid_row_3"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:weightSum="3">
+            <TextView android:id="@+id/rn_hit_r3_c0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r3_c1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r3_c2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+        </LinearLayout>
 
-            <TextView
-                android:id="@+id/rn_hit_bot_2"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="@android:color/transparent" />
+        <!-- Row 4 (66.7% - 83.3%) -->
+        <LinearLayout
+            android:id="@+id/rn_grid_row_4"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:weightSum="3">
+            <TextView android:id="@+id/rn_hit_r4_c0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r4_c1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r4_c2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+        </LinearLayout>
+
+        <!-- Row 5 (83.3% - 100.0%) -->
+        <LinearLayout
+            android:id="@+id/rn_grid_row_5"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:weightSum="3">
+            <TextView android:id="@+id/rn_hit_r5_c0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r5_c1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
+            <TextView android:id="@+id/rn_hit_r5_c2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

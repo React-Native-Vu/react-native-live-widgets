@@ -502,6 +502,12 @@ UI.Button({
 })
 ```
 
+> [!IMPORTANT]
+> **Khuyến nghị kiến trúc khi xử lý Action lúc App bị Force-Kill (Termination):**
+> - **Trên iOS:** Khi người dùng vuốt tắt ứng dụng hoàn toàn (Force-Kill), JavaScript Engine (Hermes/JSC) sẽ bị tiêu diệt. Lúc này, việc bấm nút trên Widget sẽ do Native Swift (`AppIntent`) xử lý độc lập và ghi nhận trạng thái vào App Group. JS callback (`registerActionHandler`) sẽ **không thể chạy** cho đến khi ứng dụng được người dùng mở lại.
+> - **Trên Android:** Thư viện hỗ trợ `HeadlessJsTaskService` để thức tỉnh JS thread trong nền. Tuy nhiên, trên một số dòng máy có cơ chế quản lý pin nghiêm ngặt (MIUI, ColorOS, OneUI), tiến trình nền vẫn có thể bị hạn chế.
+> - **Quy tắc thiết kế cho Production:** Với các nghiệp vụ sống còn (như **Chấm công**, thanh toán, gửi đơn từ quan trọng), không nên thiết kế nghiệp vụ phụ thuộc 100% vào việc JS callback phải chạy khi app bị kill. Hãy ưu tiên thiết kế theo mô hình **Offline-First & Local State Queue**: Native Widget ghi nhận hành động vào `SharedStorage` (App Group / SharedPreferences), và khi người dùng khởi động lại ứng dụng, `App.tsx` sẽ đọc queue này và đồng bộ an toàn lên Server!
+
 ### `UI.ZStack`, `UI.Grid` & `UI.Divider` (Bố cục nâng cao)
 ```typescript
 // 1. ZStack: Xếp chồng các lớp (Overlay)
@@ -610,6 +616,11 @@ UI.Custom('WeatherCard', { city: 'TP.HCM', temp: '31°C' })
 ---
 
 ## 5. Cấu hình Dynamic Island (iPhone 14 Pro, 15, 16, 17)
+
+> [!NOTE]
+> **Khác biệt nền tảng: iOS Dynamic Island vs Android Live Updates:**
+> - **Trên iOS:** Khối cấu hình `dynamicIsland` tương tác trực tiếp với phần cứng Dynamic Island (viên thuốc trên iPhone 14 Pro trở lên) thông qua ActivityKit và SwiftUI (`compactLeading`, `compactTrailing`, `minimal`, `expanded`).
+> - **Trên Android:** Do hệ điều hành Android gốc không có phần cứng Dynamic Island của Apple, cấu hình này được thư viện tự động ánh xạ sang **Ongoing Promoted Notification (`Notification.ProgressStyle`)** hiển thị thường trực trên thanh trạng thái với đầy đủ Avatar tròn, thanh tiến trình chia chặng và nút bấm tương tác.
 
 ```typescript
 dynamicIsland: {
@@ -750,6 +761,13 @@ await Widget.setRemoteConfig({
   - Trên **iOS**: `DynamicWidgetProvider` tự động gọi API ngầm mỗi `intervalMinutes` (hoặc ngay lập tức khi bấm nút `actionId: 'refresh'`), lấy JSON trả về và điền vào các biến `{{ten_bien}}` trong cây UI DSL.
   - Trên **Android**: `AlarmManager` tự động đánh thức `LiveActivityReceiver` (`ACTION_WIDGET_SYNC`), tải JSON mới và vẽ lại `DynamicHomeScreenWidgetProvider`.
   - Biến đặc biệt `{{_lastSyncTime}}` luôn tự động cập nhật thành giờ đồng bộ mới nhất (`HH:mm:ss`).
+
+> [!NOTE]
+> **Về chu kỳ gọi API và giới hạn tài nguyên hệ điều hành (Widget Budget):**
+> - Tham số `intervalMinutes: 15` là thời gian mong muốn đề xuất cho hệ điều hành. Cả iOS và Android đều áp dụng cơ chế quản lý năng lượng nghiêm ngặt:
+>   - **iOS WidgetKit Budget:** Apple cấp hạn mức reload Widget (khoảng 40 - 70 lần/ngày). Nếu thiết bị bật chế độ *Tiết kiệm pin (Low Power Mode)* hoặc đã cạn budget trong ngày, iOS có thể giãn cách thời gian gọi API.
+>   - **Android Doze Mode:** Hệ thống sẽ gom các tác vụ nền định kỳ để chạy cùng lúc nhằm tiết kiệm pin.
+> - **Khuyến nghị:** Nếu ứng dụng của bạn yêu cầu cập nhật chính xác từng giây/phút (như vị trí tài xế, tiến trình đơn hàng), **Server Push Notification (APNs / FCM)** là giải pháp tối ưu nhất, tính năng polling `setRemoteConfig` là giải pháp bổ trợ định kỳ.
 
 ---
 

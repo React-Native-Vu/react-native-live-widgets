@@ -55,8 +55,11 @@ class LiveActivityReceiver : BroadcastReceiver() {
                                 putExtra("actionId", actionId)
                                 putExtra("activityId", activityId)
                             }
+                            try {
+                                com.facebook.react.HeadlessJsTaskService.acquireWakeLockNow(context)
+                            } catch (_: Throwable) {}
                             context.startService(headlessIntent)
-                        } catch (_: Exception) {}
+                        } catch (_: Throwable) {}
                     } finally {
                         pendingResult.finish()
                     }

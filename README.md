@@ -4,6 +4,8 @@
 
 [![npm version](https://img.shields.io/npm/v/react-native-live-widgets.svg?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/react-native-live-widgets)
 [![Expo Ready](https://img.shields.io/badge/Expo-Config%20Plugin-000020.svg?style=for-the-badge&logo=expo)](https://expo.dev)
+[![Docs Site](https://img.shields.io/badge/Docs-Website-6366F1.svg?style=for-the-badge&logo=bookstack)](https://react-native-vu.github.io/react-native-live-widgets/)
+[![llms.txt](https://img.shields.io/badge/llms.txt-Standard%20Ready-10B981.svg?style=for-the-badge)](https://react-native-vu.github.io/react-native-live-widgets/llms.txt)
 [![Platforms](https://img.shields.io/badge/Platforms-iOS%2016.1+%20|%20Android%2016-orange.svg?style=for-the-badge)](https://github.com/React-Native-Vu/react-native-live-widgets)
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-3178C6.svg?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -12,7 +14,7 @@
 
 *Write 100% Declarative TypeScript. Render dynamically to Native SwiftUI (WidgetKit) & Android 2D Canvas without touching Xcode or Android Studio.*
 
-[📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Hướng dẫn Tiếng Việt](docs/GUIDE-VI.md) • [⚡ Expo Guide](docs/EXPO-GUIDE-VI.md) • [📱 Bare RN Demo](https://github.com/React-Native-Vu/LiveWidgetsExample) • [⚡ Expo Demo](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo) • [✨ Tính năng](#-key-features) • [⚡ Cài đặt](#-quick-start) • [☕ Ủng hộ tác giả](#-sponsor--donate-ủng-hộ-tác-giả)
+[🌐 Docs Website](https://react-native-vu.github.io/react-native-live-widgets/) • [🤖 llms.txt](https://react-native-vu.github.io/react-native-live-widgets/llms.txt) • [🧠 AI Agent Skill](skills/react-native-live-widgets/SKILL.md) • [📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Hướng dẫn Tiếng Việt](docs/GUIDE-VI.md) • [⚡ Expo Guide](docs/EXPO-GUIDE-VI.md) • [📱 Bare RN Demo](https://github.com/React-Native-Vu/LiveWidgetsExample) • [⚡ Expo Demo](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo)
 
 ---
 
