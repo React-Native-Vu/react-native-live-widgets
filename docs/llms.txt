@@ -26,6 +26,12 @@ Write 100% Declarative TypeScript (`UI.*`) in your React Native code. Automatica
   npx react-native-live-widgets init --group group.com.yourcompany.app
   ```
 
+### Dual UI Authoring Syntax: JSX Components & Functional DSL
+Widgets can be built with **EITHER** JSX elements or Functional DSL:
+- **JSX / TSX Elements**: `<VStack>`, `<HStack>`, `<ZStack>`, `<Grid>`, `<Text>`, `<Button>`, `<Badge>`, `<Progress>`, `<Timer>`, `<Equalizer>`, `<Image>`, `<Spacer>`, `<Divider>`, `<Link>`. Fully supports `style` props, StyleSheet objects, and conditional style arrays!
+- **Functional DSL**: `UI.VStack(...)`, `UI.HStack(...)`, `UI.Text(...)`, `UI.Button(...)`, etc.
+- **In-App Widget Preview**: `<WidgetPreview size="medium" showBadge interactiveSizeSwitch>{jsxLayout}</WidgetPreview>` (alias: `<VoltraWidgetPreview>`).
+
 ### Key Declarative UI DSL Methods
 - `UI.VStack(options, ...children)` / `UI.HStack(options, ...children)`: Flex containers with `spacing`, `padding`, `backgroundColor`, `borderRadius`, `alignment`.
 - `UI.Text(content, { color, fontSize, fontWeight: 'bold'|'heavy'|'medium'|'regular', maxLines })`

@@ -313,9 +313,86 @@ import { LiveActivity, Widget, SharedStorage, UI } from 'react-native-live-widge
 
 ---
 
-## 4. Declarative UI Engine (`UI.*`)
+## 4. Declarative UI Engine
 
-### `UI.StyleSheet` & Reusable Styling (`StyleProp`)
+The library supports **2 dual UI authoring styles** side-by-side depending on your preferences:
+1. **Style 1: React JSX / TSX Components (`<VStack>`, `<Text>`, `<Button>`)** — Write widgets exactly like building standard React Native components. Fully supports the standard `style` prop, conditional style arrays, and nested hierarchies.
+2. **Style 2: Functional DSL (`UI.VStack(...)`)** — Concise and functional, with zero JSX tags to import.
+
+Both styles compile down automatically to the exact same native engine (SwiftUI on iOS and 2D Canvas on Android).
+
+---
+
+### Style 1: Building Widgets with JSX / TSX Components
+
+```tsx
+import React from 'react';
+import { StyleSheet } from 'react-native';
+import { Widget, VStack, HStack, Text, Badge, Progress, Button } from 'react-native-live-widgets';
+
+export const MyWidgetLayout = (
+  <VStack style={styles.card}>
+    <HStack style={styles.header}>
+      <Text style={styles.title}>Shift Check-in</Text>
+      <Badge text="07:54 (Valid)" backgroundColor="#064E3B" textColor="#6EE7B7" />
+    </HStack>
+    <Progress value={0.75} style="segmented" segments={4} tintColor="#38BDF8" height={8} />
+    <Button title="Refresh Data" actionId="refresh" fullWidth />
+  </VStack>
+);
+
+const styles = StyleSheet.create({
+  card: {
+    padding: 16,
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+  },
+  header: {
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+});
+```
+
+---
+
+### In-App Widget Preview (`<WidgetPreview>` / `<VoltraWidgetPreview>`)
+
+Embed a realistic, pixel-accurate widget mockup inside any app screen to test layout bounds and button click interactions without leaving your application:
+
+```tsx
+import { WidgetPreview, VStack, HStack, Text, Button } from 'react-native-live-widgets';
+
+export function PreviewScreen() {
+  return (
+    <WidgetPreview
+      size="medium"                // 'small' | 'medium' | 'large' | 'lockScreen'
+      showBadge={true}             // Shows 'Medium • 338×158'
+      interactiveSizeSwitch={true} // Quick tabs to switch small / medium / large
+      onAction={(actionId) => {
+        console.log('Action tapped inside preview:', actionId);
+      }}
+    >
+      <VStack padding={16} backgroundColor="#0F172A" borderRadius={20}>
+        <HStack justifyContent="spaceBetween">
+          <Text fontSize={14} fontWeight="bold" color="#FFFFFF">Project Progress</Text>
+          <Text fontSize={12} color="#38BDF8">75%</Text>
+        </HStack>
+        <Button title="Update" actionId="refresh" fullWidth />
+      </VStack>
+    </WidgetPreview>
+  );
+}
+```
+
+---
+
+### Style 2: Functional DSL (`UI.StyleSheet` & Reusable Styling)
 Just like React Native's `StyleSheet.create`, you can define reusable styles to keep your widget layouts modular and clean, supporting conditional style arrays:
 
 ```typescript

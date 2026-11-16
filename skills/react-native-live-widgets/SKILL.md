@@ -67,31 +67,29 @@ Use this skill whenever the user asks to create, update, or troubleshoot:
 
 ---
 
-## 2. Declarative UI DSL Cheat Sheet (`UI.*`)
+## 2. Declarative UI Component Reference (Dual Syntax: JSX & Functional)
 
-Always use the built-in `UI` factory functions. **NEVER manually write Swift or Kotlin views.**
+You can construct widget trees using **EITHER JSX components** (`<VStack>`, `<HStack>`, `<Text>`, `<Button>`, `<Badge>`, `<Progress>`) **OR Functional calls** (`UI.VStack(...)`, `UI.HStack(...)`). Both compile to identical native trees! **NEVER manually write Swift or Kotlin views.**
 
 ### Layout Containers
-- **Vertical Stack**: `UI.VStack({ spacing: 8, padding: 12, backgroundColor: '#0F172A', borderRadius: 12 }, ...children)`
-- **Horizontal Stack**: `UI.HStack({ spacing: 10, alignment: 'center' }, ...children)`
-- **Overlay Stack**: `UI.ZStack({ zAlignment: 'bottomTrailing' }, ...children)`
-- **Grid Layout**: `UI.Grid({ columns: 2, columnSpacing: 8, rowSpacing: 8 }, ...children)`
-- **Divider Line**: `UI.Divider({ color: '#334155', thickness: 1 })`
+- **Vertical Stack**: `<VStack padding={12} backgroundColor="#0F172A" borderRadius={12}>` or `UI.VStack(...)`
+- **Horizontal Stack**: `<HStack spacing={10} alignment="center">` or `UI.HStack(...)`
+- **Overlay Stack**: `<ZStack zAlignment="bottomTrailing">` or `UI.ZStack(...)`
+- **Grid Layout**: `<Grid columns={2} columnSpacing={8} rowSpacing={8}>` or `UI.Grid(...)`
+- **Divider Line**: `<Divider color="#334155" thickness={1} />` or `UI.Divider(...)`
 
 ### Content & Visuals
-- **Text**: `UI.Text('Heading', { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' })`
-- **Zero-Battery Hardware Clock**: `UI.Timer(timestampMs, { mode: 'countdown' | 'timer' | 'relative', color: '#38BDF8', fontSize: 14 })`
-- **Progress Indicator**:
-  - Bar: `UI.Progress({ style: 'bar', value: 0.75, tintColor: '#38BDF8', height: 6 })`
-  - Segmented: `UI.Progress({ style: 'segmented', segments: 4, value: 0.75, tintColor: '#38BDF8', height: 6 })`
-  - Circular: `UI.Progress({ style: 'circular', value: 0.8, tintColor: '#10B981', height: 48, showPercentage: true })`
-- **Animated Waveform (Audio/Music)**: `UI.Equalizer({ isPlaying: true, barCount: 4, tintColor: '#38BDF8', height: 14 })`
-- **Images (URL, Base64, SF Symbol)**: `UI.Image({ url: 'https://...', width: 40, height: 40, cornerRadius: 20 })`
-- **KPI Gauge (240°)**: `UI.Gauge(0.85, { size: 64, tintColor: '#38BDF8', label: 'KPI', valueText: '85%' })`
+- **Text**: `<Text color="#FFFFFF" fontSize={16} fontWeight="bold">Heading</Text>` or `UI.Text(...)`
+- **Zero-Battery Hardware Clock**: `<Timer targetTimestamp={targetMs} mode="countdown" color="#38BDF8" fontSize={14} />` or `UI.Timer(...)`
+- **Progress Indicator**: `<Progress style="segmented" segments={4} value={0.75} tintColor="#38BDF8" height={6} />` or `UI.Progress(...)`
+- **Animated Waveform (Audio/Music)**: `<Equalizer isPlaying={true} barCount={4} tintColor="#38BDF8" height={14} />` or `UI.Equalizer(...)`
+- **Images (URL, Base64, SF Symbol)**: `<Image url="https://..." width={40} height={40} borderRadius={20} />` or `UI.Image(...)`
+- **KPI Gauge (240°)**: `<Gauge value={0.85} size={64} tintColor="#38BDF8" label="KPI" />` or `UI.Gauge(...)`
 
-### Interactivity
-- **Button**: `UI.Button({ title: 'Approve', actionId: 'APPROVE_TASK', backgroundColor: '#2563EB', color: '#FFF' })`
-- **Toggle**: `UI.Toggle({ isOn: true, actionId: 'TOGGLE_NOTIF' })`
+### Interactivity & Preview
+- **Button**: `<Button title="Approve" actionId="APPROVE_TASK" backgroundColor="#2563EB" />` or `UI.Button(...)`
+- **Badge**: `<Badge text="+18%" backgroundColor="#064E3B" textColor="#6EE7B7" />` or `UI.Badge(...)`
+- **In-App Widget Preview**: `<WidgetPreview size="medium" showBadge interactiveSizeSwitch onAction={(id) => ...} />` (alias: `<VoltraWidgetPreview>`)
 
 ---
 

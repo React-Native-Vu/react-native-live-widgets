@@ -82,6 +82,13 @@ export interface WidgetRemoteConfig {
 - `useWidgetAction(actionIdOrCallback: string | ((actionId: string, payload?: any) => void), handler?: ActionHandler): void`
 - `useLiveActivity(initialActivityId?: string): UseLiveActivityResult`
 - `useWidgetState<T>(key: string, initialValue: T, appGroup?: string): [T, (val: T | ((prev: T) => T)) => Promise<void>, () => Promise<void>]`
+
+### In-App Widget Preview Component
+- `<WidgetPreview size="small"|"medium"|"large"|"lockScreen" layout={node} showBadge interactiveSizeSwitch onAction={(actionId) => ...} />` (alias: `<VoltraWidgetPreview>`)
+
+### Dual UI Authoring Syntax
+- **JSX Components**: `<VStack>`, `<HStack>`, `<ZStack>`, `<Grid>`, `<Text>`, `<Button>`, `<Badge>`, `<Progress>`, `<Timer>`, `<Image>`, `<Spacer>`, `<Divider>`, `<Link>`, `<Equalizer>`, `<Gauge>`, `<Chart>`. Fully supports `style` props, StyleSheet objects, and conditional style arrays!
+- **Functional DSL**: `UI.VStack(...)`, `UI.HStack(...)`, `UI.Text(...)`, `UI.Button(...)`, etc.
 - `SharedStorage.setAppGroup(appGroup: string): void`
 - `SharedStorage.set(key: string, value: string, appGroup?: string): Promise<void>`
 - `SharedStorage.get(key: string, appGroup?: string): Promise<string | null>`
