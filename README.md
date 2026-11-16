@@ -2,20 +2,50 @@
 
 <div align="center">
 
-[![npm version](https://img.shields.io/badge/npm-v1.0.0-blue.svg?style=for-the-badge&logo=npm)](https://www.npmjs.com/package/react-native-live-widgets)
+[![npm version](https://img.shields.io/npm/v/react-native-live-widgets.svg?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/react-native-live-widgets)
+[![Expo Ready](https://img.shields.io/badge/Expo-Config%20Plugin-000020.svg?style=for-the-badge&logo=expo)](https://expo.dev)
 [![Platforms](https://img.shields.io/badge/Platforms-iOS%2016.1+%20|%20Android%2016-orange.svg?style=for-the-badge)](https://github.com/React-Native-Vu/react-native-live-widgets)
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-3178C6.svg?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
 **The Ultimate All-in-One Engine for Live Activities, Dynamic Island, and Interactive Home Screen Widgets in React Native & Expo.**
 
-*Write 100% Declarative TypeScript. Render dynamically to Native SwiftUI & Android 2D Canvas without touching Xcode or Android Studio.*
+*Write 100% Declarative TypeScript. Render dynamically to Native SwiftUI (WidgetKit) & Android 2D Canvas without touching Xcode or Android Studio.*
 
-[📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Hướng dẫn Tiếng Việt](docs/GUIDE-VI.md) • [✨ Features](#-key-features) • [⚡ Quick Start](#-quick-start)
+[📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Hướng dẫn Tiếng Việt](docs/GUIDE-VI.md) • [✨ Tính năng](#-key-features) • [⚡ Cài đặt](#-quick-start) • [☕ Ủng hộ tác giả](#-sponsor--donate-ủng-hộ-tác-giả)
 
 ---
 
 </div>
+
+## 📸 Showcase & Demos
+
+<div align="center">
+  <table>
+    <tr>
+      <td width="50%" align="center">
+        <b>🏝️ Dynamic Island Expanded & KPI Dashboard</b><br/><br/>
+        <img src="assets/dynamic_island_expanded.png" alt="Dynamic Island Expanded" width="380" />
+      </td>
+      <td width="50%" align="center">
+        <b>📱 Interactive Home Screen Widget (iOS)</b><br/><br/>
+        <img src="assets/home_widget_interactive.png" alt="Home Screen Widget Interactive" width="380" />
+      </td>
+    </tr>
+    <tr>
+      <td width="50%" align="center">
+        <b>🔒 Lock Screen Live Activity & Gauges</b><br/><br/>
+        <img src="assets/lock_screen_live_activity.png" alt="Lock Screen Live Activity" width="380" />
+      </td>
+      <td width="50%" align="center">
+        <b>🤖 100% Feature Parity (Android & iOS)</b><br/><br/>
+        <img src="assets/cross_platform_parity.png" alt="Cross Platform Parity" width="380" />
+      </td>
+    </tr>
+  </table>
+</div>
+
+---
 
 ## 💡 Why `react-native-live-widgets`?
 
@@ -23,7 +53,8 @@ Until now, adding **Live Activities** or **Home Screen Widgets** to a React Nati
 
 `react-native-live-widgets` solves this with a **Declarative TypeScript UI DSL**:
 - 🚫 **No SwiftUI / Kotlin coding required** for custom screens.
-- 🎨 **100% Declarative UI in React Native (`UI.VStack`, `UI.HStack`, `UI.Text`, `UI.Button`, `UI.Progress`)**.
+- 🎨 **100% Declarative UI in React Native (`UI.VStack`, `UI.HStack`, `UI.Text`, `UI.Button`, `UI.Progress`, `UI.Image`)**.
+- 🚀 **Full Expo & EAS Build Support** via automated Expo Config Plugin (`app.plugin.js`).
 - ⚡ **Interactive Buttons**: Tap buttons on the Home Screen Widget to run native Swift extensions or wake up TypeScript handlers.
 - 🔄 **Realtime Data Sync (`SharedStorage`)**: Single source of truth across Main App, Lock Screen, and Home Screen.
 - 🌐 **Silent Background Remote API Sync**: Automatically fetch REST APIs and update Widgets even when the App is **Force-Killed**.
@@ -47,8 +78,9 @@ Until now, adding **Live Activities** or **Home Screen Widgets** to a React Nati
 ### 3. ⚡ Bi-directional Action Dispatcher (TypeScript + Native)
 - Tap a widget button outside on the Home Screen to trigger a registered TypeScript function:
   ```ts
-  LiveActivity.registerAction('action_checkin', async () => {
+  LiveActivity.registerAction('action_checkin', async (payload) => {
     // Runs inside React Native JS engine!
+    console.log('Action triggered from Home Screen Widget:', payload);
   });
   ```
 - **App-Killed Protection**: Native fallback ensures UI responds instantly and persists data even if the main app is terminated.
@@ -73,9 +105,6 @@ Until now, adding **Live Activities** or **Home Screen Widgets** to a React Nati
   // tokens.activityUpdateToken
   ```
 
-### 6. 🎵 Background Audio & Media Notification
-- Integrated with `MPNowPlayingInfoCenter` on iOS and `MediaStyle` Notifications on Android for audio playback status.
-
 ---
 
 ## ⚡ Quick Start
@@ -90,15 +119,18 @@ npm install react-native-live-widgets
 npx expo install react-native-live-widgets
 ```
 
+---
+
 ### 2. Configuration
 
-#### A. Expo (Config Plugin)
+#### A. If using Expo (Config Plugin)
 
 Add `react-native-live-widgets` to your `app.json` or `app.config.js`:
 
 ```json
 {
   "expo": {
+    "name": "My Expo App",
     "plugins": [
       [
         "react-native-live-widgets",
@@ -122,7 +154,7 @@ npx expo run:ios
 npx expo run:android
 ```
 
-#### B. Bare React Native CLI
+#### B. If using Bare React Native CLI
 
 Run the automated scaffolding script in your React Native project root:
 
@@ -135,7 +167,7 @@ This will automatically:
 - Scaffold the `LiveWidgetsExtension` bundle in your `ios/` folder.
 - Configure `AndroidManifest.xml` with required notification permissions.
 
-And install pods:
+And install CocoaPods dependencies:
 
 ```bash
 cd ios && pod install
@@ -151,51 +183,79 @@ cd ios && pod install
 import { UI, LiveActivity } from 'react-native-live-widgets';
 
 await LiveActivity.start({
-  activityId: 'order_1024',
+  activityId: 'kpi_q4_2026',
   dynamicIsland: {
-    compactLeading: UI.Image({ systemName: 'bag.fill', tintColor: '#10B981' }),
-    compactTrailing: UI.Text('15 phút', { color: '#10B981', fontWeight: 'bold' }),
-    minimal: UI.Image({ systemName: 'bag.fill', tintColor: '#10B981' }),
+    compactLeading: UI.Text('KPI Q4', { color: '#38BDF8', fontWeight: 'bold' }),
+    compactTrailing: UI.Text('86%', { color: '#10B981', fontWeight: 'bold' }),
+    minimal: UI.Text('86%', { color: '#10B981' }),
     expanded: UI.VStack(
-      { padding: 14, spacing: 8 },
+      { padding: 14, spacing: 8, backgroundColor: '#0F172A' },
       UI.HStack(
         { justifyContent: 'spaceBetween' },
-        UI.Text('ĐƠN HÀNG #1024', { fontSize: 11, color: '#94A3B8' }),
-        UI.Badge({ text: 'Đang giao', backgroundColor: '#064E3B', textColor: '#6EE7B7' })
+        UI.Text('BẢNG ĐIỀU HÀNH KPI', { fontSize: 11, color: '#94A3B8' }),
+        UI.Badge({ text: '86% Hoàn thành', backgroundColor: '#064E3B', textColor: '#6EE7B7' })
       ),
-      UI.Text('Tài xế đang đến điểm giao', { fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }),
+      UI.Text('Mục tiêu Q4/2026', { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }),
       UI.Progress({
         style: 'bar',
-        value: 0.75,
+        value: 0.86,
         tintColor: '#10B981',
         trackColor: '#334155'
-      })
+      }),
+      UI.Text('Doanh số 12.8 tỷ / 15 tỷ VNĐ • Tăng trưởng +22%', { fontSize: 12, color: '#94A3B8' })
     )
   },
   lockScreen: UI.VStack(
-    { padding: 16, backgroundColor: '#0F172A' },
-    UI.Text('GIAO HÀNG TIẾT KIỆM', { fontSize: 11, color: '#38BDF8' }),
-    UI.Text('Dự kiến nhận lúc 11:30', { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' })
+    { padding: 16, backgroundColor: '#0F172A', cornerRadius: 16 },
+    UI.HStack(
+      { justifyContent: 'spaceBetween' },
+      UI.Text('KPI Quý 4: Đạt 86% mục tiêu', { fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' }),
+      UI.Badge({ text: '+18%', backgroundColor: '#064E3B', textColor: '#6EE7B7' })
+    ),
+    UI.Progress({
+      style: 'segmented',
+      segments: 7,
+      currentSegment: 6,
+      tintColor: '#38BDF8',
+      trackColor: '#1E293B'
+    })
   )
 });
 ```
 
-### 2. Update Home Screen Widgets
+### 2. Configure Home Screen Widget with Live Sync
 
 ```tsx
-import { UI, Widget } from 'react-native-live-widgets';
+import { UI, Widget, SharedStorage } from 'react-native-live-widgets';
 
 const APP_GROUP = 'group.com.yourcompany.app';
 
+// Set shared data
+await SharedStorage.set('kpi_percent', '86', APP_GROUP);
+await SharedStorage.set('revenue_month', '4.85 Tỷ đ', APP_GROUP);
+
+// Build Declarative Layout
 await Widget.setLayout('main', {
-  small: UI.VStack(
-    { padding: 12, backgroundColor: '#0F172A' },
-    UI.Text('CA LÀM VIỆC', { fontSize: 10, color: '#94A3B8' }),
-    UI.Text('Ca sáng', { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }),
+  large: UI.VStack(
+    { padding: 16, backgroundColor: '#0B132B', cornerRadius: 20 },
+    UI.HStack(
+      { justifyContent: 'spaceBetween' },
+      UI.Text('TỔNG QUAN ĐIỀU HÀNH (KPI & BIỂU ĐỒ)', { fontSize: 11, color: '#38BDF8', fontWeight: 'bold' }),
+      UI.Badge({ text: 'LIVE SYNC', backgroundColor: '#064E3B', textColor: '#6EE7B7' })
+    ),
+    UI.HStack(
+      { spacing: 12, marginTop: 10 },
+      UI.VStack(
+        { width: 90, alignItems: 'center' },
+        UI.Progress({ style: 'circular', value: 0.86, tintColor: '#38BDF8', trackColor: '#1E293B' }),
+        UI.Text('86%', { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }),
+        UI.Text('KPI Quý', { fontSize: 10, color: '#94A3B8' })
+      )
+    ),
     UI.Spacer(),
-    UI.Button('Chấm công', {
-      actionId: 'action_checkin',
-      backgroundColor: '#10B981',
+    UI.Button('Duyệt báo cáo doanh thu tuần', {
+      actionId: 'action_approve_report',
+      backgroundColor: '#1E293B',
       textColor: '#FFFFFF'
     })
   )
@@ -218,10 +278,33 @@ await Widget.reloadAll();
 | **SharedStorage Data Sync** | App Group UserDefaults | Context SharedPreferences |
 | **Remote API Silent Sync** | Background Timeline URLSession | WorkManager / Background Fetch |
 | **Push Remote Updates** | Apple APNs Activity Tokens | Firebase Cloud Messaging (FCM) |
+| **Expo & EAS Build Ready** | ✅ Automated Config Plugin | ✅ Automated Config Plugin |
 
 ---
 
-## 📚 Documentation
+## ☕ Sponsor & Donate (Ủng hộ tác giả)
+
+`react-native-live-widgets` là dự án mã nguồn mở **hoàn toàn miễn phí (100% Free & MIT License)**, được phát triển và duy trì với tâm huyết mang lại giải pháp Live Activities & Widgets tốt nhất cho cộng đồng React Native Việt Nam và quốc tế.
+
+Nếu thư viện này giúp ích cho dự án hoặc công ty của bạn, bạn có thể **mời tác giả một tách cà phê** để tiếp thêm động lực phát triển thêm nhiều tính năng mới nhé! ☕❤️
+
+<div align="center">
+
+<img src="assets/donate_qr.png" alt="Donate qua VietQR VPBank" width="300" style="border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+
+### 🏦 Thông tin chuyển khoản ủng hộ:
+- **Ngân hàng**: VPBank (Ngân hàng TMCP Việt Nam Thịnh Vượng)
+- **Số tài khoản / Số điện thoại**: `0906472426`
+- **Chủ tài khoản**: `TRAN LE VU`
+- **Nội dung**: `LiveWidgets Support` hoặc lời nhắn của bạn
+
+*Chân thành cảm ơn sự đồng hành và ủng hộ quý báu của bạn!* 🙏✨
+
+</div>
+
+---
+
+## 📚 Documentation & Guides
 
 - 🇬🇧 **[Full English Developer Guide](docs/GUIDE-EN.md)**: Architecture, DSL specs, push notification server configuration, and best practices.
 - 🇻🇳 **[Hướng dẫn Chi tiết bằng Tiếng Việt](docs/GUIDE-VI.md)**: Hướng dẫn tích hợp từng bước, thiết lập App Group, giải quyết lỗi thường gặp.
@@ -230,12 +313,12 @@ await Widget.reloadAll();
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request or open an Issue.
+Contributions are welcome! Please feel free to submit a Pull Request or open an Issue on [GitHub Repository](https://github.com/React-Native-Vu/react-native-live-widgets).
 
 ---
 
 ## 📄 License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+Distributed under the **MIT License**. See [LICENSE](LICENSE) for more information.
 
-Developed with ❤️ by **vu-tran** for high-performance React Native applications.
+Developed with ❤️ by **vu-tran** for high-performance React Native & Expo applications.
