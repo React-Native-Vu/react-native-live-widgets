@@ -12,19 +12,22 @@
 
 *Write 100% Declarative TypeScript. Render dynamically to Native SwiftUI (WidgetKit) & Android 2D Canvas without touching Xcode or Android Studio.*
 
-[📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Hướng dẫn Tiếng Việt](docs/GUIDE-VI.md) • [📱 Demo App](https://github.com/React-Native-Vu/LiveWidgetsExample) • [✨ Tính năng](#-key-features) • [⚡ Cài đặt](#-quick-start) • [☕ Ủng hộ tác giả](#-sponsor--donate-ủng-hộ-tác-giả)
+[📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Hướng dẫn Tiếng Việt](docs/GUIDE-VI.md) • [📱 Bare RN Demo](https://github.com/React-Native-Vu/LiveWidgetsExample) • [⚡ Expo Demo](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo) • [✨ Tính năng](#-key-features) • [⚡ Cài đặt](#-quick-start) • [☕ Ủng hộ tác giả](#-sponsor--donate-ủng-hộ-tác-giả)
 
 ---
 
 </div>
 
-## 📱 Live Demo Example App
+## 📱 Live Demo Example Apps
 
-A full, ready-to-run demo application is available on GitHub:
+Full, ready-to-run demo applications are available on GitHub for both architectures:
 
-👉 **[https://github.com/React-Native-Vu/LiveWidgetsExample](https://github.com/React-Native-Vu/LiveWidgetsExample)**
+| Platform | Repository | Description |
+| :--- | :--- | :--- |
+| **⚛️ Bare React Native CLI** | 👉 **[React-Native-Vu/LiveWidgetsExample](https://github.com/React-Native-Vu/LiveWidgetsExample)** | Full Xcode Widget Extension & Android Studio setup |
+| **🚀 Expo (SDK 58 / CNG)** | 👉 **[React-Native-Vu/LiveWidgetsExampleExpo](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo)** | Continuous Native Generation via Expo Config Plugin |
 
-### ✨ Highlights of the Demo:
+### ✨ Highlights of Both Demos:
 - 🚀 **100% Pre-configured**: Xcode App Groups, `WidgetExtension`, and Android `AppWidgetProvider` ready out of the box.
 - 🎨 **5 Real-world Presets**:
   1. **Executive KPI Dashboard**: Live sales sync, circular progress ring, and weekly chart.
@@ -34,17 +37,19 @@ A full, ready-to-run demo application is available on GitHub:
   5. **Flight Status**: Real-time gate, departure time, and airport progress bar.
 - 🔄 **Bidirectional Real-Time Sync**: Instant state updates between Main App and WidgetKit.
 
+#### 1. Clone & Run Bare React Native Demo:
 ```bash
-# Clone and run the demo app
 git clone https://github.com/React-Native-Vu/LiveWidgetsExample.git
-cd LiveWidgetsExample
-npm install
+cd LiveWidgetsExample && npm install
+npx react-native run-ios # or npx react-native run-android
+```
 
-# Run on iOS
-npx react-native run-ios
-
-# Run on Android
-npx react-native run-android
+#### 2. Clone & Run Expo Demo:
+```bash
+git clone https://github.com/React-Native-Vu/LiveWidgetsExampleExpo.git
+cd LiveWidgetsExampleExpo && npm install
+npx expo prebuild
+npx expo run:ios # or npx expo run:android
 ```
 
 ---
