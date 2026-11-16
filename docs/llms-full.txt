@@ -1,0 +1,118 @@
+# react-native-live-widgets — Full AI Reference Manual (llms-full.txt)
+
+> Comprehensive reference guide for Large Language Models (LLMs) and autonomous AI coding agents implementing Live Activities, Dynamic Island, and Home Screen Widgets in React Native and Expo.
+
+---
+
+## 1. High-Level Architecture
+
+`react-native-live-widgets` solves cross-platform widget development by abstracting native complexity behind a high-performance JSON layout protocol and declarative DSL:
+- **iOS 16.1+**: Maps `UI.*` nodes to SwiftUI primitives in WidgetKit (`DynamicNodeView.swift`). Supports ActivityKit for Live Activities on Lock Screen and Dynamic Island (expanded, compactLeading, compactTrailing, minimal). Supports iOS 17+ interactive `AppIntents`.
+- **Android API 24 -> Android 16 (API 36)**: Maps `UI.*` nodes to a high-DPI 2D `Canvas` renderer (`DynamicWidgetCanvasRenderer.kt`) for Home Screen `AppWidgetProvider`, and uses `Notification.ProgressStyle` / Ongoing Notifications for Live Activities with interactive action buttons and segmented progress bars.
+- **Shared Storage**: Uses iOS `UserDefaults(suiteName: appGroup)` and Android `SharedPreferences` to synchronize state with zero latency.
+
+---
+
+## 2. API Signature & Type Definitions
+
+```typescript
+export interface StartActivityOptions {
+  activityName: string;
+  appGroup?: string;
+  layout: WidgetNode;
+  dynamicIsland?: {
+    compactLeading?: WidgetNode;
+    compactTrailing?: WidgetNode;
+    minimal?: WidgetNode;
+    expanded?: {
+      leading?: WidgetNode;
+      trailing?: WidgetNode;
+      center?: WidgetNode;
+      bottom?: WidgetNode;
+    };
+  };
+  attributes?: Record<string, any>;
+  androidConfig?: {
+    channelId?: string;
+    channelName?: string;
+    notificationId?: number;
+    smallIcon?: string;
+    ongoing?: boolean;
+    color?: string;
+  };
+}
+
+export interface WidgetLayoutConfig {
+  layout?: WidgetNode;
+  small?: WidgetNode;
+  medium?: WidgetNode;
+  large?: WidgetNode;
+  pages?: Record<string, WidgetNode>;
+  initialPage?: string;
+  accessoryRectangular?: WidgetNode;
+  accessoryCircular?: WidgetNode;
+  accessoryInline?: WidgetNode;
+}
+
+export interface WidgetRemoteConfig {
+  url: string;
+  method?: 'GET' | 'POST';
+  headers?: Record<string, string>;
+  intervalMinutes?: number;
+  body?: Record<string, any>;
+}
+```
+
+### Static API Methods
+- `LiveActivity.start(options: StartActivityOptions): Promise<string>`: Starts an activity, returns `activityId`.
+- `LiveActivity.update(options: { activityId?: string; layout?: WidgetNode; dynamicIsland?: ... }): Promise<void>`
+- `LiveActivity.end(options: { activityId?: string; dismissalPolicy?: 'immediate'|'default' }): Promise<void>`
+- `LiveActivity.endAll(): Promise<void>`
+- `LiveActivity.getAllPushTokens(): Promise<{ devicePushToken: string; pushToStartToken: string; activityUpdateToken: string }>`
+- `LiveActivity.registerActionHandler(handler: (actionId: string, payload?: any) => void): () => void`
+- `Widget.setLayout(widgetKey: string, config: WidgetLayoutConfig, appGroup?: string): Promise<void>`
+- `Widget.reload(widgetKey?: string): Promise<void>`
+- `Widget.reloadAll(): Promise<void>`
+- `Widget.setRemoteConfig(config: WidgetRemoteConfig, widgetKey?: string, appGroup?: string): Promise<void>`
+- `Widget.requestPin(): Promise<boolean>`: Android only.
+- `SharedStorage.setAppGroup(appGroup: string): void`
+- `SharedStorage.set(key: string, value: string, appGroup?: string): Promise<void>`
+- `SharedStorage.get(key: string, appGroup?: string): Promise<string | null>`
+- `SharedStorage.remove(key: string, appGroup?: string): Promise<void>`
+
+---
+
+## 3. Complete Declarative UI Engine (`UI.*`)
+
+### Container Components
+- `UI.VStack({ spacing, padding, backgroundColor, borderRadius, alignment: 'leading'|'center'|'trailing' }, ...children)`
+- `UI.HStack({ spacing, padding, backgroundColor, borderRadius, alignment: 'top'|'center'|'bottom' }, ...children)`
+- `UI.ZStack({ zAlignment: 'center'|'topLeading'|'bottomTrailing' }, ...children)`
+- `UI.Grid({ columns: number, columnSpacing: number, rowSpacing: number }, ...children)`
+- `UI.Divider({ color, thickness, marginVertical, marginHorizontal })`
+
+### Content & Visual Components
+- `UI.Text(content: string, options?: { color, fontSize, fontWeight: 'regular'|'medium'|'bold'|'heavy', maxLines, textAlign })`
+- `UI.Image(options: { url?: string, base64?: string, systemName?: string, width: number, height: number, cornerRadius?: number, contentMode?: 'fill'|'fit', tintColor?: string })`
+- `UI.Timer(timestampMs: number, options?: { mode: 'countdown'|'timer'|'relative', color?: string, fontSize?: number, fontWeight?: string, showsHours?: boolean })`: Zero-battery native clock.
+- `UI.Progress(options: { style?: 'bar'|'segmented'|'circular', value?: number, segments?: number, currentSegment?: number, tintColor?: string, trackColor?: string, height?: number, showPercentage?: boolean })`
+- `UI.Equalizer(options: { isPlaying: boolean, barCount?: number, tintColor?: string, height?: number, barWidth?: number, spacing?: number })`: Animated waveform.
+- `UI.Badge(text: string, options?: { backgroundColor, textColor, fontSize, paddingHorizontal, paddingVertical, borderRadius })`
+- `UI.Gauge(value: number, options?: { size, tintColor, trackColor, label, valueText, textColor, labelColor })`: 240° KPI Gauge.
+- `UI.Chart(values: number[], options?: { style: 'bar'|'line', labels?: string[], tintColor, secondaryColor, labelColor, height })`
+
+### Interactive Components
+- `UI.Button(options: { title: string, actionId: string, backgroundColor?: string, activeBackgroundColor?: string, color?: string, activeColor?: string, fontSize?: number, paddingHorizontal?: number, paddingVertical?: number, borderRadius?: number })`
+- `UI.Toggle(options: { isOn: boolean, actionId: string, onColor?: string, offColor?: string })`
+- `UI.Link(options: { deepLink: string, padding?: number, backgroundColor?: string, borderRadius?: number }, ...children)`
+
+---
+
+## 4. Production Architectural Guidelines
+
+1. **App Termination (Force-Kill)**:
+   When an iOS app is terminated from the App Switcher, Hermes/JSC is killed. Widget interactions run purely in native Swift. Do not design critical flows (such as employee clock-ins or payments) expecting a TypeScript callback to fire when the app is dead. Instead, write to `SharedStorage` natively, and consume the queue upon app launch.
+2. **Widget Budget Limits**:
+   iOS limits daily widget reloads (~40-70/day). Android Doze Mode batches periodic tasks. Use `Widget.setRemoteConfig` for general background polling, but use Server Push (APNs / FCM) for second-by-second updates.
+3. **App Group Setup**:
+   The App Group string passed to `SharedStorage.setAppGroup('group.com.yourcompany.app')` must match the entitlement configured in Xcode and `app.json`.

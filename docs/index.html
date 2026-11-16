@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>react-native-live-widgets — Documentation & AI Agent Hub</title>
+  <meta name="description" content="All-in-One Declarative Engine for Live Activities, Dynamic Island & Interactive Home Screen Widgets in React Native & Expo.">
+  <link rel="icon" href="https://raw.githubusercontent.com/React-Native-Vu/react-native-live-widgets/dev/assets/dynamic_island_expanded.png" type="image/png">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#F0F9FF',
+              100: '#E0F2FE',
+              500: '#0284C7',
+              600: '#0284C7',
+              700: '#0369A1',
+            },
+            darkBg: '#090D16',
+            cardBg: '#111827',
+            cardBorder: '#1F2937'
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- PrismJS for syntax highlighting -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <style>
+    pre[class*="language-"] {
+      background: #0D1117 !important;
+      border: 1px solid #21262D;
+      border-radius: 0.75rem;
+      margin: 1rem 0;
+      font-size: 0.875rem;
+    }
+    code[class*="language-"] {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #374151;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="bg-darkBg text-slate-200 min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white">
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-50 backdrop-blur-md bg-darkBg/80 border-b border-cardBorder">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🚀</span>
+        <a href="#" class="font-bold text-lg text-white hover:text-sky-400 transition">
+          react-native-live-widgets
+        </a>
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+          v1.1.0
+        </span>
+        <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          Expo Ready
+        </span>
+      </div>
+
+      <nav class="flex items-center space-x-4">
+        <a href="#quick-start" class="text-sm text-slate-300 hover:text-white hidden md:inline">Cài đặt</a>
+        <a href="#dsl-catalog" class="text-sm text-slate-300 hover:text-white hidden md:inline">Declarative DSL</a>
+        <a href="#llms-ai" class="text-sm text-sky-400 font-medium hover:text-sky-300 flex items-center space-x-1">
+          <i data-lucide="bot" class="w-4 h-4"></i>
+          <span>AI / llms.txt</span>
+        </a>
+        <a href="https://github.com/React-Native-Vu/LiveWidgetsExampleExpo" target="_blank" class="text-sm text-slate-300 hover:text-white hidden lg:inline">
+          Expo Demo
+        </a>
+        <a href="https://github.com/React-Native-Vu/react-native-live-widgets" target="_blank" class="p-2 text-slate-400 hover:text-white transition" title="GitHub">
+          <i data-lucide="github" class="w-5 h-5"></i>
+        </a>
+        <a href="https://www.npmjs.com/package/react-native-live-widgets" target="_blank" class="p-2 text-red-400 hover:text-red-300 transition" title="npm">
+          <svg class="w-5 h-5 fill-current" viewBox="0 0 780 250"><path d="M240,250h100v-50h100V0H240V250z M340,50h50v100h-50V50z M480,0v200h100V50h50v150h50V50h50v150h50V0H480z M0,200h100V50h50v150h50V0H0V200z"/></svg>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="relative overflow-hidden pt-12 pb-16 lg:pt-20 lg:pb-24 border-b border-cardBorder bg-gradient-to-b from-sky-950/20 to-transparent">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs text-slate-300 mb-6">
+        <span>✨ Hỗ trợ 100% Expo Config Plugin, EAS Build & Bare React Native</span>
+      </div>
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight">
+        Live Activities & Dynamic Island <br>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-teal-300 to-indigo-400">
+          Chỉ bằng TypeScript Declarative
+        </span>
+      </h1>
+      <p class="mt-6 text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto">
+        Tạo tiện ích Home Screen Widgets và Live Activities Native cho cả iOS và Android mà 
+        <strong>không cần viết 1 dòng mã Swift hay Kotlin</strong>. Tích hợp sẵn chuẩn cho AI Agent & LLMs.
+      </p>
+
+      <div class="mt-8 flex flex-wrap justify-center gap-4">
+        <a href="#quick-start" class="px-6 py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold shadow-lg shadow-sky-600/25 transition flex items-center space-x-2">
+          <i data-lucide="play" class="w-4 h-4"></i>
+          <span>Bắt đầu ngay</span>
+        </a>
+        <a href="https://github.com/React-Native-Vu/LiveWidgetsExampleExpo" target="_blank" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold transition flex items-center space-x-2">
+          <i data-lucide="smartphone" class="w-4 h-4"></i>
+          <span>Xem Expo Demo</span>
+        </a>
+        <a href="llms.txt" target="_blank" class="px-6 py-3 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-700/50 font-semibold transition flex items-center space-x-2">
+          <i data-lucide="file-code" class="w-4 h-4"></i>
+          <span>Tài liệu cho AI (llms.txt)</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content Layout -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 grid grid-cols-1 lg:grid-cols-4 gap-8">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="hidden lg:block lg:col-span-1 space-y-6 sticky top-24 h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar pr-2">
+      <div>
+        <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Bắt đầu</h4>
+        <ul class="space-y-1.5 text-sm">
+          <li><a href="#quick-start" class="text-sky-400 font-medium block py-1 hover:text-sky-300">Cài đặt & Thiết lập</a></li>
+          <li><a href="#expo-setup" class="text-slate-400 hover:text-slate-200 block py-1">Dành cho Expo (CNG)</a></li>
+          <li><a href="#bare-rn-setup" class="text-slate-400 hover:text-slate-200 block py-1">Dành cho Bare React Native</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Declarative UI DSL</h4>
+        <ul class="space-y-1.5 text-sm">
+          <li><a href="#dsl-containers" class="text-slate-400 hover:text-slate-200 block py-1">VStack / HStack / ZStack</a></li>
+          <li><a href="#dsl-timer" class="text-slate-400 hover:text-slate-200 block py-1">UI.Timer (Phần cứng)</a></li>
+          <li><a href="#dsl-progress" class="text-slate-400 hover:text-slate-200 block py-1">UI.Progress (Bar, Circular)</a></li>
+          <li><a href="#dsl-equalizer" class="text-slate-400 hover:text-slate-200 block py-1">UI.Equalizer (Sóng nhạc)</a></li>
+          <li><a href="#dsl-interactive" class="text-slate-400 hover:text-slate-200 block py-1">UI.Button (Tương tác 2 chiều)</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">AI Agent & LLM</h4>
+        <ul class="space-y-1.5 text-sm">
+          <li><a href="#llms-ai" class="text-indigo-400 hover:text-indigo-300 font-medium block py-1">llms.txt Standard</a></li>
+          <li><a href="#agent-skill" class="text-indigo-400 hover:text-indigo-300 block py-1">Agent Skill (SKILL.md)</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tài nguyên & Demo</h4>
+        <ul class="space-y-1.5 text-sm">
+          <li><a href="https://github.com/React-Native-Vu/LiveWidgetsExampleExpo" target="_blank" class="text-slate-400 hover:text-slate-200 block py-1">Expo Demo GitHub ↗</a></li>
+          <li><a href="https://github.com/React-Native-Vu/LiveWidgetsExample" target="_blank" class="text-slate-400 hover:text-slate-200 block py-1">Bare RN Demo GitHub ↗</a></li>
+          <li><a href="GUIDE-VI.md" target="_blank" class="text-slate-400 hover:text-slate-200 block py-1">Tài liệu chi tiết (Tiếng Việt) ↗</a></li>
+          <li><a href="GUIDE-EN.md" target="_blank" class="text-slate-400 hover:text-slate-200 block py-1">Full English Guide ↗</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="lg:col-span-3 space-y-12">
+      
+      <!-- Section: Quick Start -->
+      <section id="quick-start" class="space-y-6">
+        <h2 class="text-2xl sm:text-3xl font-bold text-white flex items-center space-x-2">
+          <i data-lucide="zap" class="w-6 h-6 text-sky-400"></i>
+          <span>Cài đặt & Thiết lập tự động</span>
+        </h2>
+        
+        <p class="text-slate-300">
+          Thư viện cung cấp bộ công cụ <strong>All-in-One CLI Scaffolder</strong> giúp tự động tạo Xcode Extension target, 
+          cấu hình App Groups và Android permissions chỉ với 1 câu lệnh duy nhất.
+        </p>
+
+        <!-- Expo Tab -->
+        <div id="expo-setup" class="bg-cardBg border border-cardBorder rounded-xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span>1. Quy trình dành cho Expo (SDK 50, 51, 52, 58+)</span>
+            </span>
+            <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">Config Plugin</span>
+          </div>
+
+          <pre><code class="language-bash"># Bước 1: Cài đặt package
+npx expo install react-native-live-widgets
+
+# Bước 2: Thêm plugin vào app.json
+# (xem mẫu cấu hình bên dưới)
+
+# Bước 3: Sinh thư mục native
+npx expo prebuild
+
+# Bước 4: Tự động cấu hình Widget Extension target & App Groups
+npx react-native-live-widgets init --group group.com.yourcompany.app
+
+# Bước 5: Chạy ứng dụng trên Simulator
+npx expo run:ios</code></pre>
+
+          <p class="text-xs text-slate-400">Cấu hình plugin trong <code class="text-sky-300">app.json</code>:</p>
+          <pre><code class="language-json">{
+  "expo": {
+    "plugins": [
+      [
+        "react-native-live-widgets",
+        {
+          "appGroup": "group.com.yourcompany.app",
+          "enableLiveActivities": true,
+          "frequentUpdates": true
+        }
+      ]
+    ]
+  }
+}</code></pre>
+        </div>
+
+        <!-- Bare RN Tab -->
+        <div id="bare-rn-setup" class="bg-cardBg border border-cardBorder rounded-xl p-5 space-y-4">
+          <span class="font-bold text-white flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+            <span>2. Quy trình dành cho Bare React Native CLI</span>
+          </span>
+          <pre><code class="language-bash">npm install react-native-live-widgets
+# Tự động inject Xcode target, entitlements, podfile và android permissions
+npx react-native-live-widgets init --group group.com.yourcompany.app
+npx react-native run-ios</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Declarative UI DSL -->
+      <section id="dsl-catalog" class="space-y-6">
+        <h2 class="text-2xl sm:text-3xl font-bold text-white flex items-center space-x-2">
+          <i data-lucide="layers" class="w-6 h-6 text-sky-400"></i>
+          <span>Declarative UI Engine (`UI.*`)</span>
+        </h2>
+        <p class="text-slate-300">
+          Không cần viết SwiftUI hay Kotlin RemoteViews! Khai báo cây giao diện trực tiếp trong TypeScript và hệ thống sẽ tự động ánh xạ sang Native:
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Card: Live Activity Example -->
+          <div class="bg-cardBg border border-cardBorder rounded-xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold text-white">🚀 Live Activity & Dynamic Island</span>
+              <span class="text-xs text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded">iOS 16.1+</span>
+            </div>
+            <pre><code class="language-typescript">await LiveActivity.start({
+  activityName: 'Delivery',
+  appGroup: 'group.com.myapp',
+  layout: UI.VStack({
+    padding: 16,
+    backgroundColor: '#0F172A',
+    children: [
+      UI.Text('Tài xế đang giao đơn', { 
+        color: '#FFFFFF', 
+        fontSize: 15, 
+        fontWeight: 'bold' 
+      }),
+      UI.Progress({ 
+        style: 'bar', 
+        value: 0.7, 
+        tintColor: '#38BDF8', 
+        height: 6 
+      })
+    ]
+  }),
+  dynamicIsland: {
+    compactLeading: UI.Text('☕', { fontSize: 13 }),
+    compactTrailing: UI.Text('12m', { color: '#38BDF8', fontWeight: 'bold' }),
+    expanded: {
+      leading: UI.Text('COFFEE EXPRESS', { fontSize: 11 }),
+      trailing: UI.Text('12 mins', { fontSize: 16, fontWeight: 'bold' })
+    }
+  }
+});</code></pre>
+          </div>
+
+          <!-- Card: Interactive Widget Example -->
+          <div class="bg-cardBg border border-cardBorder rounded-xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold text-white">⚡ Home Screen Widget Tương Tác 2 Chiều</span>
+              <span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">AppIntents</span>
+            </div>
+            <pre><code class="language-typescript">// Cập nhật Home Screen Widget với nút bấm tương tác
+Widget.reload('main', {
+  layout: UI.VStack({
+    padding: 14,
+    backgroundColor: '#0F172A',
+    alignment: 'center',
+    children: [
+      UI.Text('BỘ ĐẾM TIỆN ÍCH', { color: '#94A3B8', fontSize: 11 }),
+      UI.Text(`${counter}`, { color: '#38BDF8', fontSize: 32, fontWeight: 'heavy' }),
+      UI.Button({
+        title: '+1 TĂNG SỐ',
+        actionId: 'INCREMENT',
+        backgroundColor: '#0284C7',
+        color: '#FFFFFF'
+      })
+    ]
+  })
+});
+
+// Lắng nghe khi người dùng bấm nút trên mặt Widget
+LiveActivity.registerActionHandler((actionId) => {
+  if (actionId === 'INCREMENT') {
+    setCounter(c => c + 1);
+  }
+});</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: AI Agent & LLM Hub -->
+      <section id="llms-ai" class="space-y-6 pt-4 border-t border-cardBorder">
+        <div class="flex items-center space-x-3">
+          <div class="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+            <i data-lucide="bot" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-2xl sm:text-3xl font-bold text-white">AI Agent & LLM Hub (llms.txt)</h2>
+            <p class="text-sm text-slate-400">Tối ưu 100% cho các mô hình AI: ChatGPT, Claude, Copilot, Cursor, Antigravity</p>
+          </div>
+        </div>
+
+        <p class="text-slate-300">
+          Thư viện tuân thủ chuẩn mở <strong><a href="https://llmstxt.org" target="_blank" class="text-sky-400 hover:underline">llms.txt</a></strong>, 
+          cho phép bất kỳ AI agent nào tự động đọc cấu trúc, API cheat sheet và các nguyên tắc kiến trúc để viết code widget chuẩn xác mà không bị ảo giác (hallucination).
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-cardBg border border-indigo-900/40 rounded-xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white flex items-center space-x-2">
+                <i data-lucide="file-text" class="w-4 h-4 text-indigo-400"></i>
+                <span>Tập tin llms.txt</span>
+              </span>
+              <a href="llms.txt" target="_blank" class="text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded hover:bg-indigo-500/20">
+                Xem file raw ↗
+              </a>
+            </div>
+            <p class="text-xs text-slate-400">
+              Chứa tóm tắt kiến trúc, bảng hàm DSL và 5 quy tắc vàng giúp AI sinh mã TypeScript widget an toàn.
+            </p>
+            <pre><code class="language-bash">curl -s https://react-native-vu.github.io/react-native-live-widgets/llms.txt</code></pre>
+          </div>
+
+          <div id="agent-skill" class="bg-cardBg border border-indigo-900/40 rounded-xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white flex items-center space-x-2">
+                <i data-lucide="cpu" class="w-4 h-4 text-sky-400"></i>
+                <span>Agent Skill (SKILL.md)</span>
+              </span>
+              <a href="https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/skills/react-native-live-widgets/SKILL.md" target="_blank" class="text-xs bg-sky-500/10 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded hover:bg-sky-500/20">
+                Xem SKILL.md ↗
+              </a>
+            </div>
+            <p class="text-xs text-slate-400">
+              Tương thích trực tiếp với các hệ thống coding agent như Antigravity, Claude Code, Cursor Rules để kích hoạt tự động theo ngữ cảnh.
+            </p>
+            <pre><code class="language-bash"># Vị trí skill trong dự án của bạn
+.agents/skills/react-native-live-widgets/SKILL.md</code></pre>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-cardBorder bg-cardBg/50 py-8 mt-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4">
+      <div>
+        Phát triển bởi <strong class="text-white">vu-tran</strong> • Giấy phép MIT • 
+        <a href="https://github.com/React-Native-Vu/react-native-live-widgets" class="text-sky-400 hover:underline">GitHub Repository</a>
+      </div>
+      <div class="flex items-center space-x-4">
+        <a href="llms.txt" class="hover:text-white transition">llms.txt</a>
+        <a href="llms-full.txt" class="hover:text-white transition">llms-full.txt</a>
+        <a href="EXPO-GUIDE-VI.md" class="hover:text-white transition">Expo Guide</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+  </script>
+</body>
+</html>

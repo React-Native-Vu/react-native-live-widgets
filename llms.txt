@@ -1,0 +1,66 @@
+# react-native-live-widgets
+
+> The All-in-One declarative TypeScript engine for iOS Live Activities, Dynamic Island, and interactive Home Screen Widgets in React Native & Expo (iOS 16.1+ & Android 16).
+
+Write 100% Declarative TypeScript (`UI.*`) in your React Native code. Automatically renders to native SwiftUI (WidgetKit) and Android High-DPI 2D Canvas without manually touching Xcode or Android Studio.
+
+## Quick Reference for LLMs & AI Agents
+
+### Core Modules
+- `LiveActivity`: Start, update, end, and inspect lock screen Live Activities & Dynamic Island on iOS, and Promoted Live Updates (`Notification.ProgressStyle`) on Android.
+- `Widget`: Set dynamic multi-page layouts (`pages`), configure background API polling (`setRemoteConfig`), trigger reload, and request in-app widget pinning (`requestPin` on Android).
+- `SharedStorage`: Fast synchronous App Group (iOS) and SharedPreferences (Android) key-value bridge.
+- `UI`: Declarative DSL builder (`UI.VStack`, `UI.HStack`, `UI.ZStack`, `UI.Text`, `UI.Button`, `UI.Progress`, `UI.Timer`, `UI.Equalizer`, `UI.Image`, `UI.Gauge`, `UI.Chart`).
+
+### Installation & Scaffolding
+- **Expo (SDK 50, 51, 52, 58+)**:
+  ```bash
+  npx expo install react-native-live-widgets
+  # Add plugin in app.json with appGroup, enableLiveActivities
+  npx expo prebuild
+  npx react-native-live-widgets init --group group.com.yourcompany.app
+  ```
+- **Bare React Native CLI**:
+  ```bash
+  npm install react-native-live-widgets
+  npx react-native-live-widgets init --group group.com.yourcompany.app
+  ```
+
+### Key Declarative UI DSL Methods
+- `UI.VStack(options, ...children)` / `UI.HStack(options, ...children)`: Flex containers with `spacing`, `padding`, `backgroundColor`, `borderRadius`, `alignment`.
+- `UI.Text(content, { color, fontSize, fontWeight: 'bold'|'heavy'|'medium'|'regular', maxLines })`
+- `UI.Timer(timestampMs, { mode: 'countdown'|'timer'|'relative', color, fontSize })`: Zero-battery native hardware clock.
+- `UI.Progress(options)`: Supports `style: 'bar' | 'segmented' | 'circular'`, `value` (0.0 to 1.0), `tintColor`, `trackColor`.
+- `UI.Equalizer({ isPlaying: true, barCount: 4, tintColor, height })`: Realtime animated audio waveform on Dynamic Island & lock screen.
+- `UI.Image({ url, base64, systemName, width, height, cornerRadius, contentMode })`: Auto-cached remote images, base64 data, or SF Symbols.
+- `UI.Button({ title, actionId, backgroundColor, color, fontSize })`: Interactive widget button triggering `AppIntents` (iOS 17+) and `BroadcastReceiver` (Android).
+- `UI.Gauge(value, { size, tintColor, trackColor, label, valueText })`: 240° KPI circular gauge.
+- `UI.Chart(dataPoints, { style: 'bar'|'line', labels, tintColor, height })`: Lightweight trend sparklines.
+
+### Bidirectional Two-Way Action Handling
+```typescript
+import { LiveActivity, Widget } from 'react-native-live-widgets';
+
+// Listen to widget button interactions inside App.tsx
+const unsubscribe = LiveActivity.registerActionHandler((actionId, payload) => {
+  if (actionId === 'INCREMENT') {
+    // Update local state and trigger widget redraw
+    Widget.reload('main');
+  }
+});
+```
+
+### Golden Rules for AI Agents
+1. **Never write Swift or Kotlin files manually** when a declarative `UI.*` node exists.
+2. **App Groups**: Both iOS app and Widget Extension MUST share the identical App Group name (e.g. `group.<bundle_id>`).
+3. **Dynamic Island**: Always configure `compactLeading`, `compactTrailing`, `minimal`, and `expanded` (`leading`, `trailing`, `bottom`, `center`).
+4. **App Termination (Force-Kill)**: When the app is force-killed on iOS, JS runtime stops. Design mission-critical actions (like employee attendance check-ins) using native `SharedStorage` queue rather than expecting live JS callbacks while killed.
+5. **Background Sync**: `Widget.setRemoteConfig` allows native widgets to fetch fresh JSON from a REST endpoint without requiring server-side APNs push infrastructure.
+
+## Documentation Links
+- [English Full Guide](https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/docs/GUIDE-EN.md)
+- [Vietnamese Full Guide](https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/docs/GUIDE-VI.md)
+- [Dedicated Expo Guide (EN)](https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/docs/EXPO-GUIDE-EN.md)
+- [Dedicated Expo Guide (VI)](https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/docs/EXPO-GUIDE-VI.md)
+- [Official Expo Demo Repo](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo)
+- [Official Bare RN Demo Repo](https://github.com/React-Native-Vu/LiveWidgetsExample)
