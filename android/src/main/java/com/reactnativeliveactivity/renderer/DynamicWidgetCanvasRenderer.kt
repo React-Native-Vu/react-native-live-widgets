@@ -788,9 +788,9 @@ object DynamicWidgetCanvasRenderer {
                             xFraction = xF,
                             yFraction = yF,
                             widthFraction = if (fullWidth) 1.0f else wF,
-                            title = title,
-                            accessibilityLabel = props?.optString("accessibilityLabel", "").takeIf { it.isNotEmpty() },
-                            accessibilityHint = props?.optString("accessibilityHint", "").takeIf { it.isNotEmpty() }
+                            title = displayTitle,
+                            accessibilityLabel = props?.optString("accessibilityLabel", "")?.takeIf { it.isNotEmpty() },
+                            accessibilityHint = props?.optString("accessibilityHint", "")?.takeIf { it.isNotEmpty() }
                         )
                     )
                 }
@@ -1080,7 +1080,7 @@ object DynamicWidgetCanvasRenderer {
                         deepLink = null,
                         zone = zone,
                         title = label,
-                        accessibilityLabel = props?.optString("accessibilityLabel", "").takeIf { it.isNotEmpty() } ?: label,
+                        accessibilityLabel = props?.optString("accessibilityLabel", "")?.takeIf { it.isNotEmpty() } ?: label,
                         accessibilityHint = if (isChecked) "Đã chọn, bấm để bỏ chọn" else "Chưa chọn, bấm để chọn"
                     )
                 )
@@ -1147,9 +1147,9 @@ object DynamicWidgetCanvasRenderer {
                             xFraction = xF,
                             yFraction = yF,
                             widthFraction = 1.0f,
-                            title = props?.optString("accessibilityLabel", "").takeIf { it.isNotEmpty() } ?: "Liên kết",
-                            accessibilityLabel = props?.optString("accessibilityLabel", "").takeIf { it.isNotEmpty() },
-                            accessibilityHint = props?.optString("accessibilityHint", "").takeIf { it.isNotEmpty() }
+                            title = props?.optString("accessibilityLabel", "")?.takeIf { it.isNotEmpty() } ?: "Liên kết",
+                            accessibilityLabel = props?.optString("accessibilityLabel", "")?.takeIf { it.isNotEmpty() },
+                            accessibilityHint = props?.optString("accessibilityHint", "")?.takeIf { it.isNotEmpty() }
                         )
                     )
                 }
