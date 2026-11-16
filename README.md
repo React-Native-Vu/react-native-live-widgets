@@ -12,11 +12,42 @@
 
 *Write 100% Declarative TypeScript. Render dynamically to Native SwiftUI (WidgetKit) & Android 2D Canvas without touching Xcode or Android Studio.*
 
-[📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Hướng dẫn Tiếng Việt](docs/GUIDE-VI.md) • [✨ Tính năng](#-key-features) • [⚡ Cài đặt](#-quick-start) • [☕ Ủng hộ tác giả](#-sponsor--donate-ủng-hộ-tác-giả)
+[📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Hướng dẫn Tiếng Việt](docs/GUIDE-VI.md) • [📱 Demo App](https://github.com/React-Native-Vu/LiveWidgetsExample) • [✨ Tính năng](#-key-features) • [⚡ Cài đặt](#-quick-start) • [☕ Ủng hộ tác giả](#-sponsor--donate-ủng-hộ-tác-giả)
 
 ---
 
 </div>
+
+## 📱 Live Demo Example App
+
+A full, ready-to-run demo application is available on GitHub:
+
+👉 **[https://github.com/React-Native-Vu/LiveWidgetsExample](https://github.com/React-Native-Vu/LiveWidgetsExample)**
+
+### ✨ Highlights of the Demo:
+- 🚀 **100% Pre-configured**: Xcode App Groups, `WidgetExtension`, and Android `AppWidgetProvider` ready out of the box.
+- 🎨 **5 Real-world Presets**:
+  1. **Executive KPI Dashboard**: Live sales sync, circular progress ring, and weekly chart.
+  2. **Coffee Delivery Tracker**: Dynamic Island countdown and delivery driver status.
+  3. **Interactive Task Checklist**: Check off items right from your Home Screen without opening the app.
+  4. **Music & Audio Player**: Dynamic Island equalizer animation and lock screen media style.
+  5. **Flight Status**: Real-time gate, departure time, and airport progress bar.
+- 🔄 **Bidirectional Real-Time Sync**: Instant state updates between Main App and WidgetKit.
+
+```bash
+# Clone and run the demo app
+git clone https://github.com/React-Native-Vu/LiveWidgetsExample.git
+cd LiveWidgetsExample
+npm install
+
+# Run on iOS
+npx react-native run-ios
+
+# Run on Android
+npx react-native run-android
+```
+
+---
 
 ## 📸 Showcase & Demos
 
@@ -306,6 +337,7 @@ Nếu thư viện này giúp ích cho dự án hoặc công ty của bạn, bạ
 
 ## 📚 Documentation & Guides
 
+- 📱 **[LiveWidgetsExample Demo Project](https://github.com/React-Native-Vu/LiveWidgetsExample)**: Complete working sample app demonstrating all 5 presets with bidirectional sync on iOS & Android.
 - 🇬🇧 **[Full English Developer Guide](docs/GUIDE-EN.md)**: Architecture, DSL specs, push notification server configuration, and best practices.
 - 🇻🇳 **[Hướng dẫn Chi tiết bằng Tiếng Việt](docs/GUIDE-VI.md)**: Hướng dẫn tích hợp từng bước, thiết lập App Group, giải quyết lỗi thường gặp.
 
