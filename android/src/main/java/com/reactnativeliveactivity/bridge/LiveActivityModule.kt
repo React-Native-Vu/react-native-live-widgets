@@ -12,6 +12,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import org.json.JSONObject
 import java.util.concurrent.Executors
@@ -121,7 +122,7 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
         val seconds = if (options?.hasKey("dismissalAfterSeconds") == true) options.getDouble("dismissalAfterSeconds").toLong() else 0L
 
         if (finalPayload != null) {
-            LiveActivityNotifier.showOrUpdate(reactContext, activityId, finalPayload)
+            LiveActivityNotifier.update(reactContext, activityId, finalPayload)
         }
 
         if (seconds > 0) {

@@ -5,15 +5,15 @@ on:
     branches:
       - main
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version or bump type (patch | minor | major | X.Y.Z)'
+        description: "Release version or bump type (patch | minor | major | X.Y.Z)"
         required: false
-        default: 'patch'
+        default: "patch"
 
 jobs:
   release:
@@ -31,8 +31,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install TypeScript compiler
         run: npm install --no-save typescript
@@ -69,5 +69,3 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
