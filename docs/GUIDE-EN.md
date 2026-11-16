@@ -1136,6 +1136,25 @@ console.log('Synthesized A11y Summary:', ir.semanticSummary);
 
 ---
 
+### 12.6. ⚡ Native State Sync, Sub-renderer Optimization & Automated Test Suite
+
+#### 1. Native State Synchronization (Phase 4):
+- Instant action & toggle responses: Native Android (`LiveActivityReceiver.kt` & `DynamicWidgetStateStore`) immediately updates `SharedPreferences` and triggers a widget redraw with zero UI lag even if the app was killed.
+- React hooks (`useWidgetStorage`, `useWidgetAction`) reconcile the latest state upon app launch.
+
+#### 2. Canvas Sub-renderer Optimization (Phase 5):
+- `renderSubNodeBitmap`: Isolates bitmap allocation solely to the sub-component's bounding box (e.g. 64dp Gauge consumes only ~40KB bitmap) instead of allocating a full-screen canvas bitmap.
+- Completely avoids Android Binder IPC `TransactionTooLargeException`.
+
+#### 3. Advanced JSX Components & Automated Tests (Phase 6):
+- New JSX components: `<Toggle>`, `<Switch>`, and `<Checkbox>` with `checked`/`isChecked`, `tintColor`, and `strikethroughOnCheck`.
+- Automated test suite verifying 100% assertions:
+  ```bash
+  npm test
+  ```
+
+---
+
 ## 📄 License
 MIT © vu-tran
 

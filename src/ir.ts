@@ -7,7 +7,7 @@ import {
   RenderPlanTarget,
   StateBinding,
   AccessibilityRole,
-} from './types';
+} from './types.js';
 
 let nodeCounter = 0;
 

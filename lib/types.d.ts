@@ -371,7 +371,7 @@ export interface ChartNode extends BaseNode {
 }
 export interface ToggleNode extends BaseNode {
     type: 'Toggle';
-    props: {
+    props: AccessibilityProps & {
         /** Mã định danh toggle (tự động gắn tiền tố 'toggle:' nếu chưa có) */
         actionId: string;
         label: string;
@@ -379,6 +379,7 @@ export interface ToggleNode extends BaseNode {
         /** 'checkbox' (ô tích) | 'switch' (công tắc gạt) */
         style?: 'checkbox' | 'switch';
         checked?: boolean;
+        isChecked?: boolean;
         tintColor?: string;
         textColor?: string;
         checkedTextColor?: string;

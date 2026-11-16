@@ -26,8 +26,8 @@ import {
   VStackNode,
   ZStackNode,
   ZStackProps,
-} from './types';
-import { registerAction } from './dispatcher';
+} from './types.js';
+import { registerAction } from './dispatcher.js';
 
 let autoActionCounter = 0;
 

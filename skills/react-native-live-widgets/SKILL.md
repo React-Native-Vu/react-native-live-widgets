@@ -98,6 +98,7 @@ You can construct widget trees using **EITHER JSX components** (`<VStack>`, `<HS
 
 ### Interactivity & Preview
 - **Button**: `<Button title="Approve" actionId="APPROVE_TASK" backgroundColor="#2563EB" gradient={{ colors: ['#2563EB', '#1D4ED8'] }} />` or `UI.Button(...)`
+- **Interactive Toggles & Switches**: `<Switch label="DND Mode" actionId="toggle:dnd" checked={false} />` or `<Checkbox label="Task Completed" actionId="toggle:task_1" checked={true} />`
 - **Badge**: `<Badge text="+18%" backgroundColor="#064E3B" textColor="#6EE7B7" />` or `UI.Badge(...)`
 - **In-App Widget Preview**: `<WidgetPreview size="medium" showBadge interactiveSizeSwitch onAction={(id) => ...} />` (alias: `<VoltraWidgetPreview>`)
 

@@ -1,4 +1,4 @@
-import { LayoutNode, WidgetSinglePageConfig, WidgetIR } from './types';
+import { LayoutNode, WidgetSinglePageConfig, WidgetIR } from './types.js';
 /**
  * 🌲 Trình biên dịch UI Intermediate Representation (IR).
  * Chuyển hóa cây DSL thành cấu trúc dữ liệu trung gian chuẩn gồm:

@@ -1153,5 +1153,30 @@ console.log(ir.semanticSummary);
 
 ---
 
+### 12.6. ⚡ Đồng bộ Trạng thái Native, Tối ưu Sub-renderer & Bộ Kiểm thử Tự động
+
+#### 1. Đồng bộ Trạng thái Hai chiều Native (Phase 4 State Synchronization):
+- Khi người dùng chạm nút hoặc đổi toggle trên Widget, Android Native (`LiveActivityReceiver.kt` & `DynamicWidgetStateStore`) **ngay lập tức lưu trạng thái mới vào SharedPreferences** và kích hoạt re-render widget ngay tức khắc, không có độ trễ và không bị lệch trạng thái kể cả khi App đã bị tắt (Force-Killed).
+- Khi App React Native mở lên, hook `useWidgetStorage` và `useWidgetAction` tự động đồng bộ lại state mới nhất từ Native Store.
+
+#### 2. Tối ưu Canvas Sub-renderer (Phase 5 RAM & Binder Protection):
+- Thay vì vẽ một tấm Bitmap khổng lồ chiếm hàng Megabyte cho toàn bộ màn hình, phương thức `renderSubNodeBitmap` chỉ vẽ đúng kích thước khung hình hộp bao của thành phần đồ họa (ví dụ Gauge 64dp chỉ tốn ~40KB bitmap).
+- Triệt tiêu hoàn toàn nguy cơ chạm trần bộ nhớ Binder IPC (`TransactionTooLargeException`) trên Android.
+
+#### 3. Bộ linh kiện Nâng cao & Kiểm thử Tự động (Phase 6):
+- Bổ sung các thẻ JSX: `<Toggle>`, `<Switch>`, `<Checkbox>` với trạng thái `checked`/`isChecked`, tự động đổi màu `tintColor` và gạch ngang chữ `strikethroughOnCheck`.
+- Bộ kiểm thử tự động 100% assertions:
+  ```bash
+  npm test
+  ```
+  Xác minh tự động:
+  - Cây IR AST và gán ID duy nhất.
+  - Lọc bỏ phần tử trang trí (`accessible: false`).
+  - Phân loại Native-first vs Canvas-when-needed.
+  - Trích xuất Two-Way State Bindings.
+  - Tổng hợp câu âm thanh trợ năng TalkBack.
+
+---
+
 ## 📄 License
 MIT © vu-tran

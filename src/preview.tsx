@@ -19,8 +19,8 @@ import {
   ProgressNode,
   TimerNode,
   ImageNode,
-} from './types';
-import { renderToWidget, extractPropsAndStyle } from './jsx';
+} from './types.js';
+import { renderToWidget, extractPropsAndStyle } from './jsx.js';
 
 export type WidgetPreviewSize = 'small' | 'medium' | 'large' | 'lockScreen' | 'dynamicIsland';
 
@@ -706,6 +706,85 @@ function renderPreviewNode(
             />
           ))}
         </View>
+      );
+    }
+
+    case 'Toggle': {
+      const tnode = node as any;
+      const p = tnode.props || {};
+      const isChecked = !!p.checked || !!p.isChecked;
+      const tint = parseDynamicColor(p.tintColor) || '#38BDF8';
+      const isSwitch = p.style === 'switch';
+
+      return (
+        <TouchableOpacity
+          accessible={p.accessible !== false}
+          accessibilityLabel={p.accessibilityLabel || p.label}
+          accessibilityHint={p.accessibilityHint}
+          accessibilityRole="switch"
+          accessibilityValue={{ text: isChecked ? 'Đã chọn' : 'Chưa chọn' }}
+          activeOpacity={0.7}
+          onPress={() => {
+            if (p.actionId && onAction) {
+              onAction(p.actionId);
+            }
+          }}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            paddingVertical: 4,
+          }}
+        >
+          {isSwitch ? (
+            <View
+              style={{
+                width: 32,
+                height: 18,
+                borderRadius: 9,
+                backgroundColor: isChecked ? tint : '#475569',
+                justifyContent: 'center',
+                paddingHorizontal: 2,
+              }}
+            >
+              <View
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  backgroundColor: '#FFFFFF',
+                  alignSelf: isChecked ? 'flex-end' : 'flex-start',
+                }}
+              />
+            </View>
+          ) : (
+            <View
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 4,
+                borderWidth: 1.5,
+                borderColor: isChecked ? tint : '#64748B',
+                backgroundColor: isChecked ? tint : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isChecked && (
+                <RNText style={{ color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' }}>✓</RNText>
+              )}
+            </View>
+          )}
+          <RNText
+            style={{
+              color: isChecked && p.strikethroughOnCheck ? '#64748B' : (parseDynamicColor(p.textColor) || '#F8FAFC'),
+              fontSize: p.fontSize ?? 13,
+              textDecorationLine: isChecked && p.strikethroughOnCheck ? 'line-through' : 'none',
+            }}
+          >
+            {p.label}
+          </RNText>
+        </TouchableOpacity>
       );
     }
 
