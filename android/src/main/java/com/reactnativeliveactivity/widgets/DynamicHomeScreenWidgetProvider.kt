@@ -123,8 +123,12 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             )
             views.setImageViewBitmap(R.id.rn_widget_canvas, bmp)
 
-            // ♿ Gán Accessibility Summary cho toàn bộ Canvas View để TalkBack đọc được (Phase 1)
-            val a11ySummary = DynamicWidgetCanvasRenderer.extractAccessibilitySummary(activeNode)
+            // ♿ Gán Accessibility Summary từ IR Semantic Tree (hoặc fallback Canvas extractor)
+            val a11ySummary = if (activeNode?.has("semanticSummary") == true) {
+                activeNode.optString("semanticSummary")
+            } else {
+                DynamicWidgetCanvasRenderer.extractAccessibilitySummary(activeNode)
+            }
             if (a11ySummary.isNotEmpty()) {
                 views.setContentDescription(R.id.rn_widget_canvas, a11ySummary)
             }
@@ -137,6 +141,16 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             if (rawJson.isNullOrEmpty()) return null
             return try {
                 val payload = JSONObject(rawJson)
+
+                // Hỗ trợ trực tiếp cấu trúc UI Intermediate Representation (IR v2.0)
+                if (payload.optString("version") == "2.0" && payload.has("root")) {
+                    val root = payload.optJSONObject("root")
+                    if (root != null && payload.has("semanticSummary")) {
+                        root.put("semanticSummary", payload.optString("semanticSummary"))
+                    }
+                    return root
+                }
+
                 val pages = payload.optJSONObject("pages")
                 if (pages != null && pages.length() > 0) {
                     val state = DynamicWidgetStateStore.loadState(context)

@@ -1092,5 +1092,66 @@ if (caps.supportsTintedMode) {
 
 ---
 
+### 12.5. 🌲 UI Intermediate Representation (IR) & Semantic Tree (Phase 2)
+
+Thay vì đi thẳng từ `DSL ➔ Canvas Bitmap`, kiến trúc v1.2 giới thiệu tầng **UI Intermediate Representation (IR)** và bộ điều phối **Renderer Planner**:
+
+```
+React Native DSL (JSX / UI.*)
+       ↓
+UI Intermediate Representation (IR v2.0)
+ ├── UI Tree (gán ID duy nhất cho từng Node)
+ ├── Semantic Tree (độc lập hoàn toàn với Renderer)
+ ├── State Bindings (toggle:<key>, page:<id>)
+ └── Renderer Planner (phân loại Native RemoteViews vs Canvas Bitmap)
+       ↓
+ ├── [NATIVE] RemoteViews (TextView, Button, ProgressBar)
+ └── [CANVAS] Canvas 2D Bitmap (Gauge 240°, Equalizer, Shader)
+```
+
+#### Sử dụng API `Widget.inspectIR` và `Widget.compileIR`:
+```typescript
+import { Widget, UI } from 'react-native-live-widgets';
+
+const layout = UI.VStack({
+  padding: 16,
+  backgroundColor: '#0F172A',
+  children: [
+    UI.Text('BẢNG ĐIỀU KHIỂN CHẤM CÔNG', { typography: 'title2' }),
+    UI.Progress({ value: 0.86, accessibilityLabel: 'Tiến độ hoàn thành ca' }),
+    UI.Button({ title: 'Check In', actionId: 'toggle:attendance' }),
+    UI.Gauge({ value: 0.92, label: 'Hiệu suất' })
+  ]
+});
+
+// 1. Phân tích kiến trúc và kế hoạch kết xuất
+console.log(Widget.inspectIR(layout));
+/*
+Output:
+🌲 Widget IR v2.0
+📊 Chiến lược kết xuất: NATIVE_FIRST_HYBRID
+   - Native RemoteViews nodes: 4
+   - Canvas Bitmap nodes: 1
+
+♿ Tóm tắt âm thanh Trợ năng:
+   "BẢNG ĐIỀU KHIỂN CHẤM CÔNG. Tiến độ hoàn thành ca 86%. Nút Check In (Kích hoạt hành động toggle:attendance). Hiệu suất: 92%"
+
+🎯 Kế hoạch phân bổ (Render Plan Tree):
+   [NATIVE] 0.0 <Text> role=header label="BẢNG ĐIỀU KHIỂN CHẤM CÔNG"
+   [NATIVE] 0.1 <Progress> role=progressbar label="Tiến độ hoàn thành ca"
+   [NATIVE] 0.2 <Button> role=button label="Check In" (Action: toggle:attendance)
+   [CANVAS] 0.3 <Gauge> role=progressbar label="Hiệu suất"
+
+⚡ Liên kết trạng thái (State Bindings):
+   - [TOGGLE] action=toggle:attendance target=attendance
+*/
+
+// 2. Biên dịch trực tiếp sang IR Object
+const ir = Widget.compileIR(layout);
+console.log(ir.semanticSummary);
+```
+
+---
+
 ## 📄 License
 MIT © vu-tran

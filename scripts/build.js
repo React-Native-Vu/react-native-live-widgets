@@ -44,7 +44,16 @@ function build() {
     stdio: 'inherit',
   });
 
-  const expectedFiles = ['index.js', 'index.d.ts', 'builder.js', 'builder.d.ts', 'types.js', 'types.d.ts'];
+  const expectedFiles = [
+    'index.js',
+    'index.d.ts',
+    'builder.js',
+    'builder.d.ts',
+    'types.js',
+    'types.d.ts',
+    'ir.js',
+    'ir.d.ts',
+  ];
   for (const file of expectedFiles) {
     const filePath = path.join(libDir, file);
     if (!fs.existsSync(filePath)) {

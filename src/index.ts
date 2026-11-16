@@ -11,7 +11,9 @@ import {
   WidgetLayoutConfig,
   WidgetRemoteConfig,
   WidgetTimelineConfig,
+  WidgetIR,
 } from './types';
+import { compileToIR, inspectIR } from './ir';
 
 declare const __DEV__: boolean | undefined;
 
@@ -707,6 +709,20 @@ export const Widget = {
       supportsAccessibility: true,
     };
   },
+
+  /**
+   * 🌲 Biên dịch cây DSL sang UI Intermediate Representation (IR & Semantic Tree - Phase 2).
+   */
+  compileIR: (layout: any): WidgetIR => {
+    return compileToIR(layout);
+  },
+
+  /**
+   * 🔍 Phân tích và in ra bản đồ kiến trúc IR, Semantic Tree và Kế hoạch phân bổ Renderer Planner.
+   */
+  inspectIR: (layout: any): string => {
+    return inspectIR(layout);
+  },
 };
 
 // ─── 3. SHARED STORAGE (App Groups & SharedPreferences) ─────────────────────
@@ -858,4 +874,5 @@ export const AudioPlayer = {
 
 export * from './types';
 export * from './builder';
+export * from './ir';
 export { StyleSheet } from './builder';

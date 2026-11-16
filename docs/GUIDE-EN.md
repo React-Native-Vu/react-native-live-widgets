@@ -1094,6 +1094,48 @@ if (caps.supportsTintedMode) {
 
 ---
 
+### 12.5. 🌲 UI Intermediate Representation (IR) & Semantic Tree (Phase 2)
+
+Rather than compiling directly from `DSL ➔ Canvas Bitmap`, the engine introduces a decoupled **UI Intermediate Representation (IR v2.0)** and a **Renderer Planner**:
+
+```
+React Native DSL (JSX / UI.*)
+       ↓
+UI Intermediate Representation (IR v2.0)
+ ├── UI Tree (unique ID for every node)
+ ├── Semantic Tree (independent of visual renderer)
+ ├── State Bindings (toggle:<key>, page:<id>)
+ └── Renderer Planner (classifies Native RemoteViews vs Canvas Bitmap)
+       ↓
+ ├── [NATIVE] RemoteViews (TextView, Button, ProgressBar)
+ └── [CANVAS] Canvas 2D Bitmap (Gauge 240°, Equalizer, Shader)
+```
+
+#### Inspecting and Compiling IR:
+```typescript
+import { Widget, UI } from 'react-native-live-widgets';
+
+const layout = UI.VStack({
+  padding: 16,
+  backgroundColor: '#0F172A',
+  children: [
+    UI.Text('ATTENDANCE DASHBOARD', { typography: 'title2' }),
+    UI.Progress({ value: 0.86, accessibilityLabel: 'Shift completion' }),
+    UI.Button({ title: 'Clock In', actionId: 'toggle:attendance' }),
+    UI.Gauge({ value: 0.92, label: 'Efficiency' })
+  ]
+});
+
+// 1. Inspect architectural plan and accessibility synthesis
+console.log(Widget.inspectIR(layout));
+
+// 2. Compile to raw IR object
+const ir = Widget.compileIR(layout);
+console.log('Synthesized A11y Summary:', ir.semanticSummary);
+```
+
+---
+
 ## 📄 License
 MIT © vu-tran
 

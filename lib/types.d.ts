@@ -621,4 +621,68 @@ export interface WidgetCapabilities {
     /** Hỗ trợ lớp Trợ năng phân cấp (Accessibility Fallback Layer: VoiceOver & TalkBack contentDescription) */
     supportsAccessibility: boolean;
 }
+/**
+ * Mục tiêu kết xuất của bộ điều phối Renderer Planner.
+ * - 'native_remote_view': Kết xuất thành RemoteViews native (TextView, Button, ProgressBar).
+ * - 'canvas_bitmap': Kết xuất qua Canvas 2D Bitmap (Gauge 240°, Equalizer, đồ họa phức tạp).
+ * - 'composite': Vùng chứa phức hợp kết hợp cả Native Views và Canvas sub-views.
+ */
+export type RenderPlanTarget = 'native_remote_view' | 'canvas_bitmap' | 'composite';
+/**
+ * Kế hoạch kết xuất cho từng Node trong cây UI.
+ */
+export interface NodeRenderPlan {
+    id: string;
+    type: LayoutNodeType;
+    target: RenderPlanTarget;
+    reason: string;
+    hasNativeEquivalent: boolean;
+    requiresCanvas: boolean;
+    childrenTargets?: RenderPlanTarget[];
+}
+/**
+ * ♿ Nút ngữ nghĩa độc lập (Semantic Node) tách biệt hoàn toàn khỏi Renderer.
+ */
+export interface SemanticNode {
+    id: string;
+    path: string;
+    type: LayoutNodeType;
+    role: AccessibilityRole;
+    label: string;
+    hint?: string;
+    value?: string | number;
+    interactive: boolean;
+    actionId?: string;
+    deepLink?: string;
+    isDecorative?: boolean;
+}
+/**
+ * Liên kết trạng thái hai chiều giữa UI và Native Store / JavaScript.
+ */
+export interface StateBinding {
+    id: string;
+    actionId: string;
+    bindingType: 'toggle' | 'page' | 'custom';
+    targetKey?: string;
+    initialValue?: any;
+}
+/**
+ * 🌲 UI Intermediate Representation (Cây đại diện trung gian IR).
+ * Chuẩn hóa toàn bộ cấu trúc UI, Semantic Tree, Kế hoạch kết xuất (Render Plan)
+ * và Liên kết trạng thái (State Bindings) trước khi chuyển giao cho Renderer nền tảng.
+ */
+export interface WidgetIR {
+    version: '2.0';
+    timestamp: number;
+    root: LayoutNode;
+    semanticTree: SemanticNode[];
+    semanticSummary: string;
+    renderPlan: {
+        overallStrategy: 'native_first_hybrid' | 'canvas_fallback';
+        nativeNodeCount: number;
+        canvasNodeCount: number;
+        nodes: Record<string, NodeRenderPlan>;
+    };
+    stateBindings: StateBinding[];
+}
 //# sourceMappingURL=types.d.ts.map

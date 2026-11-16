@@ -1,4 +1,4 @@
-import { ActiveActivityInfo, EndActivityOptions, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetCapabilities, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig } from './types';
+import { ActiveActivityInfo, EndActivityOptions, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetCapabilities, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig, WidgetIR } from './types';
 import { ActionHandler, GlobalActionHandler, registerAction, registerActionHandler, unregisterAction } from './dispatcher';
 export type { ActionHandler, GlobalActionHandler };
 export { registerAction, registerActionHandler, unregisterAction };
@@ -171,6 +171,14 @@ export declare const Widget: {
      * Giúp ứng dụng xác định chính xác tính năng nào được hỗ trợ thực tế trên thiết bị đang chạy.
      */
     getCapabilities: () => Promise<WidgetCapabilities>;
+    /**
+     * 🌲 Biên dịch cây DSL sang UI Intermediate Representation (IR & Semantic Tree - Phase 2).
+     */
+    compileIR: (layout: any) => WidgetIR;
+    /**
+     * 🔍 Phân tích và in ra bản đồ kiến trúc IR, Semantic Tree và Kế hoạch phân bổ Renderer Planner.
+     */
+    inspectIR: (layout: any) => string;
 };
 export declare const SharedStorage: {
     /**
@@ -226,5 +234,6 @@ export declare const AudioPlayer: {
 };
 export * from './types';
 export * from './builder';
+export * from './ir';
 export { StyleSheet } from './builder';
 //# sourceMappingURL=index.d.ts.map

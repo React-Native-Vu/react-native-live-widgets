@@ -122,8 +122,19 @@ console.log('Capabilities:', caps);
 //   supportsGradients: true,
 //   supportsShadows: true,
 //   supportsTintedMode: true,
-//   supportsDynamicType: true
+//   supportsAccessibility: true
 // }
+```
+
+### UI Intermediate Representation & Renderer Planner (Phase 2):
+```typescript
+import { Widget, UI } from 'react-native-live-widgets';
+
+// Inspect architectural classification (Native vs Canvas) and synthesized speech:
+console.log(Widget.inspectIR(layout));
+
+// Compile to pure IR AST:
+const ir = Widget.compileIR(layout);
 ```
 
 ### Platform Capability & Graceful Fallback Matrix:
