@@ -161,6 +161,20 @@ object DynamicWidgetStateStore {
                 val current = state.toggledItems[key] ?: false
                 state.toggledItems[key] = !current
             }
+            actionId == "action_counter_inc" || actionId.startsWith("counter:inc") -> {
+                val current = (readSharedString(context, "widget_counter_value")?.toIntOrNull() ?: 10) + 1
+                writeSharedString(context, "widget_counter_value", current.toString())
+                state.remoteVariables["counter"] = current.toString()
+            }
+            actionId == "action_counter_dec" || actionId.startsWith("counter:dec") -> {
+                val current = (readSharedString(context, "widget_counter_value")?.toIntOrNull() ?: 10) - 1
+                writeSharedString(context, "widget_counter_value", current.toString())
+                state.remoteVariables["counter"] = current.toString()
+            }
+            actionId == "action_counter_reset" || actionId.startsWith("counter:reset") -> {
+                writeSharedString(context, "widget_counter_value", "0")
+                state.remoteVariables["counter"] = "0"
+            }
         }
 
         saveState(context, state)
@@ -176,6 +190,13 @@ object DynamicWidgetStateStore {
         val syncTime = state.lastSyncTime
             ?: SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
         raw = raw.replace("{{_lastSyncTime}}", syncTime)
+
+        val counterVal = readSharedString(context, "widget_counter_value")
+        if (counterVal != null) {
+            raw = raw.replace(Regex("\"text\":\"-?\\d+\",\"props\":\\{\"fontSize\":(26|32)"), "\"text\":\"$counterVal\",\"props\":{\"fontSize\":$1")
+            raw = raw.replace(Regex("\"text\":\"-?\\d+ lượt\","), "\"text\":\"$counterVal lượt\",")
+            raw = raw.replace("{{counter}}", counterVal)
+        }
 
         for ((k, v) in state.remoteVariables) {
             val escaped = v.replace("\"", "\\\"")

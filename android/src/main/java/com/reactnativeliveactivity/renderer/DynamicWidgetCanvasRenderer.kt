@@ -21,7 +21,10 @@ import kotlin.math.roundToInt
 data class ButtonActionBinding(
     val actionId: String,
     val deepLink: String?,
-    val zone: String // "top", "mid", "bot"
+    val zone: String = "mid", // "top", "mid", "bot"
+    val xFraction: Float = 0.5f,
+    val yFraction: Float = 0.5f,
+    val widthFraction: Float = 1.0f
 )
 
 object DynamicWidgetCanvasRenderer {
@@ -576,7 +579,19 @@ object DynamicWidgetCanvasRenderer {
                         top > totalHeight * 0.76f -> "bot"
                         else -> "mid"
                     }
-                    bindings.add(ButtonActionBinding(actionId = actionId, deepLink = deepLink, zone = zone))
+                    val xF = ((left + btnW / 2f) / availWidth).coerceIn(0f, 1f)
+                    val yF = ((top + btnH / 2f) / totalHeight).coerceIn(0f, 1f)
+                    val wF = (btnW / availWidth).coerceIn(0.1f, 1f)
+                    bindings.add(
+                        ButtonActionBinding(
+                            actionId = actionId,
+                            deepLink = deepLink,
+                            zone = zone,
+                            xFraction = xF,
+                            yFraction = yF,
+                            widthFraction = if (fullWidth) 1.0f else wF
+                        )
+                    )
                 }
                 btnH + 1.5f * density
             }
@@ -912,7 +927,18 @@ object DynamicWidgetCanvasRenderer {
                         top > totalHeight * 0.76f -> "bot"
                         else -> "mid"
                     }
-                    bindings.add(ButtonActionBinding(actionId = actionId, deepLink = deepLink, zone = zone))
+                    val xF = ((left + availWidth / 2f) / availWidth).coerceIn(0f, 1f)
+                    val yF = ((top + usedH / 2f) / totalHeight).coerceIn(0f, 1f)
+                    bindings.add(
+                        ButtonActionBinding(
+                            actionId = actionId,
+                            deepLink = deepLink,
+                            zone = zone,
+                            xFraction = xF,
+                            yFraction = yF,
+                            widthFraction = 1.0f
+                        )
+                    )
                 }
                 usedH
             }

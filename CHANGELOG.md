@@ -2,6 +2,12 @@
 
 All notable changes to `react-native-live-widgets` will be documented in this file.
 
+## [1.1.1] - 2026-11-16
+### Fixed
+- **Android Widget Interaction Crash**: Added `android.permission.WAKE_LOCK` and safely wrapped `HeadlessJsTaskService` wake lock acquisition to prevent `SecurityException` on widget tap events.
+- **Android Hit Zone Accuracy**: Upgraded `rn_live_widget_host.xml` to a dynamic 6-row x 3-column interaction grid (`rn_hit_r0_c0` - `rn_hit_r5_c2`), mapping button physical coordinates (`yFraction`, `xFraction`) accurately to fix misaligned tap zones.
+- **Background Headless Responsiveness**: Added native state store handling and `LiveActivity.registerBackgroundActionHandler()` support for zero-latency widget interactions even when the app is swiped away or force-killed.
+
 ## [1.1.0] - 2026-11-16
 ### Added
 - **Expo Config Plugin (`app.plugin.js`)**: Full Expo & EAS Build support (`npx expo prebuild` / `npx expo run:ios` / `npx expo run:android`). Automatically configures `NSSupportsLiveActivities` and `NSSupportsLiveActivitiesFrequentUpdates` in iOS `Info.plist`, App Groups entitlements, and Android notifications & foreground service permissions.
