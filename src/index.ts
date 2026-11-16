@@ -12,8 +12,8 @@ import {
   WidgetRemoteConfig,
   WidgetTimelineConfig,
   WidgetIR,
-} from './types.js';
-import { compileToIR, inspectIR } from './ir.js';
+} from './types';
+import { compileToIR, inspectIR } from './ir';
 
 declare const __DEV__: boolean | undefined;
 
@@ -872,7 +872,7 @@ export const AudioPlayer = {
   },
 };
 
-export * from './types.js';
-export * from './builder.js';
-export * from './ir.js';
-export { StyleSheet } from './builder.js';
+export * from './types';
+export * from './builder';
+export * from './ir';
+export { StyleSheet } from './builder';

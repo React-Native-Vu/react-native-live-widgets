@@ -1,4 +1,4 @@
-import { LayoutNode, ButtonNode, BadgeNode, ProgressNode, TimerNode, ImageNode, DividerNode, GaugeNode, ChartNode, ToggleNode, ContainerProps, TextStyle, ZStackProps, GridProps, LinkProps, EqualizerProps, StyleProp } from './types.js';
+import { LayoutNode, ButtonNode, BadgeNode, ProgressNode, TimerNode, ImageNode, DividerNode, GaugeNode, ChartNode, ToggleNode, ContainerProps, TextStyle, ZStackProps, GridProps, LinkProps, EqualizerProps, StyleProp } from './types';
 export declare function extractPropsAndStyle<T extends object>(props: any): any;
 export interface VStackProps extends ContainerProps {
     children?: React.ReactNode;

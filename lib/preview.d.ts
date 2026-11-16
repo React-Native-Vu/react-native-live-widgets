@@ -1,5 +1,5 @@
 import { ViewStyle } from 'react-native';
-import { LayoutNode, WidgetSinglePageConfig } from './types.js';
+import { LayoutNode, WidgetSinglePageConfig } from './types';
 export type WidgetPreviewSize = 'small' | 'medium' | 'large' | 'lockScreen' | 'dynamicIsland';
 export interface WidgetPreviewProps {
     /**

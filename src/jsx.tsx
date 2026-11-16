@@ -25,8 +25,8 @@ import {
   LinkProps,
   EqualizerProps,
   StyleProp,
-} from './types.js';
-import { UI, flattenStyle } from './builder.js';
+} from './types';
+import { UI, flattenStyle } from './builder';
 
 // ─── 1. JSX COMPONENT DEFINITIONS ────────────────────────────────────────────
 

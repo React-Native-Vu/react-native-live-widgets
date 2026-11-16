@@ -19,8 +19,8 @@ import {
   ProgressNode,
   TimerNode,
   ImageNode,
-} from './types.js';
-import { renderToWidget, extractPropsAndStyle } from './jsx.js';
+} from './types';
+import { renderToWidget, extractPropsAndStyle } from './jsx';
 
 export type WidgetPreviewSize = 'small' | 'medium' | 'large' | 'lockScreen' | 'dynamicIsland';
 

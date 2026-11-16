@@ -1,4 +1,4 @@
-import { ActiveActivityInfo, EndActivityOptions, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetCapabilities, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig, WidgetIR } from './types.js';
+import { ActiveActivityInfo, EndActivityOptions, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetCapabilities, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig, WidgetIR } from './types';
 import { ActionHandler, GlobalActionHandler, registerAction, registerActionHandler, unregisterAction } from './dispatcher';
 export type { ActionHandler, GlobalActionHandler };
 export { registerAction, registerActionHandler, unregisterAction };
@@ -232,8 +232,8 @@ export declare const AudioPlayer: {
      */
     getStatus: () => Promise<AudioPlayerStatus>;
 };
-export * from './types.js';
-export * from './builder.js';
-export * from './ir.js';
-export { StyleSheet } from './builder.js';
+export * from './types';
+export * from './builder';
+export * from './ir';
+export { StyleSheet } from './builder';
 //# sourceMappingURL=index.d.ts.map
