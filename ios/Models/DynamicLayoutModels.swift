@@ -119,6 +119,11 @@ public struct WidgetRemoteConfigDTO: Codable {
   public let method: String?
   public let headers: [String: String]?
   public let refreshIntervalMinutes: Int?
+  public let intervalMinutes: Int?
+
+  public var effectiveIntervalMinutes: Int {
+    return refreshIntervalMinutes ?? intervalMinutes ?? 15
+  }
 }
 
 public struct InteractiveWidgetState: Codable {

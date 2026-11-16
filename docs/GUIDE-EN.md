@@ -68,7 +68,7 @@ git clone https://github.com/React-Native-Vu/LiveWidgetsExampleExpo.git
 cd LiveWidgetsExampleExpo
 npm install
 npx expo prebuild
-npm run setup:widgets
+npx react-native-live-widgets init
 npx expo run:ios # or npx expo run:android
 ```
 
@@ -237,7 +237,7 @@ async function ensureAndroidNotificationPermission() {
 ```
 
 #### 5. Step 4: Adding & Resizing Home Screen Widgets on Android (`small` / `medium` / `large`)
-1. After calling `Widget.update('main', { small, medium, large })` in your app, go to the Android Home Screen.
+1. After calling `Widget.setLayout('main', { small, medium, large })` (or alias `Widget.update(...)`) in your app, go to the Android Home Screen.
 2. **Long-press an empty area** on the Home Screen -> Tap **Widgets** -> Find your app -> Drag **Live Widgets** onto the Home Screen.
 3. **Responsive Family Switching (`small` / `medium` / `large`):** Long-press the placed widget and release to show the resize handles:
    - Resize to **2×2 cells** (`width < 210dp`): Automatically renders the **`small`** layout (1:1 square aspect ratio).
@@ -313,9 +313,86 @@ import { LiveActivity, Widget, SharedStorage, UI } from 'react-native-live-widge
 
 ---
 
-## 4. Declarative UI Engine (`UI.*`)
+## 4. Declarative UI Engine
 
-### `UI.StyleSheet` & Reusable Styling (`StyleProp`)
+The library supports **2 dual UI authoring styles** side-by-side depending on your preferences:
+1. **Style 1: React JSX / TSX Components (`<VStack>`, `<Text>`, `<Button>`)** — Write widgets exactly like building standard React Native components. Fully supports the standard `style` prop, conditional style arrays, and nested hierarchies.
+2. **Style 2: Functional DSL (`UI.VStack(...)`)** — Concise and functional, with zero JSX tags to import.
+
+Both styles compile down automatically to the exact same native engine (SwiftUI on iOS and 2D Canvas on Android).
+
+---
+
+### Style 1: Building Widgets with JSX / TSX Components
+
+```tsx
+import React from 'react';
+import { StyleSheet } from 'react-native';
+import { Widget, VStack, HStack, Text, Badge, Progress, Button } from 'react-native-live-widgets';
+
+export const MyWidgetLayout = (
+  <VStack style={styles.card}>
+    <HStack style={styles.header}>
+      <Text style={styles.title}>Shift Check-in</Text>
+      <Badge text="07:54 (Valid)" backgroundColor="#064E3B" textColor="#6EE7B7" />
+    </HStack>
+    <Progress value={0.75} style="segmented" segments={4} tintColor="#38BDF8" height={8} />
+    <Button title="Refresh Data" actionId="refresh" fullWidth />
+  </VStack>
+);
+
+const styles = StyleSheet.create({
+  card: {
+    padding: 16,
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+  },
+  header: {
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+});
+```
+
+---
+
+### In-App Widget Preview (`<WidgetPreview>` / `<VoltraWidgetPreview>`)
+
+Embed a realistic, pixel-accurate widget mockup inside any app screen to test layout bounds and button click interactions without leaving your application:
+
+```tsx
+import { WidgetPreview, VStack, HStack, Text, Button } from 'react-native-live-widgets';
+
+export function PreviewScreen() {
+  return (
+    <WidgetPreview
+      size="medium"                // 'small' | 'medium' | 'large' | 'lockScreen'
+      showBadge={true}             // Shows 'Medium • 338×158'
+      interactiveSizeSwitch={true} // Quick tabs to switch small / medium / large
+      onAction={(actionId) => {
+        console.log('Action tapped inside preview:', actionId);
+      }}
+    >
+      <VStack padding={16} backgroundColor="#0F172A" borderRadius={20}>
+        <HStack justifyContent="spaceBetween">
+          <Text fontSize={14} fontWeight="bold" color="#FFFFFF">Project Progress</Text>
+          <Text fontSize={12} color="#38BDF8">75%</Text>
+        </HStack>
+        <Button title="Update" actionId="refresh" fullWidth />
+      </VStack>
+    </WidgetPreview>
+  );
+}
+```
+
+---
+
+### Style 2: Functional DSL (`UI.StyleSheet` & Reusable Styling)
 Just like React Native's `StyleSheet.create`, you can define reusable styles to keep your widget layouts modular and clean, supporting conditional style arrays:
 
 ```typescript
@@ -746,14 +823,21 @@ if (isSupported) {
 When the user swipes away (force-kills) the main app, the React Native JS thread stops. To keep your Widget updated with live server data autonomously:
 
 ```typescript
-await Widget.setRemoteConfig({
+// Full standard signature:
+await Widget.setRemoteConfig('main', {
   url: 'https://api.yourcompany.com/v1/widget-summary',
   method: 'GET',
   headers: {
     Authorization: `Bearer ${accessToken}`,
   },
-  intervalMinutes: 15, // OS-scheduled background sync every 15 minutes
-});
+  refreshIntervalMinutes: 15, // OS-scheduled background sync (alias: intervalMinutes)
+}, APP_GROUP);
+
+// Or convenient shorthand (defaults to widgetKey = 'main'):
+await Widget.setRemoteConfig({
+  url: 'https://api.yourcompany.com/v1/widget-summary',
+  refreshIntervalMinutes: 15,
+}, APP_GROUP);
 ```
 
 - **How it works:**

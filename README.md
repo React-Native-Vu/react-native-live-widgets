@@ -91,7 +91,8 @@ Until now, adding **Live Activities** or **Home Screen Widgets** to a React Nati
 
 `react-native-live-widgets` solves this with a **Declarative TypeScript UI DSL**:
 - 🚫 **No SwiftUI / Kotlin coding required** for custom screens.
-- 🎨 **100% Declarative UI in React Native (`UI.VStack`, `UI.HStack`, `UI.Text`, `UI.Button`, `UI.Progress`, `UI.Image`)**.
+- 🎨 **Dual UI Syntax**: Choose between **React JSX/TSX (`<VStack>`, `<Text>`, `<Button>`)** or **Functional DSL (`UI.VStack(...)`)**.
+- 📱 **In-App Widget Preview (`<WidgetPreview>`)**: Preview and test widget interactions directly on your app screen.
 - 🚀 **Full Expo & EAS Build Support** via automated Expo Config Plugin (`app.plugin.js`).
 - ⚡ **Interactive Buttons**: Tap buttons on the Home Screen Widget to run native Swift extensions or wake up TypeScript handlers.
 - 🔄 **Realtime Data Sync (`SharedStorage`)**: Single source of truth across Main App, Lock Screen, and Home Screen.
@@ -113,17 +114,32 @@ Until now, adding **Live Activities** or **Home Screen Widgets** to a React Nati
 - **Checklist & Toggles**: Toggle checkboxes and switch states without opening the app (`actionId: "toggle:<key>"`).
 - **Dark & Light Mode**: Declarative color tokens `{ light: '#FFF', dark: '#0F172A' }`.
 
-### 3. ⚡ Bi-directional Action Dispatcher (TypeScript + Native)
-- Tap a widget button outside on the Home Screen to trigger a registered TypeScript function:
-  ```ts
-  LiveActivity.registerAction('action_checkin', async (payload) => {
-    // Runs inside React Native JS engine!
+### 3. ⚡ React Hooks & Fast Refresh Resilient
+- **`useWidgetAction(actionId, callback)`**: Automatically registers and cleans up widget button tap listeners on unmount. 100% resilient to React Native Fast Refresh / Hot Reloading!
+  ```tsx
+  useWidgetAction('action_checkin', async (payload) => {
     console.log('Action triggered from Home Screen Widget:', payload);
   });
   ```
-- **App-Killed Protection**: Native fallback ensures UI responds instantly and persists data even if the main app is terminated.
+- **`useLiveActivity()`**: Track activity state, push tokens, and control start / update / end directly in React components.
+- **`useWidgetState(key, initialValue)`**: Synchronize local component state with Widget Shared Storage and trigger instant OS re-renders.
 
-### 4. 🌐 Background Remote API Sync (Zero Code Backend)
+### 4. ⚡ Bi-directional Action Dispatcher (TypeScript + Native)
+- Imperative action registration for background services:
+  ```ts
+  LiveActivity.registerAction('action_checkin', async (payload) => {
+    console.log('Action triggered:', payload);
+  });
+  // Or listen globally to all widget actions:
+  Widget.onWidgetAction((actionId, payload) => {
+    console.log(`Action ${actionId} received`, payload);
+  });
+  ```
+- **App-Killed Background Support**:
+  - **Android**: Supports `LiveActivity.registerBackgroundActionHandler()` via Headless JS tasks and instant native state persistence in `DynamicWidgetStateStore`.
+  - **iOS**: Apple sandboxes widget extensions when the main app is force-killed. Button taps update native App Group state directly; JavaScript callbacks resume automatically when the app is reopened.
+
+### 5. 🌐 Background Remote API Sync (Zero Code Backend)
 - Configure an API endpoint with `Widget.setRemoteConfig`:
   ```ts
   await Widget.setRemoteConfig('main', {
@@ -251,7 +267,7 @@ await LiveActivity.start({
     )
   },
   lockScreen: UI.VStack(
-    { padding: 16, backgroundColor: '#0F172A', cornerRadius: 16 },
+    { padding: 16, backgroundColor: '#0F172A', borderRadius: 16 },
     UI.HStack(
       { justifyContent: 'spaceBetween' },
       UI.Text('KPI Quý 4: Đạt 86% mục tiêu', { fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' }),
@@ -282,7 +298,7 @@ await SharedStorage.set('revenue_month', '4.85 Tỷ đ', APP_GROUP);
 // Build Declarative Layout
 await Widget.setLayout('main', {
   large: UI.VStack(
-    { padding: 16, backgroundColor: '#0B132B', cornerRadius: 20 },
+    { padding: 16, backgroundColor: '#0B132B', borderRadius: 20 },
     UI.HStack(
       { justifyContent: 'spaceBetween' },
       UI.Text('TỔNG QUAN ĐIỀU HÀNH (KPI & BIỂU ĐỒ)', { fontSize: 11, color: '#38BDF8', fontWeight: 'bold' }),
@@ -307,6 +323,54 @@ await Widget.setLayout('main', {
 }, APP_GROUP);
 
 await Widget.reloadAll();
+```
+
+### 3. Build Widgets with React JSX / TSX Syntax
+
+Prefer JSX over nested functions? Build layouts using clean, declarative JSX with full `style` prop & array flattening support:
+
+```tsx
+import { Widget, VStack, HStack, Text, Badge, Progress, Button } from 'react-native-live-widgets';
+
+await Widget.setLayout('main', {
+  medium: (
+    <VStack padding={16} backgroundColor="#0F172A" borderRadius={16}>
+      <HStack justifyContent="spaceBetween">
+        <Text fontSize={14} fontWeight="bold" color="#FFFFFF">Vào ca sáng</Text>
+        <Badge text="07:54 (Hợp lệ)" backgroundColor="#064E3B" textColor="#6EE7B7" />
+      </HStack>
+      <Progress value={0.75} style="segmented" segments={4} tintColor="#38BDF8" height={8} />
+      <Button title="Làm mới dữ liệu" actionId="refresh" fullWidth />
+    </VStack>
+  )
+});
+```
+
+### 4. In-App Live Widget Preview (`<WidgetPreview>` / `<VoltraWidgetPreview>`)
+
+Test and preview widgets directly inside your app screens with pixel-accurate OS container frames and real-time button clicks:
+
+```tsx
+import { WidgetPreview, VStack, HStack, Text, Button } from 'react-native-live-widgets';
+
+export function WidgetDemoScreen() {
+  return (
+    <WidgetPreview
+      size="medium" // 'small' | 'medium' | 'large' | 'lockScreen'
+      showBadge={true}
+      interactiveSizeSwitch={true} // Quick tabs to test small / medium / large
+      onAction={(actionId) => console.log('Tapped action:', actionId)}
+    >
+      <VStack padding={16} backgroundColor="#0F172A" borderRadius={20}>
+        <HStack justifyContent="spaceBetween">
+          <Text fontSize={14} fontWeight="bold" color="#FFFFFF">KPI Tuần</Text>
+          <Text fontSize={12} color="#38BDF8">86%</Text>
+        </HStack>
+        <Button title="Check-in ngay" actionId="checkin" fullWidth />
+      </VStack>
+    </WidgetPreview>
+  );
+}
 ```
 
 ---

@@ -262,7 +262,11 @@ object DynamicWidgetStateStore {
             }
             saveState(context, state)
 
-            val intervalMins = config.optInt("refreshIntervalMinutes", 15).coerceAtLeast(1)
+            val intervalMins = if (config.has("refreshIntervalMinutes")) {
+                config.optInt("refreshIntervalMinutes", 15)
+            } else {
+                config.optInt("intervalMinutes", 15)
+            }.coerceAtLeast(1)
             scheduleBackgroundWidgetSync(context, widgetKey, intervalMins)
         } catch (_: Exception) {
             stampSyncTimeOnly(context)

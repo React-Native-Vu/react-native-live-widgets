@@ -1,6 +1,6 @@
 {
   "name": "react-native-live-widgets",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "All-in-One Live Activities (iOS 16.1+ WidgetKit / Dynamic Island), Live Updates (Android 16+ ProgressStyle) and Interactive Multi-Page Home Screen Widgets for React Native & Expo with Declarative Dynamic UI Engine",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -83,6 +83,7 @@
   },
   "devDependencies": {
     "@expo/config-plugins": "^9.0.0",
+    "@types/react": ">=18.0.0",
     "typescript": "^5.0.0"
   }
 }

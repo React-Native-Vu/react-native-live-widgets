@@ -316,11 +316,46 @@ Widget.reload('main', {
   })
 });
 
-// Lắng nghe khi người dùng bấm nút trên mặt Widget
-LiveActivity.registerActionHandler((actionId) => {
+// Cách 1: Dùng React Hook (Khuyến nghị - An toàn tuyệt đối với Fast Refresh)
+useWidgetAction('INCREMENT', () => {
+  setCounter(c => c + 1);
+});
+
+// Cách 2: Lắng nghe toàn cục Imperative
+Widget.onWidgetAction((actionId) => {
   if (actionId === 'INCREMENT') {
     setCounter(c => c + 1);
   }
+});</code></pre>
+          </div>
+
+          <!-- Card: JSX Syntax & In-App Widget Preview -->
+          <div class="bg-cardBg border border-cardBorder rounded-xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold text-white">✨ Cú pháp JSX / TSX & Xem Trước Widget Trong App (&lt;WidgetPreview&gt;)</span>
+              <span class="text-xs text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded">v1.2.0 JSX</span>
+            </div>
+            <pre><code class="language-typescript">import { WidgetPreview, VStack, HStack, Text, Badge, Button } from 'react-native-live-widgets';
+
+// 1. Nhúng khung xem trước trực tiếp trên màn hình App (hỗ trợ small, medium, large)
+&lt;WidgetPreview size="medium" showBadge interactiveSizeSwitch onAction={(id) => alert(id)}&gt;
+  &lt;VStack padding={16} backgroundColor="#0F172A" borderRadius={16}&gt;
+    &lt;HStack justifyContent="spaceBetween"&gt;
+      &lt;Text fontSize={14} fontWeight="bold" color="#FFFFFF"&gt;Ca làm sáng&lt;/Text&gt;
+      &lt;Badge text="07:54 (Hợp lệ)" backgroundColor="#064E3B" textColor="#6EE7B7" /&gt;
+    &lt;/HStack&gt;
+    &lt;Button title="Làm mới dữ liệu" actionId="refresh" fullWidth /&gt;
+  &lt;/VStack&gt;
+&lt;/WidgetPreview&gt;
+
+// 2. Cập nhật Widget ra Home Screen bằng JSX trực tiếp:
+await Widget.setLayout('main', {
+  medium: (
+    &lt;VStack padding={16} backgroundColor="#0F172A" borderRadius={16}&gt;
+      &lt;Text fontSize={14} color="#FFF"&gt;Xin chào Trần Tuấn Vũ&lt;/Text&gt;
+      &lt;Button title="Check-in" actionId="checkin" /&gt;
+    &lt;/VStack&gt;
+  )
 });</code></pre>
           </div>
         </div>

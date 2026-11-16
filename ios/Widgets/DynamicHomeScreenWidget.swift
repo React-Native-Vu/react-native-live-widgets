@@ -110,9 +110,8 @@ public struct DynamicWidgetProvider: TimelineProvider {
     let configKey = "widget_remote_config_\(widgetKey)"
     if let json = Self.readSharedString(forKey: configKey, appGroup: appGroup),
        let data = json.data(using: .utf8),
-       let config = try? JSONDecoder().decode(WidgetRemoteConfigDTO.self, from: data),
-       let mins = config.refreshIntervalMinutes, mins >= 1 {
-      return mins
+       let config = try? JSONDecoder().decode(WidgetRemoteConfigDTO.self, from: data) {
+      return max(1, config.effectiveIntervalMinutes)
     }
     return 15
   }

@@ -68,7 +68,7 @@ git clone https://github.com/React-Native-Vu/LiveWidgetsExampleExpo.git
 cd LiveWidgetsExampleExpo
 npm install
 npx expo prebuild
-npm run setup:widgets
+npx react-native-live-widgets init
 npx expo run:ios # hoặc npx expo run:android
 ```
 
@@ -237,7 +237,7 @@ async function ensureAndroidNotificationPermission() {
 ```
 
 #### 5. Bước 4: Cách thêm và kéo giãn Home Screen Widget trên Android (`small` / `medium` / `large`)
-1. Sau khi gọi `Widget.update('main', { small, medium, large })` trong app, ra màn hình chính (Home Screen) của Android.
+1. Sau khi gọi `Widget.setLayout('main', { small, medium, large })` (hoặc alias `Widget.update(...)`) trong app, ra màn hình chính (Home Screen) của Android.
 2. **Nhấn giữ vào khoảng trống** trên màn hình chính -> Chọn **Widgets (Tiện ích)** -> Tìm ứng dụng của bạn -> Kéo **Live Widgets** ra màn hình.
 3. **Thay đổi kích thước tự động (Responsive Sizing):** Nhấn giữ vào Widget trên màn hình chính rồi thả tay ra để xuất hiện khung viền 4 chấm tròn:
    - Kéo thu nhỏ về **2×2 ô** (`chiều rộng < 210dp`): Tự động hiển thị giao diện **`small`** (tỷ lệ vuông 1:1).
@@ -315,7 +315,84 @@ import { LiveActivity, Widget, SharedStorage, UI } from 'react-native-live-widge
 
 ## 4. Xây dựng Giao diện Động (Declarative UI Engine)
 
-### `UI.StyleSheet` & Tái sử dụng Style (`StyleProp`)
+Thư viện hỗ trợ song song **2 phong cách viết giao diện** tùy theo sở thích và thói quen của bạn:
+1. **Phong cách 1: Dạng JSX / TSX (`<VStack>`, `<Text>`, `<Button>`)** — Giống hệt như viết Component trong React Native, trực quan và dễ bảo trì khi layout lồng ghép nhiều tầng. Hỗ trợ đầy đủ thuộc tính `style` và mảng style có điều kiện.
+2. **Phong cách 2: Dạng Hàm lồng nhau (`UI.VStack(...)`)** — Phong cách Functional gọn gàng, không cần import nhiều thẻ JSX.
+
+Cả 2 cách đều được biên dịch tự động sang cùng một kiến trúc Native (SwiftUI trên iOS và 2D Canvas trên Android).
+
+---
+
+### Phong cách 1: Xây dựng bằng JSX / TSX Component
+
+```tsx
+import React from 'react';
+import { StyleSheet } from 'react-native';
+import { Widget, VStack, HStack, Text, Badge, Progress, Button } from 'react-native-live-widgets';
+
+export const MyWidgetLayout = (
+  <VStack style={styles.card}>
+    <HStack style={styles.header}>
+      <Text style={styles.title}>Vào ca sáng</Text>
+      <Badge text="07:54 (Hợp lệ)" backgroundColor="#064E3B" textColor="#6EE7B7" />
+    </HStack>
+    <Progress value={0.75} style="segmented" segments={4} tintColor="#38BDF8" height={8} />
+    <Button title="Làm mới dữ liệu" actionId="refresh" fullWidth />
+  </VStack>
+);
+
+const styles = StyleSheet.create({
+  card: {
+    padding: 16,
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+  },
+  header: {
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+});
+```
+
+---
+
+### Xem Trước Widget Trong App (`<WidgetPreview>` / `<VoltraWidgetPreview>`)
+
+Bạn có thể nhúng widget vào trực tiếp bất kỳ màn hình nào của ứng dụng để xem trước giao diện và bấm thử các nút tương tác mà không cần phải thoát ra Home Screen:
+
+```tsx
+import { WidgetPreview, VStack, HStack, Text, Button } from 'react-native-live-widgets';
+
+export function PreviewScreen() {
+  return (
+    <WidgetPreview
+      size="medium"                // 'small' | 'medium' | 'large' | 'lockScreen'
+      showBadge={true}             // Hiển thị 'Medium • 338×158'
+      interactiveSizeSwitch={true} // Bật thanh tab để chuyển nhanh small/medium/large
+      onAction={(actionId) => {
+        console.log('Action được bấm trên widget:', actionId);
+      }}
+    >
+      <VStack padding={16} backgroundColor="#0F172A" borderRadius={20}>
+        <HStack justifyContent="spaceBetween">
+          <Text fontSize={14} fontWeight="bold" color="#FFFFFF">Tiến độ công việc</Text>
+          <Text fontSize={12} color="#38BDF8">75%</Text>
+        </HStack>
+        <Button title="Cập nhật" actionId="refresh" fullWidth />
+      </VStack>
+    </WidgetPreview>
+  );
+}
+```
+
+---
+
+### Phong cách 2: Dạng Hàm (`UI.StyleSheet` & Functional DSL)
 Tương tự như `StyleSheet.create` trong React Native, bạn có thể gom nhóm các style định dạng lại để tái sử dụng nhiều nơi, giữ code sạch sẽ và hỗ trợ truyền mảng style có điều kiện:
 
 ```typescript
@@ -744,17 +821,24 @@ if (isSupported) {
 
 ## 7. Đồng bộ API Ngầm cho Widget kể cả khi Kill App (`Widget.setRemoteConfig`)
 
-Khi ứng dụng bị người dùng vuốt tắt hoàn toàn (Kill App), JavaScript thread của React Native sẽ dừng. Để Widget vẫn luôn có dữ liệu mới từ Server:
+Khi ứng dụng bị người dùng vuốt tắt hoàn toàn (Kill App), JavaScript thread của React Native sẽ dừng. Để Widget vẫn luôn tự động gọi API lấy dữ liệu mới từ Server:
 
 ```typescript
-await Widget.setRemoteConfig({
+// Cú pháp tiêu chuẩn đầy đủ:
+await Widget.setRemoteConfig('main', {
   url: 'https://api.yourcompany.com/v1/widget-summary',
   method: 'GET',
   headers: {
     Authorization: `Bearer ${accessToken}`,
   },
-  intervalMinutes: 15, // Tự động đồng bộ mỗi 15 phút ở tầng OS (WidgetKit Timeline / Android AlarmManager)
-});
+  refreshIntervalMinutes: 15, // Chu kỳ gọi ngầm ở tầng OS (alias: intervalMinutes)
+}, APP_GROUP);
+
+// Hoặc cú pháp ngắn gọn (mặc định widgetKey = 'main'):
+await Widget.setRemoteConfig({
+  url: 'https://api.yourcompany.com/v1/widget-summary',
+  refreshIntervalMinutes: 15,
+}, APP_GROUP);
 ```
 
 - **Cách hoạt động:**

@@ -43,6 +43,8 @@ export interface ContainerProps {
   spacing?: number;
   backgroundColor?: DynamicColor;
   borderRadius?: number;
+  /** Alias bo góc theo cú pháp SwiftUI (tự động ánh xạ sang borderRadius) */
+  cornerRadius?: number;
   borderColor?: DynamicColor;
   borderWidth?: number;
   alignment?: 'leading' | 'center' | 'trailing' | string;
@@ -135,6 +137,7 @@ export interface ProgressNode extends BaseNode {
     height?: number;
     /** Bo góc thanh. Mặc định bo tròn hoàn toàn */
     borderRadius?: number;
+    cornerRadius?: number;
 
     // ── 3. Màu sắc & Gradient ───────────────────────────────────
     /** Màu thanh khi lấp đầy (dạng '#RRGGBB' hoặc { light, dark }) */
@@ -197,6 +200,7 @@ export interface ImageNode extends BaseNode {
     padding?: number;
     /** Bo góc ảnh (đặt bằng width / 2 để tạo ảnh Avatar tròn) */
     borderRadius?: number;
+    cornerRadius?: number;
     /** Độ dày viền quanh ảnh (ví dụ viền Avatar) */
     borderWidth?: number;
     /** Màu viền quanh ảnh */
@@ -240,6 +244,7 @@ export interface ButtonNode extends BaseNode {
     paddingHorizontal?: number;
     paddingVertical?: number;
     borderRadius?: number;
+    cornerRadius?: number;
     fullWidth?: boolean;
     /** Tiêu đề hiển thị khi nút ở trạng thái đã tick (dùng với actionId 'toggle:<key>') */
     checkedTitle?: string;
@@ -374,6 +379,7 @@ export interface BadgeNode extends BaseNode {
     paddingHorizontal?: number;
     paddingVertical?: number;
     borderRadius?: number;
+    cornerRadius?: number;
   };
 }
 
@@ -576,6 +582,8 @@ export interface WidgetRemoteConfig {
   headers?: Record<string, string>;
   /** Chu kỳ tự động gọi lại API tính bằng phút (mặc định 15 phút) */
   refreshIntervalMinutes?: number;
+  /** Alias ngắn gọn cho refreshIntervalMinutes */
+  intervalMinutes?: number;
 }
 
 export interface LiveActivityPushTokens {
