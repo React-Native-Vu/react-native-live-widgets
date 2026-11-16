@@ -1,23 +1,28 @@
 # REACT-NATIVE-LIVE-WIDGETS — COMPLETE SETUP & DEVELOPER GUIDE 🚀
 
-> 🌐 **Language:** [Tiếng Việt (GUIDE-VI.md)](./GUIDE-VI.md) | **English**
+> 🌐 **Language:** [Tiếng Việt (GUIDE-VI.md)](./GUIDE-VI.md) | **English** • [⚡ Dedicated Expo Guide (EXPO-GUIDE-EN.md)](./EXPO-GUIDE-EN.md)
 
 Comprehensive guide covering installation, native setup (iOS & Android), and building 100% JavaScript/TypeScript declarative layouts for **Live Activities (Dynamic Island / Lock Screen / Android Live Updates)** and **Interactive Multi-Page Home Screen Widgets**.
+
+> [!TIP]
+> **Using Expo (SDK 50, 51, 52, 58+)?** Check out the [Dedicated Expo Integration Guide (EXPO-GUIDE-EN.md)](./EXPO-GUIDE-EN.md) for full details on Expo Config Plugins and EAS Build!
 
 ---
 
 ## TABLE OF CONTENTS
 1. [Overview & Architecture](#1-overview--architecture)
-2. [Installation & Project Setup](#2-installation--project-setup)
-   - [Package Installation](#package-installation)
+2. [Official Live Demo Repositories (Expo & Bare RN)](#2-official-live-demo-repositories-expo--bare-rn)
+3. [Installation & Project Setup](#3-installation--project-setup)
+   - [For Expo Projects](#for-expo-projects)
+   - [Package Installation (Bare React Native)](#package-installation)
    - [iOS Setup (Xcode & Widget Extension)](#ios-setup-xcode--widget-extension)
    - [Android Setup (Gradle, Manifest, MainApplication & Permissions)](#android-setup-gradle-manifest-mainapplication--permissions)
    - [Native Directory Architecture (`ios/` & `android/`)](#native-directory-architecture-ios--android)
-3. [Core API Reference](#3-core-api-reference)
+4. [Core API Reference](#4-core-api-reference)
    - [LiveActivity API (Lock Screen, Dynamic Island & 3 Push Token Types)](#1-liveactivity-api)
    - [Widget API (Home Screen Widgets, Multi-Page & Background Sync)](#2-widget-api-home-screen-widgets)
    - [SharedStorage API (App Groups & SharedPreferences)](#3-sharedstorage-api)
-4. [Declarative UI Engine (`UI.*`)](#4-declarative-ui-engine-ui)
+5. [Declarative UI Engine (`UI.*`)](#5-declarative-ui-engine-ui)
    - [UI.VStack & UI.HStack](#uivstack--uihstack)
    - [UI.Text](#uitext)
    - [UI.Timer (Zero-Battery Hardware Timer)](#uitimer-zero-battery-hardware-timer)
@@ -25,15 +30,15 @@ Comprehensive guide covering installation, native setup (iOS & Android), and bui
    - [UI.Equalizer (Realtime Animated Music Waveform)](#uiequalizer-realtime-animated-music-waveform)
    - [UI.Image (Remote URL, Base64, File, Asset & SF Symbols)](#uiimage-remote-url-base64-file-asset--sf-symbols)
    - [UI.Button (Interactive Page Switching, Task Toggle, API Refresh & Deep Links)](#uibutton-interactive-widget-buttons)
-5. [Dynamic Island Configuration (iPhone 14 Pro, 15, 16, 17)](#5-dynamic-island-configuration-iphone-14-pro-15-16-17)
-6. [Building Multi-Page & Interactive Home Screen Widgets in JavaScript](#6-building-multi-page--interactive-home-screen-widgets-in-javascript)
+6. [Dynamic Island Configuration (iPhone 14 Pro, 15, 16, 17)](#6-dynamic-island-configuration-iphone-14-pro-15-16-17)
+7. [Building Multi-Page & Interactive Home Screen Widgets in JavaScript](#7-building-multi-page--interactive-home-screen-widgets-in-javascript)
    - [Lock Screen Widgets on iOS (accessoryRectangular, circular, inline)](#lock-screen-widgets-on-ios)
    - [In-App Pin Widget on Android](#in-app-pin-widget-on-android)
-7. [Background API Auto-Sync When App Is Killed (`Widget.setRemoteConfig`)](#7-background-api-auto-sync-when-app-is-killed-widgetsetremoteconfig)
-8. [Managing All 3 Push Token Types (APNs & FCM)](#8-managing-all-3-push-token-types-apns--fcm)
-9. [State Machine & Timed Phases (`phases`)](#9-state-machine--timed-phases-phases)
-10. [Server Push Payload Structure (APNs & FCM)](#10-server-push-payload-structure-apns--fcm)
-11. [Troubleshooting](#11-troubleshooting)
+8. [Background API Auto-Sync When App Is Killed (`Widget.setRemoteConfig`)](#8-background-api-auto-sync-when-app-is-killed-widgetsetremoteconfig)
+9. [Managing All 3 Push Token Types (APNs & FCM)](#9-managing-all-3-push-token-types-apns--fcm)
+10. [State Machine & Timed Phases (`phases`)](#10-state-machine--timed-phases-phases)
+11. [Server Push Payload Structure (APNs & FCM)](#11-server-push-payload-structure-apns--fcm)
+12. [Troubleshooting](#12-troubleshooting)
 
 ---
 
@@ -48,9 +53,47 @@ Comprehensive guide covering installation, native setup (iOS & Android), and bui
 
 ---
 
-## 2. Installation & Project Setup
+## 2. Official Live Demo Repositories (Expo & Bare RN)
 
-### Package Installation
+To inspect real-world implementation patterns and test immediately on a simulator or device, check out the two official demo projects:
+
+| Architecture | GitHub Repository | Highlights |
+| :--- | :--- | :--- |
+| **🚀 Expo (SDK 58 / CNG)** | 👉 **[https://github.com/React-Native-Vu/LiveWidgetsExampleExpo](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo)** | Continuous Native Generation with Expo Config Plugin (`app.plugin.js`), zero manual Xcode/Gradle editing required. |
+| **⚛️ Bare React Native CLI** | 👉 **[https://github.com/React-Native-Vu/LiveWidgetsExample](https://github.com/React-Native-Vu/LiveWidgetsExample)** | Full Xcode Widget Extension and Android Studio project structure for standard React Native CLI setups. |
+
+### ⚡ Quick Start with Expo Demo (LiveWidgetsExampleExpo):
+```bash
+git clone https://github.com/React-Native-Vu/LiveWidgetsExampleExpo.git
+cd LiveWidgetsExampleExpo
+npm install
+npx expo prebuild
+npm run setup:widgets
+npx expo run:ios # or npx expo run:android
+```
+
+---
+
+## 3. Installation & Project Setup
+
+### For Expo Projects
+If you are using **Expo**, the library provides an **Expo Config Plugin (`app.plugin.js`)** and **CLI Wizard** out of the box.
+👉 **See the dedicated step-by-step guide: [Expo Integration Guide (EXPO-GUIDE-EN.md)](./EXPO-GUIDE-EN.md)**
+
+```bash
+# 1. Install package
+npx expo install react-native-live-widgets
+
+# 2. Add plugin to app.json & generate native projects
+npx expo prebuild
+
+# 3. Automatically link and configure Widget Extension
+npx react-native-live-widgets init --group group.com.yourcompany.app
+```
+
+---
+
+### Package Installation (Bare React Native CLI)
 From the root directory of your React Native project:
 ```bash
 npm install react-native-live-widgets

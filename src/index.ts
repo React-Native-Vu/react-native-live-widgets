@@ -11,9 +11,11 @@ import {
   WidgetTimelineConfig,
 } from './types';
 
+declare const __DEV__: boolean | undefined;
+
 const { LiveActivityModule } = NativeModules;
 
-if (!LiveActivityModule && __DEV__) {
+if (!LiveActivityModule && typeof __DEV__ !== 'undefined' && __DEV__) {
   console.warn(
     '[react-native-live-widgets] Native module not found. ' +
       'Please ensure you have run "npx react-native-live-widgets init" and re-compiled your app.'
@@ -204,7 +206,9 @@ export const LiveActivity = {
    */
   onDevicePushTokenChange: (listener: (token: string) => void): (() => void) => {
     if (!liveActivityEmitter) return () => {};
-    const sub = liveActivityEmitter.addListener(DEVICE_TOKEN_CHANGED_EVENT, listener);
+    const sub = liveActivityEmitter.addListener(DEVICE_TOKEN_CHANGED_EVENT, (token: any) => {
+      listener(typeof token === 'string' ? token : String(token ?? ''));
+    });
     return () => sub.remove();
   },
 
@@ -213,7 +217,9 @@ export const LiveActivity = {
    */
   onPushToStartTokenChange: (listener: (token: string) => void): (() => void) => {
     if (!liveActivityEmitter) return () => {};
-    const sub = liveActivityEmitter.addListener(TOKEN_CHANGED_EVENT, listener);
+    const sub = liveActivityEmitter.addListener(TOKEN_CHANGED_EVENT, (token: any) => {
+      listener(typeof token === 'string' ? token : String(token ?? ''));
+    });
     return () => sub.remove();
   },
 
@@ -225,7 +231,9 @@ export const LiveActivity = {
     listener: (event: { activityId: string; token: string }) => void
   ): (() => void) => {
     if (!liveActivityEmitter) return () => {};
-    const sub = liveActivityEmitter.addListener(UPDATE_TOKEN_CHANGED_EVENT, listener);
+    const sub = liveActivityEmitter.addListener(UPDATE_TOKEN_CHANGED_EVENT, (event: any) => {
+      listener(event as { activityId: string; token: string });
+    });
     return () => sub.remove();
   },
 

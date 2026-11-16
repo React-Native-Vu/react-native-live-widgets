@@ -1,23 +1,28 @@
 # HƯỚNG DẪN SỬ DỤNG VÀ THIẾT LẬP THƯ VIỆN REACT-NATIVE-LIVE-WIDGETS 🚀
 
-> 🌐 **Language:** **Tiếng Việt** | [English (GUIDE-EN.md)](./GUIDE-EN.md)
+> 🌐 **Language:** **Tiếng Việt** | [English (GUIDE-EN.md)](./GUIDE-EN.md) • [⚡ Hướng dẫn riêng cho Expo (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md)
 
 Tài liệu hướng dẫn toàn diện từ cài đặt, thiết lập native (iOS/Android), xây dựng giao diện động bằng JavaScript/TypeScript cho cả **Live Activities (Dynamic Island / Lock Screen / Android Live Update)** và **Home Screen Widgets (Tiện ích màn hình chính tương tác đa trang)**.
+
+> [!TIP]
+> **Bạn đang dùng Expo (SDK 50, 51, 52, 58+)?** Hãy đọc ngay [Hướng dẫn Tích hợp Expo Chuyên sâu (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md) để sử dụng Expo Config Plugin và EAS Build một cách tối ưu nhất!
 
 ---
 
 ## MỤC LỤC
 1. [Giới thiệu và Kiến trúc](#1-giới-thiệu-và-kiến-trúc)
-2. [Cài đặt và Thiết lập Dự án](#2-cài-đặt-và-thiết-lập-dự-án)
-   - [Cài đặt package](#cài-đặt-package)
+2. [Kho Mã Nguồn Demo Chính Thức (Expo & Bare RN)](#2-kho-mã-nguồn-demo-chính-thức-expo--bare-rn)
+3. [Cài đặt và Thiết lập Dự án](#3-cài-đặt-và-thiết-lập-dự-án)
+   - [Dành cho dự án Expo](#dành-cho-dự-án-expo)
+   - [Cài đặt package (Bare React Native)](#cài-đặt-package)
    - [Thiết lập iOS (Xcode & Widget Extension)](#thiết-lập-ios-xcode--widget-extension)
    - [Thiết lập Android (Gradle, Manifest, MainApplication & Permissions)](#thiết-lập-android-gradle-manifest-mainapplication--permissions)
    - [Cấu trúc Thư mục Native của Thư viện (`ios/` & `android/`)](#cấu-trúc-thư-mục-native-của-thư-viện-ios--android)
-3. [Tài liệu API (Core API Reference)](#3-tài-liệu-api-core-api-reference)
+4. [Tài liệu API (Core API Reference)](#4-tài-liệu-api-core-api-reference)
    - [LiveActivity API (Màn hình khóa, Dynamic Island & 3 loại Push Token)](#1-liveactivity-api)
    - [Widget API (Tiện ích màn hình chính, Multi-page & Background Sync)](#2-widget-api)
    - [SharedStorage API (Đồng bộ App Groups & SharedPreferences)](#3-sharedstorage-api)
-4. [Xây dựng Giao diện Động (Declarative UI Engine)](#4-xây-dựng-giao-diện-động-declarative-ui-engine)
+5. [Xây dựng Giao diện Động (Declarative UI Engine)](#5-xây-dựng-giao-diện-động-declarative-ui-engine)
    - [UI.VStack & UI.HStack](#uivstack--uihstack)
    - [UI.Text](#uitext)
    - [UI.Timer (Realtime không tốn pin)](#uitimer-realtime-không-tốn-pin)
@@ -25,15 +30,15 @@ Tài liệu hướng dẫn toàn diện từ cài đặt, thiết lập native (
    - [UI.Equalizer (Sóng nhạc chuyển động liên tục)](#uiequalizer-sóng-nhạc-chuyển-động-liên-tục)
    - [UI.Image (URL mạng, Base64, File, Asset & SF Symbols)](#uiimage-url-mạng-base64-file-asset--sf-symbols)
    - [UI.Button (Tương tác chuyển trang, Tick công việc, Refresh API & Deep Link)](#uibutton-nút-bấm-tương-tác-trực-tiếp-trên-widget)
-5. [Cấu hình Dynamic Island (iPhone 14 Pro, 15, 16, 17)](#5-cấu-hình-dynamic-island-iphone-14-pro-15-16-17)
-6. [Tạo Home Screen & Lock Screen Widget Đa Dạng bằng JavaScript](#6-tạo-home-screen-widget-đa-trang--tương-tác-bằng-javascript)
+6. [Cấu hình Dynamic Island (iPhone 14 Pro, 15, 16, 17)](#6-cấu-hình-dynamic-island-iphone-14-pro-15-16-17)
+7. [Tạo Home Screen & Lock Screen Widget Đa Dạng bằng JavaScript](#7-tạo-home-screen-widget-đa-trang--tương-tác-bằng-javascript)
    - [Lock Screen Widgets trên iOS (accessoryRectangular, circular, inline)](#lock-screen-widgets-trên-ios)
    - [Ghim Tiện ích vào Màn hình chính trong App (Android In-App Pin)](#ghim-tiện-ích-vào-màn-hình-chính-trong-app-android-in-app-pin)
-7. [Đồng bộ API Ngầm cho Widget kể cả khi Kill App (`Widget.setRemoteConfig`)](#7-đồng-bộ-api-ngầm-cho-widget-kể-cả-khi-kill-app-widgetsetremoteconfig)
-8. [Quản lý 3 loại Push Token (APNs & FCM) cho Live Activity](#8-quản-lý-3-loại-push-token-apns--fcm-cho-live-activity)
-9. [State Machine & Tự động cập nhật theo pha (Phases)](#9-state-machine--tự-động-cập-nhật-theo-pha-phases)
-10. [Cấu trúc Payload Server Push (APNs & FCM)](#10-cấu-trúc-payload-server-push-apns--fcm)
-11. [Xử lý sự cố thường gặp (Troubleshooting)](#11-xử-lý-sự-cố-thường-gặp-troubleshooting)
+8. [Đồng bộ API Ngầm cho Widget kể cả khi Kill App (`Widget.setRemoteConfig`)](#8-đồng-bộ-api-ngầm-cho-widget-kể-cả-khi-kill-app-widgetsetremoteconfig)
+9. [Quản lý 3 loại Push Token (APNs & FCM) cho Live Activity](#9-quản-lý-3-loại-push-token-apns--fcm-cho-live-activity)
+10. [State Machine & Tự động cập nhật theo pha (Phases)](#10-state-machine--tự-động-cập-nhật-theo-pha-phases)
+11. [Cấu trúc Payload Server Push (APNs & FCM)](#11-cấu-trúc-payload-server-push-apns--fcm)
+12. [Xử lý sự cố thường gặp (Troubleshooting)](#12-xử-lý-sự-cố-thường-gặp-troubleshooting)
 
 ---
 
@@ -48,9 +53,47 @@ Thư viện **`react-native-live-widgets`** là giải pháp All-in-One cho phé
 
 ---
 
-## 2. Cài đặt và Thiết lập Dự án
+## 2. Kho Mã Nguồn Demo Chính Thức (Expo & Bare RN)
 
-### Cài đặt package
+Để xem cách thức triển khai thực tế và chạy thử nghiệm ngay lập tức, bạn có thể tham khảo 2 kho mã nguồn mẫu chính thức:
+
+| Nền tảng | Kho mã nguồn (GitHub) | Đặc điểm nổi bật |
+| :--- | :--- | :--- |
+| **🚀 Expo (SDK 58 / CNG)** | 👉 **[https://github.com/React-Native-Vu/LiveWidgetsExampleExpo](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo)** | Tích hợp Continuous Native Generation bằng Expo Config Plugin (`app.plugin.js`), không cần đụng mã Swift/Kotlin. |
+| **⚛️ Bare React Native CLI** | 👉 **[https://github.com/React-Native-Vu/LiveWidgetsExample](https://github.com/React-Native-Vu/LiveWidgetsExample)** | Dành cho dự án thuần React Native CLI với cấu hình Xcode Extension và Android Studio hoàn chỉnh. |
+
+### ⚡ Chạy Nhanh Demo Expo (LiveWidgetsExampleExpo):
+```bash
+git clone https://github.com/React-Native-Vu/LiveWidgetsExampleExpo.git
+cd LiveWidgetsExampleExpo
+npm install
+npx expo prebuild
+npm run setup:widgets
+npx expo run:ios # hoặc npx expo run:android
+```
+
+---
+
+## 3. Cài đặt và Thiết lập Dự án
+
+### Dành cho dự án Expo
+Nếu bạn sử dụng **Expo**, thư viện hỗ trợ sẵn **Expo Config Plugin (`app.plugin.js`)** và **CLI Wizard**.
+👉 **Xem hướng dẫn chi tiết từng bước tại: [Tài liệu Expo Tích hợp (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md)**
+
+```bash
+# 1. Cài đặt
+npx expo install react-native-live-widgets
+
+# 2. Thêm plugin vào app.json và sinh mã native
+npx expo prebuild
+
+# 3. Tự động liên kết target Widget Extension
+npx react-native-live-widgets init --group group.com.yourcompany.app
+```
+
+---
+
+### Cài đặt package (Dành cho Bare React Native CLI)
 Trong thư mục gốc của dự án React Native:
 ```bash
 npm install react-native-live-widgets

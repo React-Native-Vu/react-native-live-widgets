@@ -2,6 +2,14 @@
 
 All notable changes to `react-native-live-widgets` will be documented in this file.
 
+## [1.1.0] - 2026-11-16
+### Added
+- **Expo Config Plugin (`app.plugin.js`)**: Full Expo & EAS Build support (`npx expo prebuild` / `npx expo run:ios` / `npx expo run:android`). Automatically configures `NSSupportsLiveActivities` and `NSSupportsLiveActivitiesFrequentUpdates` in iOS `Info.plist`, App Groups entitlements, and Android notifications & foreground service permissions.
+
+### Fixed
+- **TypeScript Module Resolution**: Fixed `error TS7016` when resolving React Native package exports by updating to `moduleResolution: bundler` and `module: ES2020`.
+- **Global `__DEV__` Declaration**: Fixed `error TS2304: Cannot find name '__DEV__'` with safe typing and fallback checks.
+
 ## [1.0.0] - 2026-11-15
 ### Added
 - **Declarative UI Engine (`UI.*`)**: Build Home Screen Widgets (`small`, `medium`, `large`) and Live Activities (`lockScreen`, `dynamicIsland`) 100% in React Native using `UI.VStack`, `UI.HStack`, `UI.Text`, `UI.Timer`, `UI.Progress` (`bar`, `segmented`, `circular`), `UI.Image`, and `UI.Button`.
