@@ -95,7 +95,7 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
   showBadge = true,
   interactiveSizeSwitch = false,
   style,
-}) => {
+}: WidgetPreviewProps) => {
   const [activeSize, setActiveSize] = useState<WidgetPreviewSize>(initialSize);
 
   // Trích xuất LayoutNode từ props hoặc JSX children

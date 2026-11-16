@@ -171,7 +171,7 @@ export function renderToWidget(element: any): LayoutNode | null {
 
   const parsedChildren: LayoutNode[] = [];
   if (children !== undefined && children !== null) {
-    React.Children.forEach(children, (child) => {
+    React.Children.forEach(children, (child: any) => {
       const parsed = renderToWidget(child);
       if (parsed) {
         parsedChildren.push(parsed);
