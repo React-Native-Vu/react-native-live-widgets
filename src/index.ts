@@ -454,16 +454,24 @@ export const Widget = {
       }
 
       let finalLayout: any = layoutConfig;
-      if (React.isValidElement(finalLayout)) {
+      const convertIfJsx = (node: any) => {
+        if (!node) return node;
+        if (React.isValidElement(node) || (node as any)?.$$typeof || typeof (node as any)?.type === 'function') {
+          return renderToWidget(node);
+        }
+        return node;
+      };
+
+      if (React.isValidElement(finalLayout) || (finalLayout as any)?.$$typeof || typeof (finalLayout as any)?.type === 'function') {
         finalLayout = { medium: renderToWidget(finalLayout) };
       } else if (finalLayout && typeof finalLayout === 'object') {
         const c = { ...finalLayout };
-        if (React.isValidElement(c.small)) c.small = renderToWidget(c.small);
-        if (React.isValidElement(c.medium)) c.medium = renderToWidget(c.medium);
-        if (React.isValidElement(c.large)) c.large = renderToWidget(c.large);
-        if (React.isValidElement(c.accessoryRectangular)) c.accessoryRectangular = renderToWidget(c.accessoryRectangular);
-        if (React.isValidElement(c.accessoryCircular)) c.accessoryCircular = renderToWidget(c.accessoryCircular);
-        if (React.isValidElement(c.accessoryInline)) c.accessoryInline = renderToWidget(c.accessoryInline);
+        c.small = convertIfJsx(c.small);
+        c.medium = convertIfJsx(c.medium);
+        c.large = convertIfJsx(c.large);
+        c.accessoryRectangular = convertIfJsx(c.accessoryRectangular);
+        c.accessoryCircular = convertIfJsx(c.accessoryCircular);
+        c.accessoryInline = convertIfJsx(c.accessoryInline);
         finalLayout = c;
       }
 

@@ -100,21 +100,32 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
 
   // Trích xuất LayoutNode từ props hoặc JSX children
   let rootNode: LayoutNode | null = null;
+  let rawTarget: any = null;
 
   if (children) {
-    rootNode = renderToWidget(children);
+    rawTarget = children;
   } else if (layout) {
-    if ((layout as any).type) {
-      rootNode = layout as LayoutNode;
+    if (React.isValidElement(layout) || (layout as any)?.$$typeof) {
+      rawTarget = layout;
+    } else if ((layout as any).type && typeof (layout as any).type === 'string' && (layout as any).props !== undefined) {
+      rawTarget = layout;
     } else {
       const pageConfig = layout as WidgetSinglePageConfig;
-      rootNode =
+      rawTarget =
         (pageConfig as any)[activeSize] ||
         pageConfig.medium ||
         pageConfig.large ||
         pageConfig.small ||
         pageConfig.accessoryRectangular ||
         null;
+    }
+  }
+
+  if (rawTarget) {
+    if (React.isValidElement(rawTarget) || (rawTarget as any)?.$$typeof || typeof (rawTarget as any)?.type === 'function') {
+      rootNode = renderToWidget(rawTarget);
+    } else {
+      rootNode = rawTarget as LayoutNode;
     }
   }
 
@@ -157,10 +168,10 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
         ]}
       >
         {rootNode ? (
-          renderPreviewNode(rootNode, onAction)
+          renderPreviewNode(rootNode, onAction, true, 'column')
         ) : (
           <View style={styles.emptyContainer}>
-            <RNText style={styles.emptyText}>Chưa có cấu hình layout cho size này</RNText>
+            <RNText style={styles.emptyText}>Chưa có cấu hình layout cho kích thước {activeSize}</RNText>
           </View>
         )}
       </View>
@@ -173,8 +184,19 @@ export const VoltraWidgetPreview = WidgetPreview;
 
 // ─── RECURSIVE NODE RENDERER ─────────────────────────────────────────────────
 
-function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => void): React.ReactNode {
+function renderPreviewNode(
+  node: any,
+  onAction?: (actionId: string) => void,
+  isRoot: boolean = false,
+  parentDirection: 'row' | 'column' = 'column'
+): React.ReactNode {
   if (!node) return null;
+
+  if (React.isValidElement(node) || (node as any)?.$$typeof || typeof (node as any)?.type === 'function') {
+    const converted = renderToWidget(node);
+    if (!converted) return null;
+    return renderPreviewNode(converted, onAction, isRoot, parentDirection);
+  }
 
   switch (node.type) {
     case 'VStack': {
@@ -189,6 +211,7 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
         borderRadius: p.borderRadius ?? p.cornerRadius ?? 0,
         borderWidth: p.borderWidth,
         borderColor: parseDynamicColor(p.borderColor),
+        rowGap: p.spacing ?? 0,
         alignItems:
           p.alignment === 'center'
             ? 'center'
@@ -200,17 +223,31 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
             ? 'center'
             : p.justifyContent === 'spaceBetween'
             ? 'space-between'
+            : p.justifyContent === 'spaceAround'
+            ? 'space-around'
             : p.justifyContent === 'flexEnd'
             ? 'flex-end'
             : 'flex-start',
-        width: '100%',
-        height: '100%',
       };
+
+      if (isRoot) {
+        containerStyle.width = '100%';
+        containerStyle.height = '100%';
+        containerStyle.flex = 1;
+      } else if (parentDirection === 'row') {
+        if (p.flex !== undefined) {
+          containerStyle.flex = p.flex;
+        }
+      } else {
+        containerStyle.alignSelf = 'stretch';
+      }
 
       return (
         <View style={containerStyle}>
           {vnode.children?.map((child, idx) => (
-            <React.Fragment key={idx}>{renderPreviewNode(child, onAction)}</React.Fragment>
+            <React.Fragment key={idx}>
+              {renderPreviewNode(child, onAction, false, 'column')}
+            </React.Fragment>
           ))}
         </View>
       );
@@ -228,27 +265,97 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
         borderRadius: p.borderRadius ?? p.cornerRadius ?? 0,
         borderWidth: p.borderWidth,
         borderColor: parseDynamicColor(p.borderColor),
+        columnGap: p.spacing ?? 0,
         alignItems:
           p.alignment === 'center'
             ? 'center'
             : p.alignment === 'trailing'
             ? 'flex-end'
-            : 'flex-start',
+            : p.alignment === 'top'
+            ? 'flex-start'
+            : 'center',
         justifyContent:
           p.justifyContent === 'center'
             ? 'center'
             : p.justifyContent === 'spaceBetween'
             ? 'space-between'
+            : p.justifyContent === 'spaceAround'
+            ? 'space-around'
             : p.justifyContent === 'flexEnd'
             ? 'flex-end'
             : 'flex-start',
-        width: '100%',
       };
+
+      if (isRoot) {
+        containerStyle.width = '100%';
+        containerStyle.height = '100%';
+      } else if (parentDirection === 'column') {
+        containerStyle.alignSelf = 'stretch';
+      } else if (p.flex !== undefined) {
+        containerStyle.flex = p.flex;
+      }
 
       return (
         <View style={containerStyle}>
           {hnode.children?.map((child, idx) => (
-            <React.Fragment key={idx}>{renderPreviewNode(child, onAction)}</React.Fragment>
+            <React.Fragment key={idx}>
+              {renderPreviewNode(child, onAction, false, 'row')}
+            </React.Fragment>
+          ))}
+        </View>
+      );
+    }
+
+    case 'ZStack': {
+      const znode = node as any;
+      const p = extractPropsAndStyle(znode.props);
+      return (
+        <View
+          style={{
+            position: 'relative',
+            width: isRoot ? '100%' : undefined,
+            height: isRoot ? '100%' : undefined,
+            alignSelf: isRoot ? undefined : 'stretch',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: parseDynamicColor(p.backgroundColor) || 'transparent',
+            borderRadius: p.borderRadius ?? p.cornerRadius ?? 0,
+          }}
+        >
+          {znode.children?.map((child: any, idx: number) => (
+            <View
+              key={idx}
+              style={
+                idx === 0
+                  ? { width: '100%', height: '100%' }
+                  : { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' }
+              }
+            >
+              {renderPreviewNode(child, onAction, false, parentDirection)}
+            </View>
+          ))}
+        </View>
+      );
+    }
+
+    case 'Grid': {
+      const gnode = node as any;
+      const p = extractPropsAndStyle(gnode.props);
+      const cols = p.columns ?? 2;
+      return (
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: p.spacing ?? 6,
+            width: '100%',
+            alignSelf: 'stretch',
+          }}
+        >
+          {gnode.children?.map((child: any, idx: number) => (
+            <View key={idx} style={{ flexBasis: `${Math.floor(100 / cols) - 3}%` }}>
+              {renderPreviewNode(child, onAction, false, 'column')}
+            </View>
           ))}
         </View>
       );
@@ -268,9 +375,16 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
             : p.fontWeight === 'medium'
             ? '500'
             : 'normal',
+        textAlign: p.textAlign ?? 'left',
       };
       return (
-        <RNText numberOfLines={p.numberOfLines} style={textStyle}>
+        <RNText
+          numberOfLines={p.numberOfLines}
+          style={[
+            textStyle,
+            parentDirection === 'row' ? { flexShrink: 1 } : undefined,
+          ]}
+        >
           {p.text}
         </RNText>
       );
@@ -286,6 +400,7 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
         paddingVertical: p.paddingVertical ?? p.padding ?? 6,
         alignItems: 'center',
         justifyContent: 'center',
+        alignSelf: p.fullWidth ? 'stretch' : 'auto',
         width: p.fullWidth ? '100%' : undefined,
       };
       const textStyle: RNTextStyle = {
@@ -304,7 +419,9 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
           }}
           style={btnStyle}
         >
-          <RNText style={textStyle}>{p.title}</RNText>
+          <RNText numberOfLines={1} style={textStyle}>
+            {p.title}
+          </RNText>
         </TouchableOpacity>
       );
     }
@@ -315,15 +432,18 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
       return (
         <View
           style={{
-            backgroundColor: p.backgroundColor || '#064E3B',
+            backgroundColor: parseDynamicColor(p.backgroundColor) || '#064E3B',
             borderRadius: p.borderRadius ?? p.cornerRadius ?? 6,
             paddingHorizontal: p.paddingHorizontal ?? 6,
             paddingVertical: p.paddingVertical ?? 2,
+            flexShrink: 0,
+            alignSelf: 'center',
           }}
         >
           <RNText
+            numberOfLines={1}
             style={{
-              color: p.textColor || '#6EE7B7',
+              color: parseDynamicColor(p.textColor) || '#6EE7B7',
               fontSize: p.fontSize ?? 10,
               fontWeight: '600',
             }}
@@ -346,7 +466,7 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
         const segs = p.segments ?? 4;
         const filled = Math.round(val * segs);
         return (
-          <View style={{ flexDirection: 'row', gap: 4, width: '100%', height }}>
+          <View style={{ flexDirection: 'row', gap: 4, width: '100%', height, alignSelf: 'stretch' }}>
             {Array.from({ length: segs }).map((_, idx) => (
               <View
                 key={idx}
@@ -363,7 +483,7 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
       }
 
       return (
-        <View style={{ width: '100%', height, backgroundColor: track, borderRadius: height / 2 }}>
+        <View style={{ width: '100%', height, backgroundColor: track, borderRadius: height / 2, alignSelf: 'stretch' }}>
           <View
             style={{
               width: `${val * 100}%`,
@@ -380,7 +500,12 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
       const tnode = node as TimerNode;
       const p = tnode.props || {};
       return (
-        <RNText style={{ color: p.color || '#2563EB', fontSize: p.fontSize ?? 14, fontWeight: 'bold' }}>
+        <RNText
+          style={[
+            { color: parseDynamicColor(p.color) || '#2563EB', fontSize: p.fontSize ?? 14, fontWeight: 'bold' },
+            parentDirection === 'row' ? { flexShrink: 0 } : undefined,
+          ]}
+        >
           {p.prefix || ''}1:29:55{p.suffix || ''}
         </RNText>
       );
@@ -422,11 +547,100 @@ function renderPreviewNode(node: LayoutNode, onAction?: (actionId: string) => vo
     }
 
     case 'Spacer': {
-      return <View style={{ flex: 1 }} />;
+      const snode = node as any;
+      const p = snode.props || {};
+      const minLen = p?.minLength ?? 4;
+      return (
+        <View
+          style={
+            parentDirection === 'row'
+              ? { minWidth: minLen, flex: 1 }
+              : { minHeight: minLen, flex: 1 }
+          }
+        />
+      );
     }
 
     case 'Divider': {
-      return <View style={{ width: '100%', height: 1, backgroundColor: '#334155' }} />;
+      const p = (node as any).props || {};
+      const color = parseDynamicColor(p.color) || '#334155';
+      return (
+        <View
+          style={
+            parentDirection === 'row'
+              ? { width: 1, height: '100%', backgroundColor: color }
+              : { width: '100%', height: 1, backgroundColor: color, alignSelf: 'stretch' }
+          }
+        />
+      );
+    }
+
+    case 'Link': {
+      const lnode = node as any;
+      const p = lnode.props || {};
+      return (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => {
+            if (p.url && onAction) onAction(p.url);
+          }}
+          style={{ flexDirection: 'row', alignItems: 'center' }}
+        >
+          {lnode.children?.map((child: any, idx: number) => (
+            <React.Fragment key={idx}>
+              {renderPreviewNode(child, onAction, false, parentDirection)}
+            </React.Fragment>
+          ))}
+        </TouchableOpacity>
+      );
+    }
+
+    case 'Equalizer': {
+      const enode = node as any;
+      const p = enode.props || {};
+      const tint = parseDynamicColor(p.color) || '#38BDF8';
+      return (
+        <View style={{ flexDirection: 'row', gap: 3, alignItems: 'flex-end', height: 16 }}>
+          {[12, 16, 8, 14].map((h, i) => (
+            <View key={i} style={{ width: 3, height: h, backgroundColor: tint, borderRadius: 1.5 }} />
+          ))}
+        </View>
+      );
+    }
+
+    case 'Gauge': {
+      const gnode = node as any;
+      const p = gnode.props || {};
+      const val = Math.round((p.value ?? 0.75) * 100);
+      const tint = parseDynamicColor(p.tintColor) || '#10B981';
+      return (
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <RNText style={{ color: tint, fontSize: 13, fontWeight: 'bold' }}>{val}%</RNText>
+        </View>
+      );
+    }
+
+    case 'Chart': {
+      const cnode = node as any;
+      const p = cnode.props || {};
+      const values: number[] = Array.isArray(p.values) ? p.values : [20, 45, 60, 80, 50];
+      const maxVal = Math.max(...values, 1);
+      const tint = parseDynamicColor(p.color) || '#38BDF8';
+      return (
+        <View style={{ flexDirection: 'row', gap: 4, alignItems: 'flex-end', height: 28, width: '100%', alignSelf: 'stretch' }}>
+          {values.map((v, i) => (
+            <View
+              key={i}
+              style={{
+                flex: 1,
+                height: `${Math.max(15, (v / maxVal) * 100)}%`,
+                backgroundColor: tint,
+                borderRadius: 2,
+              }}
+            />
+          ))}
+        </View>
+      );
     }
 
     default:

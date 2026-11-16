@@ -182,62 +182,74 @@ export function renderToWidget(element: any): LayoutNode | null {
   // Trường hợp Component là Function
   if (typeof type === 'function') {
     const compName = (type as any).displayName || type.name;
-    switch (compName) {
-      case 'VStack':
-        return UI.VStack(restProps, ...parsedChildren);
-      case 'HStack':
-        return UI.HStack(restProps, ...parsedChildren);
-      case 'ZStack':
-        return UI.ZStack(restProps, ...parsedChildren);
-      case 'Grid':
-        return UI.Grid(restProps, ...parsedChildren);
-      case 'Text': {
-        const textContent =
-          typeof children === 'string' || typeof children === 'number'
-            ? String(children)
-            : restProps.text || '';
-        return UI.Text(textContent, restProps);
-      }
-      case 'Button': {
-        const title =
-          restProps.title || (typeof children === 'string' ? children : '');
-        return UI.Button({ ...restProps, title });
-      }
-      case 'Badge': {
-        const text =
-          restProps.text || (typeof children === 'string' ? children : '');
-        return UI.Badge({ ...restProps, text });
-      }
-      case 'Progress':
-        return UI.Progress(restProps.value ?? restProps.totalDuration ?? 0, restProps);
-      case 'Timer':
-        return UI.Timer(restProps.targetTimestamp ?? Date.now(), restProps);
-      case 'Image':
-        return UI.Image(
-          restProps.url || restProps.base64 || restProps.systemName || restProps.source || '',
-          restProps
-        );
-      case 'Spacer':
-        return UI.Spacer(restProps.minLength);
-      case 'Divider':
-        return UI.Divider(restProps);
-      case 'Equalizer':
-        return UI.Equalizer(restProps);
-      case 'Link':
-        return UI.Link(restProps, ...parsedChildren);
-      case 'Gauge':
-        return UI.Gauge(restProps.value ?? 0, restProps);
-      case 'Chart':
-        return UI.Chart(restProps.values ?? [], restProps);
-      default: {
-        // Component do người dùng tự viết: gọi hàm render để đệ quy phân giải
-        try {
-          const rendered = (type as any)(props);
-          return renderToWidget(rendered);
-        } catch {
-          return null;
-        }
-      }
+    const isComp = (target: any, name: string) => type === target || compName === name;
+
+    if (isComp(VStack, 'VStack')) {
+      return UI.VStack(restProps, ...parsedChildren);
+    }
+    if (isComp(HStack, 'HStack')) {
+      return UI.HStack(restProps, ...parsedChildren);
+    }
+    if (isComp(ZStack, 'ZStack')) {
+      return UI.ZStack(restProps, ...parsedChildren);
+    }
+    if (isComp(Grid, 'Grid')) {
+      return UI.Grid(restProps, ...parsedChildren);
+    }
+    if (isComp(Text, 'Text')) {
+      const textContent =
+        typeof children === 'string' || typeof children === 'number'
+          ? String(children)
+          : restProps.text || '';
+      return UI.Text(textContent, restProps);
+    }
+    if (isComp(Button, 'Button')) {
+      const title =
+        restProps.title || (typeof children === 'string' ? children : '');
+      return UI.Button({ ...restProps, title });
+    }
+    if (isComp(Badge, 'Badge')) {
+      const text =
+        restProps.text || (typeof children === 'string' ? children : '');
+      return UI.Badge({ ...restProps, text });
+    }
+    if (isComp(Progress, 'Progress')) {
+      return UI.Progress(restProps.value ?? restProps.totalDuration ?? 0, restProps);
+    }
+    if (isComp(Timer, 'Timer')) {
+      return UI.Timer(restProps.targetTimestamp ?? Date.now(), restProps);
+    }
+    if (isComp(Image, 'Image')) {
+      return UI.Image(
+        restProps.url || restProps.base64 || restProps.systemName || restProps.source || '',
+        restProps
+      );
+    }
+    if (isComp(Spacer, 'Spacer')) {
+      return UI.Spacer(restProps.minLength);
+    }
+    if (isComp(Divider, 'Divider')) {
+      return UI.Divider(restProps);
+    }
+    if (isComp(Equalizer, 'Equalizer')) {
+      return UI.Equalizer(restProps);
+    }
+    if (isComp(Link, 'Link')) {
+      return UI.Link(restProps, ...parsedChildren);
+    }
+    if (isComp(Gauge, 'Gauge')) {
+      return UI.Gauge(restProps.value ?? 0, restProps);
+    }
+    if (isComp(Chart, 'Chart')) {
+      return UI.Chart(restProps.values ?? [], restProps);
+    }
+
+    // Component do người dùng tự viết: gọi hàm render để đệ quy phân giải
+    try {
+      const rendered = (type as any)(props);
+      return renderToWidget(rendered);
+    } catch {
+      return null;
     }
   }
 
