@@ -5,7 +5,7 @@ All notable changes to `react-native-live-widgets` will be documented in this fi
 ## [1.2.1] - 2026-11-17
 ### Added
 - **Cross-Platform System Icons (SF Symbols & Material Icons)**: Dedicated `systemNameIos` and `systemNameAndroid` props with full TypeScript autocomplete for 9,500+ Apple SF Symbols (`KnownSFSymbol`) and 3,800+ Google Material Icons (`KnownMaterialIcon`), automatically rendered across iOS WidgetKit and Android Canvas.
-- **TypeScript-Driven Swift Codegen CLI (`npx react-native-live-widgets codegen`)**: Configured via `widgets.config.ts` to automatically generate `LiveWidgetsBundle.swift`, sync Apple String Catalogs (`Localizable.xcstrings`), and generate Android `res/values-*/strings.xml`.
+- **TypeScript-Driven Swift Codegen CLI (`npx react-native-live-widgets codegen`)**: Configured via `widgets.config.ts` to automatically generate `LiveWidgetsBundle.swift`, sync Apple String Catalogs (`Localizable.xcstrings`), generate Android `res/values-*/strings.xml`, and automatically ensure/generate missing `LiveWidgetsExtension/Info.plist`.
 - **English CLI Output**: Standardized all Codegen CLI and icon generation terminal logs to clean, professional English.
 
 ### Fixed

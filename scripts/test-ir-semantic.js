@@ -290,9 +290,25 @@ assert(i18nSwiftCode.includes('.description(LocalizedStringKey("widget.counter.d
 
 // ── Test 12: Android i18n strings.xml Resource Mapping ───────────────────────
 console.log('   ✓ Test 12: Verifying Android i18n Resource Mapping (toAndroidStringName)...');
-const { toAndroidStringName } = require('../cli/codegen');
+const { toAndroidStringName, ensureExtensionInfoPlist } = require('../cli/codegen');
 assert.strictEqual(toAndroidStringName('widgets.counter.title'), 'widgets_counter_title');
 assert.strictEqual(toAndroidStringName('widgets.shift-attendance.desc'), 'widgets_shift_attendance_desc');
 assert.strictEqual(toAndroidStringName('123.kpi'), 'str_123_kpi');
 
-console.log('\n🎉 [Test Suite] All 12 test suites passed with 100% assertions satisfied!\n');
+// ── Test 13: Extension Info.plist Auto-generation ───────────────────────────
+console.log('   ✓ Test 13: Verifying Extension Info.plist auto-generation (ensureExtensionInfoPlist)...');
+const os = require('os');
+const tmpTestDir = path.join(os.tmpdir(), 'live_widget_test_' + Date.now());
+fs.mkdirSync(tmpTestDir, { recursive: true });
+try {
+  ensureExtensionInfoPlist(tmpTestDir);
+  const generatedPlistPath = path.join(tmpTestDir, 'Info.plist');
+  assert(fs.existsSync(generatedPlistPath), 'Info.plist should be generated');
+  const plistContent = fs.readFileSync(generatedPlistPath, 'utf8');
+  assert(plistContent.includes('com.apple.widgetkit-extension'));
+  assert(plistContent.includes('RCTNewArchEnabled'));
+} finally {
+  fs.rmSync(tmpTestDir, { recursive: true, force: true });
+}
+
+console.log('\n🎉 [Test Suite] All 13 test suites passed with 100% assertions satisfied!\n');

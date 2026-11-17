@@ -555,6 +555,49 @@ function findBundleSwiftPath(projectRoot) {
 }
 
 /**
+ * Đảm bảo file Info.plist cho Widget Extension luôn tồn tại
+ */
+function ensureExtensionInfoPlist(targetDir) {
+  const infoPlistPath = path.join(targetDir, 'Info.plist');
+  if (!fs.existsSync(infoPlistPath)) {
+    const defaultInfoPlist = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+\t<key>CFBundleDevelopmentRegion</key>
+\t<string>en</string>
+\t<key>CFBundleDisplayName</key>
+\t<string>${path.basename(targetDir)}</string>
+\t<key>CFBundleExecutable</key>
+\t<string>$(EXECUTABLE_NAME)</string>
+\t<key>CFBundleIdentifier</key>
+\t<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+\t<key>CFBundleInfoDictionaryVersion</key>
+\t<string>6.0</string>
+\t<key>CFBundleName</key>
+\t<string>$(PRODUCT_NAME)</string>
+\t<key>CFBundlePackageType</key>
+\t<string>XPC!</string>
+\t<key>CFBundleShortVersionString</key>
+\t<string>1.0</string>
+\t<key>CFBundleVersion</key>
+\t<string>1</string>
+\t<key>NSExtension</key>
+\t<dict>
+\t\t<key>NSExtensionPointIdentifier</key>
+\t\t<string>com.apple.widgetkit-extension</string>
+\t</dict>
+\t<key>RCTNewArchEnabled</key>
+\t<true/>
+</dict>
+</plist>
+`;
+    fs.writeFileSync(infoPlistPath, defaultInfoPlist, 'utf8');
+    console.log(`🛡️  Ensured WidgetKit Extension Info.plist at: ${path.basename(targetDir)}/Info.plist`);
+  }
+}
+
+/**
  * Thực thi lệnh Codegen
  */
 function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
@@ -598,6 +641,9 @@ function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
   if (!fs.existsSync(targetDir)) {
     fs.mkdirSync(targetDir, { recursive: true });
   }
+
+  // Ensure extension Info.plist exists (auto-generate if missing)
+  ensureExtensionInfoPlist(targetDir);
 
   // 1. Generate i18n Localizable if catalog exists
   if (Object.keys(catalog).length > 0) {
@@ -650,4 +696,5 @@ module.exports = {
   flattenObject,
   toAndroidStringName,
   writeAndroidI18nFiles,
+  ensureExtensionInfoPlist,
 };
