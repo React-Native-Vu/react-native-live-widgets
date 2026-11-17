@@ -7,39 +7,122 @@
  */
 export type LayoutNodeType = 'VStack' | 'HStack' | 'ZStack' | 'Grid' | 'Divider' | 'Text' | 'Timer' | 'Progress' | 'Gauge' | 'Chart' | 'Image' | 'Spacer' | 'Button' | 'Toggle' | 'Badge' | 'Link' | 'Equalizer' | 'Custom';
 /**
- * Định dạng màu hỗ trợ chuỗi Hex đơn (ví dụ '#0F172A')
- * hoặc Object Dynamic Color tự đổi theo chế độ Sáng / Tối (Dark Mode) của hệ điều hành.
+ * Định dạng màu hỗ trợ:
+ * - Chuỗi Hex đơn (ví dụ '#0F172A', '#38BDF8AA')
+ * - Object Dynamic Color tự đổi theo chế độ Sáng / Tối (Light / Dark Mode)
+ * - Chế độ Tinted / Accented trên iOS 18+ và Material You Android.
  */
 export type DynamicColor = string | {
     light: string;
     dark: string;
+    /** Màu hiển thị ở chế độ Tinted Home Screen trên iOS 18+ hoặc Material You Dynamic Theming Android */
+    tinted?: string;
 };
+export type BorderStyle = 'solid' | 'dashed' | 'dotted';
+/** Cấu hình đổ bóng (Shadow Modifier) cho Card, Button và Container */
+export interface ShadowProps {
+    /** Màu bóng đổ (hỗ trợ DynamicColor) */
+    shadowColor?: DynamicColor;
+    /** Bán kính mờ của bóng đổ (dp/pt) */
+    shadowRadius?: number;
+    /** Độ mờ đục từ 0.0 (trong suốt) đến 1.0 (đậm đặc) */
+    shadowOpacity?: number;
+    /** Độ dời vị trí bóng đổ theo trục X và Y */
+    shadowOffset?: {
+        x: number;
+        y: number;
+    };
+}
+/** Cấu hình dải màu chuyển sắc (Gradient Modifier) */
+export interface GradientProps {
+    /** Kiểu chuyển sắc: 'linear' (đường thẳng - mặc định) hoặc 'radial' (tâm tròn) */
+    type?: 'linear' | 'radial';
+    /** Danh sách các màu chuyển tiếp (hỗ trợ DynamicColor cho từng chặng) */
+    colors: DynamicColor[];
+    /** Điểm bắt đầu theo toạ độ tỉ lệ từ 0.0 đến 1.0 (mặc định { x: 0, y: 0 } top-left) */
+    startPoint?: {
+        x: number;
+        y: number;
+    };
+    /** Điểm kết thúc theo toạ độ tỉ lệ từ 0.0 đến 1.0 (mặc định { x: 1, y: 1 } bottom-right) */
+    endPoint?: {
+        x: number;
+        y: number;
+    };
+    /** Góc gradient theo độ (ví dụ 45, 90, 180) */
+    angle?: number;
+}
+export type TypographyStyle = 'largeTitle' | 'title1' | 'title2' | 'title3' | 'headline' | 'subheadline' | 'body' | 'callout' | 'footnote' | 'caption1' | 'caption2';
+export type FontDesign = 'default' | 'monospaced' | 'rounded' | 'serif';
+/**
+ * ♿ Vai trò ngữ nghĩa cho Trợ năng (Accessibility Semantic Role).
+ * Giúp các công cụ đọc màn hình (TalkBack trên Android, VoiceOver trên iOS, Screen Readers)
+ * phát âm chính xác bản chất của phần tử thay vì coi tất cả là hình ảnh raster.
+ */
+export type AccessibilityRole = 'none' | 'button' | 'header' | 'text' | 'image' | 'progressbar' | 'timer' | 'switch' | 'checkbox' | 'summary' | 'alert';
+/**
+ * ♿ Thuộc tính Trợ năng (Accessibility & Semantics Layer).
+ * Tách biệt hoàn toàn tầng ngữ nghĩa khỏi tầng vẽ đồ họa (Canvas/SwiftUI),
+ * cho phép TalkBack và VoiceOver tiếp cận dữ liệu chính xác ngay cả khi render bằng Canvas.
+ */
+export interface AccessibilityProps {
+    /** Cho phép công cụ trợ năng (TalkBack/VoiceOver) tiếp cận thành phần này (mặc định true; đặt false cho các icon/hình trang trí decorative) */
+    accessible?: boolean;
+    /** Mô tả âm thanh phát âm cho người dùng khi TalkBack/VoiceOver lướt tới phần tử */
+    accessibilityLabel?: string;
+    /** Hướng dẫn hành động bổ sung (ví dụ: "Chạm hai lần để xác nhận chấm công") */
+    accessibilityHint?: string;
+    /** Vai trò ngữ nghĩa của phần tử (header, button, progressbar, ...) */
+    accessibilityRole?: AccessibilityRole;
+    /** Giá trị trạng thái đọc lên (ví dụ: "86%", "Đang vận chuyển", "Đã bật") */
+    accessibilityValue?: string | number;
+}
 export interface BaseNode {
     type: LayoutNodeType;
 }
-export interface ContainerProps {
+export interface ContainerProps extends ShadowProps, AccessibilityProps {
     padding?: number;
     paddingHorizontal?: number;
     paddingVertical?: number;
     spacing?: number;
+    /** Khoảng cách giữa các phần tử con (Alias chuẩn React Native Style cho spacing) */
+    gap?: number;
+    rowGap?: number;
+    columnGap?: number;
     backgroundColor?: DynamicColor;
+    /** Gradient màu nền (tự động graceful fallback sang backgroundColor nếu platform không hỗ trợ) */
+    gradient?: GradientProps;
     borderRadius?: number;
     /** Alias bo góc theo cú pháp SwiftUI (tự động ánh xạ sang borderRadius) */
     cornerRadius?: number;
     borderColor?: DynamicColor;
     borderWidth?: number;
-    alignment?: 'leading' | 'center' | 'trailing' | string;
-    justifyContent?: 'flexStart' | 'center' | 'flexEnd' | 'spaceBetween' | string;
+    borderStyle?: BorderStyle;
+    alignment?: 'leading' | 'center' | 'trailing' | 'top' | 'bottom' | 'firstTextBaseline' | 'lastTextBaseline' | string;
+    justifyContent?: 'flexStart' | 'center' | 'flexEnd' | 'spaceBetween' | 'spaceAround' | 'spaceEvenly' | string;
+    /** Chiều viết văn bản (Hỗ trợ quốc tế hoá RTL cho tiếng Ả Rập, Do Thái) */
+    direction?: 'ltr' | 'rtl' | 'auto';
+    /** Cờ bật RTL chủ động cho khối container này */
+    isRTL?: boolean;
     /** Tự động ẩn hoặc làm mờ nội dung khi thiết bị đang khóa màn hình (Bảo mật chuẩn Apple) */
     privacySensitive?: boolean;
     /** Chủ động che nội dung thành vệt khối mờ Placeholder (Skeleton Redaction) */
     redacted?: boolean;
 }
 export type FontWeight = 'regular' | 'medium' | 'semibold' | 'bold' | 'heavy' | 'light' | (string & {}) | string;
-export interface TextStyle {
+export interface TextStyle extends ShadowProps, AccessibilityProps {
     color?: DynamicColor;
     fontSize?: number;
     fontWeight?: FontWeight;
+    /** Hệ thống phân cấp cỡ chữ chuẩn Apple Human Interface Guidelines / Material Design */
+    typography?: TypographyStyle;
+    /** Kiểu dáng họ font chữ hệ thống */
+    fontDesign?: FontDesign;
+    /** Tự động co giãn cỡ chữ theo cài đặt Trợ năng (Accessibility Dynamic Type) của hệ điều hành (mặc định true) */
+    dynamicType?: boolean;
+    textAlign?: 'left' | 'center' | 'right' | 'leading' | 'trailing' | 'auto';
+    lineHeight?: number;
+    letterSpacing?: number;
     numberOfLines?: number;
     strikethroughWhenToggled?: string;
     /** Tự động làm mờ hoặc ẩn chữ khi màn hình khóa (iOS Privacy Redacted) */
@@ -69,7 +152,7 @@ export interface TextNode extends BaseNode {
 }
 export interface TimerNode extends BaseNode {
     type: 'Timer';
-    props: {
+    props: AccessibilityProps & {
         /** Epoch timestamp tính bằng giây để đếm tới (hoặc đếm từ) */
         targetTimestamp: number;
         /** 'countdown': đếm ngược tới mốc; 'countup': đếm tiến từ mốc */
@@ -83,7 +166,7 @@ export interface TimerNode extends BaseNode {
 }
 export interface ProgressNode extends BaseNode {
     type: 'Progress';
-    props: {
+    props: AccessibilityProps & {
         /** Mốc bắt đầu (epoch giây) nếu dùng timer interval tự chạy */
         startTimestamp?: number;
         /** Mốc kết thúc (epoch giây) */
@@ -128,7 +211,7 @@ export interface ProgressNode extends BaseNode {
 }
 export interface ImageNode extends BaseNode {
     type: 'Image';
-    props: {
+    props: AccessibilityProps & {
         /** URL ảnh từ mạng (https://...) - Tự động tải, nén tối ưu RAM và cache vào App Group cho Widget & Live Activity */
         url?: string;
         /** Chuỗi ảnh Base64 (có thể kèm tiền tố data:image/png;base64,... hoặc chuỗi raw base64) */
@@ -171,7 +254,7 @@ export interface SpacerNode extends BaseNode {
 }
 export interface ButtonNode extends BaseNode {
     type: 'Button';
-    props: {
+    props: ShadowProps & AccessibilityProps & {
         title: string;
         /**
          * Mã hành động chạy ngầm ngay trên Widget (iOS 17+ AppIntent, không mở App):
@@ -185,14 +268,21 @@ export interface ButtonNode extends BaseNode {
         /** Mở App và điều hướng tới URL Deep Link cụ thể */
         deepLink?: string;
         backgroundColor?: DynamicColor;
+        /** Gradient màu nền nút bấm */
+        gradient?: GradientProps;
         textColor?: DynamicColor;
         fontSize?: number;
         fontWeight?: 'regular' | 'medium' | 'semibold' | 'bold';
+        typography?: TypographyStyle;
+        fontDesign?: FontDesign;
         padding?: number;
         paddingHorizontal?: number;
         paddingVertical?: number;
         borderRadius?: number;
         cornerRadius?: number;
+        borderColor?: DynamicColor;
+        borderWidth?: number;
+        borderStyle?: BorderStyle;
         fullWidth?: boolean;
         /** Tiêu đề hiển thị khi nút ở trạng thái đã tick (dùng với actionId 'toggle:<key>') */
         checkedTitle?: string;
@@ -236,7 +326,7 @@ export interface DividerNode extends BaseNode {
 }
 export interface GaugeNode extends BaseNode {
     type: 'Gauge';
-    props: {
+    props: AccessibilityProps & {
         /** Giá trị tiến độ từ 0.0 đến 1.0 */
         value: number;
         /** Chuỗi hiển thị chính giữa đồng hồ (vd "85%", "120 km/h", "420") */
@@ -281,7 +371,7 @@ export interface ChartNode extends BaseNode {
 }
 export interface ToggleNode extends BaseNode {
     type: 'Toggle';
-    props: {
+    props: AccessibilityProps & {
         /** Mã định danh toggle (tự động gắn tiền tố 'toggle:' nếu chưa có) */
         actionId: string;
         label: string;
@@ -289,6 +379,7 @@ export interface ToggleNode extends BaseNode {
         /** 'checkbox' (ô tích) | 'switch' (công tắc gạt) */
         style?: 'checkbox' | 'switch';
         checked?: boolean;
+        isChecked?: boolean;
         tintColor?: string;
         textColor?: string;
         checkedTextColor?: string;
@@ -493,5 +584,106 @@ export interface LiveActivityPushTokens {
 export interface ActiveActivityInfo {
     activityId: string;
     pushToken?: string;
+}
+/**
+ * 📊 Bảng tra cứu năng lực nền tảng (Platform Capability & Fallback Matrix).
+ * Cho phép ứng dụng kiểm tra tính năng được hỗ trợ thực tế trên thiết bị đang chạy
+ * thay vì phỏng đoán, đảm bảo UI hoạt động ổn định và graceful fallback mượt mà.
+ */
+export interface WidgetCapabilities {
+    /** Nền tảng hệ điều hành ('ios' hoặc 'android') */
+    platform: 'ios' | 'android';
+    /** Phiên bản OS (ví dụ '18.1', '17.2', '14.0' Android API 34) */
+    osVersion: string | number;
+    /** Hỗ trợ Live Activities trên Lock Screen (iOS 16.1+ / Android 8.0+ Ongoing Notification) */
+    supportsLiveActivities: boolean;
+    /** Hỗ trợ Dynamic Island (iPhone 14 Pro, 15, 16 series) */
+    supportsDynamicIsland: boolean;
+    /** Hỗ trợ Android 16+ Live Update thông báo kiểu tiến trình ProgressStyle */
+    supportsAndroidLiveUpdates: boolean;
+    /** Hỗ trợ ghim tiện ích Home Screen Widgets (iOS 14+ / Android 8.0+) */
+    supportsHomeWidgets: boolean;
+    /** Hỗ trợ tương tác bấm nút chạy ngầm không mở app (iOS 17+ AppIntent / Android PendingIntent) */
+    supportsInteractiveIntents: boolean;
+    /** Hỗ trợ dải màu chuyển tiếp Linear / Radial Gradient */
+    supportsGradients: boolean;
+    /** Hỗ trợ bóng đổ Elevation / Shadow layer */
+    supportsShadows: boolean;
+    /** Hỗ trợ viền nét đứt Dashed / Dotted Stroke */
+    supportsDashedBorders: boolean;
+    /** Hỗ trợ tự động co giãn cỡ chữ theo Trợ năng (Accessibility Dynamic Type) */
+    supportsDynamicType: boolean;
+    /** Hỗ trợ bố cục quốc tế hoá từ phải sang trái (RTL: Arabic, Hebrew, ...) */
+    supportsRTL: boolean;
+    /** Hỗ trợ chế độ màu Tinted / Accented Widgets (iOS 18+ / Android Material You) */
+    supportsTintedMode: boolean;
+    /** Hỗ trợ hiệu ứng Odometer số lật (iOS 16+ numericText) */
+    supportsNumericAnimation: boolean;
+    /** Hỗ trợ lớp Trợ năng phân cấp (Accessibility Fallback Layer: VoiceOver & TalkBack contentDescription) */
+    supportsAccessibility: boolean;
+}
+/**
+ * Mục tiêu kết xuất của bộ điều phối Renderer Planner.
+ * - 'native_remote_view': Kết xuất thành RemoteViews native (TextView, Button, ProgressBar).
+ * - 'canvas_bitmap': Kết xuất qua Canvas 2D Bitmap (Gauge 240°, Equalizer, đồ họa phức tạp).
+ * - 'composite': Vùng chứa phức hợp kết hợp cả Native Views và Canvas sub-views.
+ */
+export type RenderPlanTarget = 'native_remote_view' | 'canvas_bitmap' | 'composite';
+/**
+ * Kế hoạch kết xuất cho từng Node trong cây UI.
+ */
+export interface NodeRenderPlan {
+    id: string;
+    type: LayoutNodeType;
+    target: RenderPlanTarget;
+    reason: string;
+    hasNativeEquivalent: boolean;
+    requiresCanvas: boolean;
+    childrenTargets?: RenderPlanTarget[];
+}
+/**
+ * ♿ Nút ngữ nghĩa độc lập (Semantic Node) tách biệt hoàn toàn khỏi Renderer.
+ */
+export interface SemanticNode {
+    id: string;
+    path: string;
+    type: LayoutNodeType;
+    role: AccessibilityRole;
+    label: string;
+    hint?: string;
+    value?: string | number;
+    interactive: boolean;
+    actionId?: string;
+    deepLink?: string;
+    isDecorative?: boolean;
+}
+/**
+ * Liên kết trạng thái hai chiều giữa UI và Native Store / JavaScript.
+ */
+export interface StateBinding {
+    id: string;
+    actionId: string;
+    bindingType: 'toggle' | 'page' | 'custom';
+    targetKey?: string;
+    initialValue?: any;
+}
+/**
+ * 🌲 UI Intermediate Representation (Cây đại diện trung gian IR).
+ * Chuẩn hóa toàn bộ cấu trúc UI, Semantic Tree, Kế hoạch kết xuất (Render Plan)
+ * và Liên kết trạng thái (State Bindings) trước khi chuyển giao cho Renderer nền tảng.
+ */
+export interface WidgetIR {
+    version: '2.0';
+    timestamp: number;
+    root: LayoutNode;
+    semanticTree: SemanticNode[];
+    semanticSummary: string;
+    renderPlan: {
+        overallStrategy: 'native_first_hybrid' | 'canvas_fallback';
+        nativeNodeCount: number;
+        canvasNodeCount: number;
+        nodes: Record<string, NodeRenderPlan>;
+    };
+    stateBindings: StateBinding[];
 }
 //# sourceMappingURL=types.d.ts.map

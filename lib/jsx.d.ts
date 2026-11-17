@@ -1,4 +1,4 @@
-import { LayoutNode, ButtonNode, BadgeNode, ProgressNode, TimerNode, ImageNode, DividerNode, GaugeNode, ChartNode, ContainerProps, TextStyle, ZStackProps, GridProps, LinkProps, EqualizerProps, StyleProp } from './types';
+import { LayoutNode, ButtonNode, BadgeNode, ProgressNode, TimerNode, ImageNode, DividerNode, GaugeNode, ChartNode, ToggleNode, ContainerProps, TextStyle, ZStackProps, GridProps, LinkProps, EqualizerProps, StyleProp } from './types';
 export declare function extractPropsAndStyle<T extends object>(props: any): any;
 export interface VStackProps extends ContainerProps {
     children?: React.ReactNode;
@@ -60,6 +60,14 @@ export declare const Link: React.FC<LinkJSXProps>;
 export declare const Equalizer: React.FC<EqualizerProps>;
 export declare const Gauge: React.FC<GaugeNode['props']>;
 export declare const Chart: React.FC<ChartNode['props']>;
+export type ToggleJSXProps = Partial<ToggleNode['props']> & {
+    children?: React.ReactNode;
+    actionId?: string;
+    key?: string;
+};
+export declare const Toggle: React.FC<ToggleJSXProps>;
+export declare const Switch: React.FC<ToggleJSXProps>;
+export declare const Checkbox: React.FC<ToggleJSXProps>;
 /**
  * Chuyển đổi một cây JSX/TSX thành cấu trúc cây LayoutNode chuẩn của thư viện.
  *

@@ -1,8 +1,8 @@
-import { ActiveActivityInfo, EndActivityOptions, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig } from './types';
+import { ActiveActivityInfo, EndActivityOptions, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetCapabilities, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig, WidgetIR } from './types';
 import { ActionHandler, GlobalActionHandler, registerAction, registerActionHandler, unregisterAction } from './dispatcher';
 export type { ActionHandler, GlobalActionHandler };
 export { registerAction, registerActionHandler, unregisterAction };
-export * from './hooks';
+export type { WidgetCapabilities, GradientProps, ShadowProps, BorderStyle, TypographyStyle, FontDesign, } from './types';
 export * from './jsx';
 export * from './preview';
 export declare const LiveActivity: {
@@ -165,6 +165,19 @@ export declare const Widget: {
      * Kiểm tra xem thiết bị hiện tại có hỗ trợ ghim Tiện ích trực tiếp từ trong ứng dụng hay không (Chỉ Android API 26+).
      */
     isPinSupported: () => Promise<boolean>;
+    /**
+     * 📊 Bảng tra cứu năng lực nền tảng (Platform Capability & Fallback Matrix).
+     * Giúp ứng dụng xác định chính xác tính năng nào được hỗ trợ thực tế trên thiết bị đang chạy.
+     */
+    getCapabilities: () => Promise<WidgetCapabilities>;
+    /**
+     * 🌲 Biên dịch cây DSL sang UI Intermediate Representation (IR & Semantic Tree - Phase 2).
+     */
+    compileIR: (layout: any) => WidgetIR;
+    /**
+     * 🔍 Phân tích và in ra bản đồ kiến trúc IR, Semantic Tree và Kế hoạch phân bổ Renderer Planner.
+     */
+    inspectIR: (layout: any) => string;
 };
 export declare const SharedStorage: {
     /**
@@ -220,5 +233,7 @@ export declare const AudioPlayer: {
 };
 export * from './types';
 export * from './builder';
+export * from './ir';
 export { StyleSheet } from './builder';
+export * from './hooks';
 //# sourceMappingURL=index.d.ts.map

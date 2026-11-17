@@ -10,6 +10,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.SizeF
+import android.util.TypedValue
+import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONObject
 import kotlin.math.max
@@ -88,7 +90,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
 
             val family = when {
                 widgetWidthDp < 245f -> "small"
-                widgetHeightDp < 235f -> "medium"
+                widgetHeightDp < 195f -> "medium"
                 else -> "large"
             }
 
@@ -100,10 +102,10 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                 "medium" -> 330f
                 else -> 340f
             }
-            val aspectRatio = when (family) {
-                "small" -> 1.02f
-                "medium" -> (widgetHeightDp / widgetWidthDp).coerceIn(0.45f, 0.62f)
-                else -> (widgetHeightDp / widgetWidthDp).coerceIn(0.78f, 1.45f)
+            val aspectRatio = if (family == "small") {
+                1.02f
+            } else {
+                (widgetHeightDp / widgetWidthDp).coerceIn(0.38f, 1.65f)
             }
             val logicalHeightDp = logicalWidthDp * aspectRatio
 
@@ -123,7 +125,47 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             )
             views.setImageViewBitmap(R.id.rn_widget_canvas, bmp)
 
-            bindHitZones(context, views, appWidgetId, bindings)
+            // 📐 Ánh xạ toạ độ Bitmap -> toạ độ thật của widget trên Launcher.
+            // ImageView dùng scaleType=fitCenter nên Bitmap có thể bị thu/phóng và chừa viền (letterbox).
+            // Mọi vùng bấm & đồng hồ phải đi qua phép ánh xạ này thì mới khớp 100% với hình đã vẽ.
+            val mapping = computeCanvasMapping(context, rawWidthDp, rawHeightDp, widthPx, heightPx)
+
+            // ⏱️ Live Chronometer tự đếm bằng engine native của hệ điều hành
+            val timerInfo = DynamicWidgetCanvasRenderer.activeTimerInfo
+            if (timerInfo != null) {
+                views.setViewVisibility(R.id.rn_widget_chronometer, View.VISIBLE)
+                views.setViewPadding(
+                    R.id.rn_widget_chronometer,
+                    (mapping.offX + timerInfo.leftPx * mapping.scale).roundToInt(),
+                    (mapping.offY + timerInfo.topPx * mapping.scale).roundToInt(),
+                    0,
+                    0
+                )
+                views.setTextViewTextSize(
+                    R.id.rn_widget_chronometer,
+                    TypedValue.COMPLEX_UNIT_PX,
+                    timerInfo.fontSizePx * mapping.scale
+                )
+                views.setTextColor(R.id.rn_widget_chronometer, timerInfo.color)
+                views.setChronometer(R.id.rn_widget_chronometer, timerInfo.baseMillis, null, true)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    views.setChronometerCountDown(R.id.rn_widget_chronometer, timerInfo.isCountDown)
+                }
+            } else {
+                views.setViewVisibility(R.id.rn_widget_chronometer, View.GONE)
+            }
+
+            // ♿ Gán Accessibility Summary từ IR Semantic Tree (hoặc fallback Canvas extractor)
+            val a11ySummary = if (activeNode?.has("semanticSummary") == true) {
+                activeNode.optString("semanticSummary")
+            } else {
+                DynamicWidgetCanvasRenderer.extractAccessibilitySummary(activeNode)
+            }
+            if (a11ySummary.isNotEmpty()) {
+                views.setContentDescription(R.id.rn_widget_canvas, a11ySummary)
+            }
+
+            bindHitZones(context, views, appWidgetId, bindings, mapping)
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
 
@@ -131,6 +173,16 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             if (rawJson.isNullOrEmpty()) return null
             return try {
                 val payload = JSONObject(rawJson)
+
+                // Hỗ trợ trực tiếp cấu trúc UI Intermediate Representation (IR v2.0)
+                if (payload.optString("version") == "2.0" && payload.has("root")) {
+                    val root = payload.optJSONObject("root")
+                    if (root != null && payload.has("semanticSummary")) {
+                        root.put("semanticSummary", payload.optString("semanticSummary"))
+                    }
+                    return root
+                }
+
                 val pages = payload.optJSONObject("pages")
                 if (pages != null && pages.length() > 0) {
                     val state = DynamicWidgetStateStore.loadState(context)
@@ -158,66 +210,83 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             }
         }
 
+        /** Thông số ánh xạ từ toạ độ Bitmap sang toạ độ pixel thật của host view trên Launcher. */
+        private data class CanvasMapping(
+            val hostW: Float,
+            val hostH: Float,
+            val bmpW: Float,
+            val bmpH: Float,
+            val scale: Float,
+            val offX: Float,
+            val offY: Float
+        )
+
+        private fun computeCanvasMapping(
+            context: Context,
+            widgetWidthDp: Float,
+            widgetHeightDp: Float,
+            bmpWidthPx: Int,
+            bmpHeightPx: Int
+        ): CanvasMapping {
+            val density = context.resources.displayMetrics.density
+            val bmpW = bmpWidthPx.toFloat()
+            val bmpH = bmpHeightPx.toFloat()
+            val hostW = (widgetWidthDp * density).takeIf { it > 1f } ?: bmpW
+            val hostH = (widgetHeightDp * density).takeIf { it > 1f } ?: bmpH
+            // fitCenter: scale đồng đều theo chiều nhỏ hơn, căn giữa phần còn lại
+            val scale = min(hostW / bmpW, hostH / bmpH)
+            val offX = (hostW - bmpW * scale) / 2f
+            val offY = (hostH - bmpH * scale) / 2f
+            return CanvasMapping(hostW, hostH, bmpW, bmpH, scale, offX, offY)
+        }
+
+        /**
+         * 🎯 Exact Hit Layer: mỗi Button / Toggle / Link nhận 1 view bấm riêng được đặt CHÍNH XÁC
+         * theo hình chữ nhật đã vẽ trên Canvas (không còn chia lưới cố định / đoán theo hàng-cột).
+         * - Bấm đúng nút nào => ăn đúng nút đó.
+         * - Bấm vào vùng trống => không kích hoạt hành động nào.
+         * - Nút nhỏ nằm trong vùng lớn (vd Button bên trong Link) luôn được ưu tiên vì nằm trên cùng.
+         */
         private fun bindHitZones(
             context: Context,
             views: RemoteViews,
             appWidgetId: Int,
-            bindings: List<ButtonActionBinding>
+            bindings: List<ButtonActionBinding>,
+            mapping: CanvasMapping
         ) {
-            val gridIds = listOf(
-                listOf(R.id.rn_hit_r0_c0, R.id.rn_hit_r0_c1, R.id.rn_hit_r0_c2, R.id.rn_hit_r0_c3),
-                listOf(R.id.rn_hit_r1_c0, R.id.rn_hit_r1_c1, R.id.rn_hit_r1_c2),
-                listOf(R.id.rn_hit_r2_c0, R.id.rn_hit_r2_c1, R.id.rn_hit_r2_c2),
-                listOf(R.id.rn_hit_r3_c0, R.id.rn_hit_r3_c1, R.id.rn_hit_r3_c2),
-                listOf(R.id.rn_hit_r4_c0, R.id.rn_hit_r4_c1, R.id.rn_hit_r4_c2),
-                listOf(R.id.rn_hit_r5_c0, R.id.rn_hit_r5_c1, R.id.rn_hit_r5_c2)
-            )
+            views.removeAllViews(R.id.rn_hit_layer)
+            if (bindings.isEmpty()) return
 
-            val cellBindings = mutableMapOf<Int, ButtonActionBinding>()
+            val density = context.resources.displayMetrics.density
+            val slop = 1.5f * density // nới nhẹ vùng chạm cho dễ bấm, không đủ lớn để lấn sang nút bên cạnh
 
-            val topButtons = bindings.filter { it.zone == "top" || it.yFraction < 0.20f }
-            val otherButtons = bindings.filter { it !in topButtons }
+            // Vùng lớn thêm trước (nằm dưới), vùng nhỏ thêm sau (nằm trên) => ưu tiên nút nhỏ/cụ thể
+            val ordered = bindings
+                .filter { it.rightFraction > it.leftFraction && it.bottomFraction > it.topFraction }
+                .sortedByDescending { (it.rightFraction - it.leftFraction) * (it.bottomFraction - it.topFraction) }
+                .take(48)
 
-            val row0 = gridIds[0]
-            for (c in 0 until min(row0.size, topButtons.size)) {
-                cellBindings[row0[c]] = topButtons[c]
-            }
+            ordered.forEachIndexed { index, b ->
+                val left = mapping.offX + b.leftFraction * mapping.bmpW * mapping.scale - slop
+                val right = mapping.offX + b.rightFraction * mapping.bmpW * mapping.scale + slop
+                val top = mapping.offY + b.topFraction * mapping.bmpH * mapping.scale - slop
+                val bottom = mapping.offY + b.bottomFraction * mapping.bmpH * mapping.scale + slop
 
-            for (b in otherButtons) {
-                val row = when {
-                    b.yFraction < 0.35f -> 1
-                    b.yFraction < 0.52f -> 2
-                    b.yFraction < 0.62f -> 3
-                    b.yFraction < 0.75f -> 4
-                    else -> 5
-                }
+                val padL = left.coerceIn(0f, mapping.hostW).roundToInt()
+                val padT = top.coerceIn(0f, mapping.hostH).roundToInt()
+                val padR = (mapping.hostW - right).coerceIn(0f, mapping.hostW).roundToInt()
+                val padB = (mapping.hostH - bottom).coerceIn(0f, mapping.hostH).roundToInt()
 
-                val rowCols = gridIds[row]
-                if (b.widthFraction > 0.50f) {
-                    for (viewId in rowCols) {
-                        cellBindings[viewId] = b
-                    }
-                } else {
-                    if (b.xFraction < 0.40f) {
-                        cellBindings[rowCols[0]] = b
-                        cellBindings[rowCols[1]] = b
-                    } else {
-                        cellBindings[rowCols[1]] = b
-                        cellBindings[rowCols[2]] = b
-                    }
-                }
-            }
-
-            var requestIdx = 0
-            for (r in gridIds.indices) {
-                for (c in gridIds[r].indices) {
-                    val viewId = gridIds[r][c]
-                    val b = cellBindings[viewId]
-                    views.setOnClickPendingIntent(
-                        viewId,
-                        createPendingIntent(context, appWidgetId * 100 + requestIdx++, b)
-                    )
-                }
+                val zone = RemoteViews(context.packageName, R.layout.rn_live_widget_hit_zone)
+                zone.setViewPadding(R.id.rn_hit_zone_root, padL, padT, padR, padB)
+                zone.setOnClickPendingIntent(
+                    R.id.rn_hit_zone,
+                    createPendingIntent(context, appWidgetId * 1000 + index, b)
+                )
+                val btnLabel = if (!b.accessibilityLabel.isNullOrEmpty()) b.accessibilityLabel else b.title
+                val fullDesc = if (!b.accessibilityHint.isNullOrEmpty()) "$btnLabel. ${b.accessibilityHint}" else btnLabel
+                zone.setContentDescription(R.id.rn_hit_zone, fullDesc)
+                views.addView(R.id.rn_hit_layer, zone)
             }
         }
 
@@ -251,6 +320,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
 
             val intent = Intent(context, LiveActivityReceiver::class.java).apply {
                 action = LiveActivityReceiver.ACTION_WIDGET_ACTION
+                data = Uri.parse("rnlivewidget://action/$requestCode/${Uri.encode(binding.actionId)}")
                 putExtra("actionId", binding.actionId)
             }
             return PendingIntent.getBroadcast(

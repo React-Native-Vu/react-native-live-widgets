@@ -79,17 +79,75 @@ You can construct widget trees using **EITHER JSX components** (`<VStack>`, `<HS
 - **Divider Line**: `<Divider color="#334155" thickness={1} />` or `UI.Divider(...)`
 
 ### Content & Visuals
-- **Text**: `<Text color="#FFFFFF" fontSize={16} fontWeight="bold">Heading</Text>` or `UI.Text(...)`
+- **Text**: `<Text color="#FFFFFF" fontSize={16} fontWeight="bold" typography="headline" fontDesign="rounded" dynamicType={true}>Heading</Text>` or `UI.Text(...)`
 - **Zero-Battery Hardware Clock**: `<Timer targetTimestamp={targetMs} mode="countdown" color="#38BDF8" fontSize={14} />` or `UI.Timer(...)`
 - **Progress Indicator**: `<Progress style="segmented" segments={4} value={0.75} tintColor="#38BDF8" height={6} />` or `UI.Progress(...)`
 - **Animated Waveform (Audio/Music)**: `<Equalizer isPlaying={true} barCount={4} tintColor="#38BDF8" height={14} />` or `UI.Equalizer(...)`
 - **Images (URL, Base64, SF Symbol)**: `<Image url="https://..." width={40} height={40} borderRadius={20} />` or `UI.Image(...)`
 - **KPI Gauge (240°)**: `<Gauge value={0.85} size={64} tintColor="#38BDF8" label="KPI" />` or `UI.Gauge(...)`
 
+### Styling Modifiers (Gradients, Shadows, Borders, Dynamic Colors & RTL)
+- **Linear Gradient**: `gradient={{ colors: ['#6366F1', '#EC4899'], startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } }}` (automatically falls back to `colors[0]` on legacy/unsupported targets).
+- **Shadows**: `shadowColor="#000000" shadowRadius={8} shadowOpacity={0.25} shadowOffset={{ x: 0, y: 4 }}` (maps to iOS SwiftUI shadow and Android `setShadowLayer`/elevation).
+- **Borders & Dashed Lines**: `borderWidth={1} borderColor="#38BDF8" borderStyle="dashed"` (`solid` | `dashed` | `dotted`).
+- **Typography Presets**: `typography="title2" fontDesign="rounded"` (`largeTitle`, `title1`-`3`, `headline`, `subheadline`, `body`, `callout`, `footnote`, `caption1`-`2`).
+- **Dynamic Type**: `dynamicType={true}` automatically scales font with OS Accessibility text size settings.
+- **Light / Dark / Tinted Mode**: `backgroundColor={{ light: '#FFFFFF', dark: '#0F172A', tinted: '#1E293B' }}` (supports iOS 18 Tinted Home Screen & Android Material You).
+- **RTL / Bi-directional Support**: `direction="rtl"` or `isRTL={true}` (automatically reverses row order and aligns text).
+- **Accessibility & Semantics (Phase 1)**: `accessible={true}`, `accessibilityLabel="Label"`, `accessibilityHint="Hint"`, `accessibilityRole="button" | "header"`, `accessibilityValue="86%"`. (TalkBack on Android reads aggregated canvas summary + individual button hit-zones; VoiceOver on iOS maps to native traits).
+
 ### Interactivity & Preview
-- **Button**: `<Button title="Approve" actionId="APPROVE_TASK" backgroundColor="#2563EB" />` or `UI.Button(...)`
+- **Button**: `<Button title="Approve" actionId="APPROVE_TASK" backgroundColor="#2563EB" gradient={{ colors: ['#2563EB', '#1D4ED8'] }} />` or `UI.Button(...)`
+- **Interactive Toggles & Switches**: `<Switch label="DND Mode" actionId="toggle:dnd" checked={false} />` or `<Checkbox label="Task Completed" actionId="toggle:task_1" checked={true} />`
 - **Badge**: `<Badge text="+18%" backgroundColor="#064E3B" textColor="#6EE7B7" />` or `UI.Badge(...)`
 - **In-App Widget Preview**: `<WidgetPreview size="medium" showBadge interactiveSizeSwitch onAction={(id) => ...} />` (alias: `<VoltraWidgetPreview>`)
+
+---
+
+## 3. Runtime Capability Inspection & Graceful Fallbacks
+
+Before rendering platform-specific visual features, inspect available capabilities programmatically:
+
+```typescript
+import { Widget } from 'react-native-live-widgets';
+
+const caps = await Widget.getCapabilities();
+console.log('Capabilities:', caps);
+// Output:
+// {
+//   platform: 'ios' | 'android',
+//   osVersion: '18.1',
+//   supportsLiveActivities: true,
+//   supportsDynamicIsland: true,
+//   supportsInteractiveWidgets: true,
+//   supportsGradients: true,
+//   supportsShadows: true,
+//   supportsTintedMode: true,
+//   supportsAccessibility: true
+// }
+```
+
+### UI Intermediate Representation & Renderer Planner (Phase 2):
+```typescript
+import { Widget, UI } from 'react-native-live-widgets';
+
+// Inspect architectural classification (Native vs Canvas) and synthesized speech:
+console.log(Widget.inspectIR(layout));
+
+// Compile to pure IR AST:
+const ir = Widget.compileIR(layout);
+```
+
+### Platform Capability & Graceful Fallback Matrix:
+| Feature | iOS (WidgetKit / SwiftUI) | Android (RemoteViews / Canvas) | In-App Preview | Fallback Strategy |
+| :--- | :--- | :--- | :--- | :--- |
+| **Linear Gradients** | Full native `LinearGradient` | Native Canvas Shader | Full CSS / SVG / Solid | Solid background (`colors[0]`) |
+| **Shadows** | Native `.shadow()` | `setShadowLayer` / Elevation | Native RN `shadow*` | Solid border / High-contrast border |
+| **Dashed / Dotted Borders** | Native `StrokeStyle(dash:)` | `DashPathEffect` | Solid border (`borderStyle`) | Solid border line |
+| **Dynamic Type** | Full native Dynamic Type | Responds to `fontScale` | System font size | Clamped standard pixel sizing |
+| **Accessibility (TalkBack / VoiceOver)** | Native VoiceOver traits | A11y Summary + Hit-Zones | RN accessibility props | Aggregated `contentDescription` on canvas |
+| **Tinted Mode** | iOS 18 Tinted Home Screen | Material You dynamic theme | Preview toggle | Uses `dark` or `light` theme color |
+| **RTL Layout** | Native `layoutDirection` | Flow reversed (`row-reverse`) | `row-reverse` / `rtl` | Left-to-right default |
 
 ---
 
@@ -176,3 +234,8 @@ export function useLiveWidgetCounter() {
    - For real-time second-by-second updates, always prefer Server Push Notifications (APNs / FCM) with `LiveActivity.getAllPushTokens()`.
 3. **Android Platform Parity**:
    - Android does not have hardware Dynamic Island; the library maps `dynamicIsland` to Android Ongoing Promoted Notifications (`Notification.ProgressStyle`).
+4. **Android Exact Dynamic Hit Layer & Chronometer Countdown (v1.2.1+)**:
+   - Touch interactions on Android widgets use dynamic `FrameLayout` hit zones (`rn_hit_layer`) with letterbox compensation (`computeCanvasMapping`).
+   - Timers with `targetTimestamp` utilize native `android.widget.Chronometer` with `setChronometerCountDown(true)` for real-time 1s ticks without redrawing the Canvas Bitmap.
+5. **Swift 6 ViewBuilder Conventions (iOS)**:
+   - When customizing native Swift code in `DynamicNodeView.swift`, never place top-level variable assignment statements or non-view-producing if/switch branches directly inside `@ViewBuilder` methods. Always wrap them in self-invoking closures `{ ... }()`.

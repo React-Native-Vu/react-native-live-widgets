@@ -72,6 +72,14 @@ const unsubscribe = Widget.onWidgetAction((actionId, payload) => {
 });
 ```
 
+### Architecture & Native Parity (v1.2.1 Updates)
+- **Native Semantic Coverage & Accessibility**: Standard `BaseSemanticProps` (`accessible`, `accessibilityRole`, `accessibilityLabel`, `accessibilityHint`, `accessibilityValue`) with full VoiceOver and TalkBack support.
+- **UI Intermediate Representation (IR)**: Inspect and compile layout trees with `Widget.inspectIR(layout)` and `Widget.compileIR(layout)`.
+- **Android Exact Dynamic Hit Layer**: Dynamic `FrameLayout` overlay with `computeCanvasMapping` compensating for `fitCenter` aspect ratio letterboxing, eliminating misclicks and phantom taps.
+- **Android Native Live Chronometer**: Realtime 1s countdowns driven by native `android.widget.Chronometer` without Canvas bitmap redraws.
+- **Dynamic Template Variable Interpolation**: Resolves `{{id}}`, `{{title}}`, and counter values dynamically, with initial `defaultChecked` persistence in `DynamicWidgetStateStore`.
+- **Swift 6 Compatibility**: Full compliance with Swift 6 language mode and `@ViewBuilder` closure encapsulation on iOS Xcode.
+
 ### Golden Rules for AI Agents
 1. **Never write Swift or Kotlin files manually** when a declarative `UI.*` node exists.
 2. **App Groups**: Both iOS app and Widget Extension MUST share the identical App Group name (e.g. `group.<bundle_id>`).

@@ -6,11 +6,14 @@ import {
   LiveActivityPushTokens,
   StartActivityOptions,
   UpdateActivityOptions,
+  WidgetCapabilities,
   WidgetConfigOption,
   WidgetLayoutConfig,
   WidgetRemoteConfig,
   WidgetTimelineConfig,
+  WidgetIR,
 } from './types';
+import { compileToIR, inspectIR } from './ir';
 
 declare const __DEV__: boolean | undefined;
 
@@ -43,7 +46,14 @@ import {
 } from './dispatcher';
 export type { ActionHandler, GlobalActionHandler };
 export { registerAction, registerActionHandler, unregisterAction };
-export * from './hooks';
+export type {
+  WidgetCapabilities,
+  GradientProps,
+  ShadowProps,
+  BorderStyle,
+  TypographyStyle,
+  FontDesign,
+} from './types';
 export * from './jsx';
 export * from './preview';
 import { renderToWidget } from './jsx';
@@ -659,6 +669,59 @@ export const Widget = {
       return false;
     }
   },
+
+  /**
+   * 📊 Bảng tra cứu năng lực nền tảng (Platform Capability & Fallback Matrix).
+   * Giúp ứng dụng xác định chính xác tính năng nào được hỗ trợ thực tế trên thiết bị đang chạy.
+   */
+  getCapabilities: async (): Promise<WidgetCapabilities> => {
+    const isIOS = Platform.OS === 'ios';
+    const isAndroid = Platform.OS === 'android';
+    const osVerNum = parseFloat(String(Platform.Version)) || 0;
+
+    let hasIsland = false;
+    if (isIOS) {
+      try {
+        hasIsland = LiveActivityModule?.isDynamicIslandSupported
+          ? await LiveActivityModule.isDynamicIslandSupported()
+          : osVerNum >= 16.1;
+      } catch {
+        hasIsland = osVerNum >= 16.1;
+      }
+    }
+
+    return {
+      platform: isIOS ? 'ios' : 'android',
+      osVersion: Platform.Version,
+      supportsLiveActivities: isIOS ? osVerNum >= 16.1 : osVerNum >= 26,
+      supportsDynamicIsland: hasIsland,
+      supportsAndroidLiveUpdates: isAndroid && osVerNum >= 36,
+      supportsHomeWidgets: isIOS ? osVerNum >= 14.0 : osVerNum >= 26,
+      supportsInteractiveIntents: isIOS ? osVerNum >= 17.0 : true,
+      supportsGradients: true,
+      supportsShadows: true,
+      supportsDashedBorders: true,
+      supportsDynamicType: true,
+      supportsRTL: true,
+      supportsTintedMode: isIOS ? osVerNum >= 18.0 : isAndroid,
+      supportsNumericAnimation: isIOS && osVerNum >= 16.0,
+      supportsAccessibility: true,
+    };
+  },
+
+  /**
+   * 🌲 Biên dịch cây DSL sang UI Intermediate Representation (IR & Semantic Tree - Phase 2).
+   */
+  compileIR: (layout: any): WidgetIR => {
+    return compileToIR(layout);
+  },
+
+  /**
+   * 🔍 Phân tích và in ra bản đồ kiến trúc IR, Semantic Tree và Kế hoạch phân bổ Renderer Planner.
+   */
+  inspectIR: (layout: any): string => {
+    return inspectIR(layout);
+  },
 };
 
 // ─── 3. SHARED STORAGE (App Groups & SharedPreferences) ─────────────────────
@@ -810,4 +873,6 @@ export const AudioPlayer = {
 
 export * from './types';
 export * from './builder';
+export * from './ir';
 export { StyleSheet } from './builder';
+export * from './hooks';

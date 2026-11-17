@@ -17,6 +17,7 @@ import {
   LinkNode,
   GaugeNode,
   ChartNode,
+  ToggleNode,
   ContainerProps,
   TextStyle,
   ZStackProps,
@@ -126,6 +127,21 @@ Gauge.displayName = 'Gauge';
 
 export const Chart: React.FC<ChartNode['props']> = () => null;
 Chart.displayName = 'Chart';
+
+export type ToggleJSXProps = Partial<ToggleNode['props']> & {
+  children?: React.ReactNode;
+  actionId?: string;
+  key?: string;
+};
+
+export const Toggle: React.FC<ToggleJSXProps> = () => null;
+Toggle.displayName = 'Toggle';
+
+export const Switch: React.FC<ToggleJSXProps> = () => null;
+Switch.displayName = 'Switch';
+
+export const Checkbox: React.FC<ToggleJSXProps> = () => null;
+Checkbox.displayName = 'Checkbox';
 
 // ─── 2. RECURSIVE JSX -> LAYOUTNODE CONVERTER ────────────────────────────────
 
@@ -243,6 +259,12 @@ export function renderToWidget(element: any): LayoutNode | null {
     if (isComp(Chart, 'Chart')) {
       return UI.Chart(restProps.values ?? [], restProps);
     }
+    if (isComp(Toggle, 'Toggle') || isComp(Switch, 'Switch') || isComp(Checkbox, 'Checkbox')) {
+      const label = restProps.label || (typeof children === 'string' ? children : '');
+      const actionId = restProps.actionId || (restProps.key ? `toggle:${restProps.key}` : 'toggle:item');
+      const style = isComp(Switch, 'Switch') ? 'switch' : (isComp(Checkbox, 'Checkbox') ? 'checkbox' : restProps.style);
+      return UI.Toggle(label, { ...restProps, actionId, style });
+    }
 
     // Component do người dùng tự viết: gọi hàm render để đệ quy phân giải
     try {
@@ -287,6 +309,14 @@ export function renderToWidget(element: any): LayoutNode | null {
         return UI.Spacer(restProps.minLength);
       case 'Divider':
         return UI.Divider(restProps);
+      case 'Toggle':
+      case 'Switch':
+      case 'Checkbox': {
+        const label = restProps.label || (typeof children === 'string' ? children : '');
+        const actionId = restProps.actionId || 'toggle:item';
+        const style = type === 'Switch' ? 'switch' : (type === 'Checkbox' ? 'checkbox' : restProps.style);
+        return UI.Toggle(label, { ...restProps, actionId, style });
+      }
       default:
         return null;
     }

@@ -241,6 +241,11 @@ public struct DynamicHomeScreenWidgetView: View {
       return nil
     }
 
+    // Hỗ trợ trực tiếp UI Intermediate Representation (IR v2.0)
+    if let root = payload.root {
+      return root
+    }
+
     if let pages = payload.pages, !pages.isEmpty {
       let state = DynamicWidgetStateStore.loadState()
       let defaultOrder = payload.pageOrder ?? Array(pages.keys).sorted()

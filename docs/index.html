@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="vi" class="dark">
+<html lang="vi" class="dark scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>react-native-live-widgets — Documentation & AI Agent Hub</title>
-  <meta name="description" content="All-in-One Declarative Engine for Live Activities, Dynamic Island & Interactive Home Screen Widgets in React Native & Expo.">
+  <title>react-native-live-widgets — Live Activities, Dynamic Island & Interactive Home Screen Widgets</title>
+  <meta name="description" content="All-in-One Declarative Engine & JSX for Live Activities, Dynamic Island and Interactive Home Screen Widgets in React Native & Expo without Swift/Kotlin.">
   <link rel="icon" href="https://raw.githubusercontent.com/React-Native-Vu/react-native-live-widgets/dev/assets/dynamic_island_expanded.png" type="image/png">
+  
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -17,205 +18,504 @@
             brand: {
               50: '#F0F9FF',
               100: '#E0F2FE',
-              500: '#0284C7',
+              400: '#38BDF8',
+              500: '#0EA5E9',
               600: '#0284C7',
               700: '#0369A1',
             },
-            darkBg: '#090D16',
-            cardBg: '#111827',
-            cardBorder: '#1F2937'
+            darkBg: '#080C14',
+            darkCard: '#0F1626',
+            cardBorder: '#1E293B',
+            accentGlow: 'rgba(56, 189, 248, 0.15)',
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'float': 'float 4s ease-in-out infinite',
+            'glow': 'glow 3s ease-in-out infinite alternate',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-6px)' },
+            },
+            glow: {
+              '0%': { boxShadow: '0 0 15px rgba(56, 189, 248, 0.2)' },
+              '100%': { boxShadow: '0 0 35px rgba(56, 189, 248, 0.45)' },
+            }
           }
         }
       }
     }
   </script>
+
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+
   <!-- PrismJS for syntax highlighting -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-jsx.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-tsx.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+
   <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #080C14;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1E293B;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+
+    /* Prism styling overhaul */
     pre[class*="language-"] {
-      background: #0D1117 !important;
-      border: 1px solid #21262D;
-      border-radius: 0.75rem;
-      margin: 1rem 0;
-      font-size: 0.875rem;
+      background: #0B111E !important;
+      border: 1px solid #1E293B;
+      border-radius: 0.85rem;
+      margin: 0 !important;
+      padding: 1.15rem !important;
+      font-size: 0.86rem;
+      line-height: 1.55;
     }
     code[class*="language-"] {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
+
+    /* Equalizer Sound Waves Keyframe */
+    @keyframes soundwave {
+      0%, 100% { height: 4px; }
+      50% { height: 26px; }
     }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #374151;
-      border-radius: 3px;
+    .eq-bar-1 { animation: soundwave 0.75s ease-in-out infinite; }
+    .eq-bar-2 { animation: soundwave 0.55s ease-in-out infinite 0.12s; }
+    .eq-bar-3 { animation: soundwave 0.9s ease-in-out infinite 0.25s; }
+    .eq-bar-4 { animation: soundwave 0.65s ease-in-out infinite 0.08s; }
+    .eq-bar-5 { animation: soundwave 0.8s ease-in-out infinite 0.18s; }
+
+    /* Dynamic Island Simulator Transition */
+    .island-container {
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Subtle backdrop grid pattern */
+    .bg-grid-pattern {
+      background-size: 32px 32px;
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     }
   </style>
 </head>
 <body class="bg-darkBg text-slate-200 min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white">
 
-  <!-- Top Navigation Header -->
-  <header class="sticky top-0 z-50 backdrop-blur-md bg-darkBg/80 border-b border-cardBorder">
+  <!-- Top Announcement Bar -->
+  <div class="bg-gradient-to-r from-sky-900/50 via-indigo-900/40 to-purple-900/50 border-b border-sky-500/20 py-2 px-4 text-center text-xs text-sky-200">
+    <span class="inline-flex items-center space-x-1.5 font-medium">
+      <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold text-[10px] uppercase tracking-wide">Mới v1.2.1</span>
+      <span>Exact Dynamic Hit Layer, Native Chronometer Countdown, Swift 6 Ready & Chuẩn hoá <strong>UI IR</strong></span>
+      <a href="#exact-hit-layer" class="underline hover:text-white ml-2">Xem chi tiết &rarr;</a>
+    </span>
+  </div>
+
+  <!-- Main Navigation Header -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-darkBg/85 border-b border-cardBorder">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
       <div class="flex items-center space-x-3">
-        <span class="text-2xl">🚀</span>
-        <a href="#" class="font-bold text-lg text-white hover:text-sky-400 transition">
-          react-native-live-widgets
-        </a>
-        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
-          v1.1.0
-        </span>
-        <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-          Expo Ready
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/25">
+          <i data-lucide="layers" class="w-5 h-5"></i>
+        </div>
+        <div class="flex flex-col">
+          <a href="#" class="font-bold text-base sm:text-lg text-white hover:text-sky-400 transition leading-tight">
+            react-native-live-widgets
+          </a>
+          <span class="text-[11px] text-slate-400 hidden sm:inline">Declarative Widgets & Dynamic Island Engine</span>
+        </div>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          v1.2.1
         </span>
       </div>
 
-      <nav class="flex items-center space-x-4">
-        <a href="#quick-start" class="text-sm text-slate-300 hover:text-white hidden md:inline">Cài đặt</a>
-        <a href="#dsl-catalog" class="text-sm text-slate-300 hover:text-white hidden md:inline">Declarative DSL</a>
-        <a href="#llms-ai" class="text-sm text-sky-400 font-medium hover:text-sky-300 flex items-center space-x-1">
+      <!-- Nav Links & Search -->
+      <nav class="flex items-center space-x-3 sm:space-x-5">
+        <a href="#interactive-simulator" class="text-xs sm:text-sm text-slate-300 hover:text-white hidden lg:inline flex items-center space-x-1">
+          <i data-lucide="play-circle" class="w-4 h-4 text-sky-400"></i>
+          <span>Live Simulator</span>
+        </a>
+        <a href="#quick-start" class="text-xs sm:text-sm text-slate-300 hover:text-white hidden md:inline">Cài đặt</a>
+        <a href="#dsl-catalog" class="text-xs sm:text-sm text-slate-300 hover:text-white hidden md:inline">UI DSL & JSX</a>
+        <a href="#core-api" class="text-xs sm:text-sm text-slate-300 hover:text-white hidden md:inline">API Reference</a>
+        
+        <a href="#llms-ai" class="text-xs sm:text-sm text-sky-400 font-medium hover:text-sky-300 flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-500/20">
           <i data-lucide="bot" class="w-4 h-4"></i>
-          <span>AI / llms.txt</span>
+          <span>llms.txt</span>
         </a>
-        <a href="https://github.com/React-Native-Vu/LiveWidgetsExampleExpo" target="_blank" class="text-sm text-slate-300 hover:text-white hidden lg:inline">
-          Expo Demo
-        </a>
-        <a href="https://github.com/React-Native-Vu/react-native-live-widgets" target="_blank" class="p-2 text-slate-400 hover:text-white transition" title="GitHub">
-          <i data-lucide="github" class="w-5 h-5"></i>
-        </a>
-        <a href="https://www.npmjs.com/package/react-native-live-widgets" target="_blank" class="p-2 text-red-400 hover:text-red-300 transition" title="npm">
-          <svg class="w-5 h-5 fill-current" viewBox="0 0 780 250"><path d="M240,250h100v-50h100V0H240V250z M340,50h50v100h-50V50z M480,0v200h100V50h50v150h50V50h50v150h50V0H480z M0,200h100V50h50v150h50V0H0V200z"/></svg>
-        </a>
+
+        <!-- GitHub Repo & Demo links -->
+        <div class="flex items-center space-x-1 border-l border-cardBorder pl-3">
+          <a href="https://github.com/React-Native-Vu/react-native-live-widgets" target="_blank" class="p-2 text-slate-400 hover:text-white transition rounded-lg hover:bg-slate-800" title="GitHub Repository">
+            <i data-lucide="github" class="w-5 h-5"></i>
+          </a>
+          <a href="https://www.npmjs.com/package/react-native-live-widgets" target="_blank" class="p-2 text-red-400 hover:text-red-300 transition rounded-lg hover:bg-slate-800" title="npm package">
+            <svg class="w-5 h-5 fill-current" viewBox="0 0 780 250"><path d="M240,250h100v-50h100V0H240V250z M340,50h50v100h-50V50z M480,0v200h100V50h50v150h50V50h50v150h50V0H480z M0,200h100V50h50v150h50V0H0V200z"/></svg>
+          </a>
+        </div>
       </nav>
     </div>
   </header>
 
   <!-- Hero Section -->
-  <section class="relative overflow-hidden pt-12 pb-16 lg:pt-20 lg:pb-24 border-b border-cardBorder bg-gradient-to-b from-sky-950/20 to-transparent">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs text-slate-300 mb-6">
-        <span>✨ Hỗ trợ 100% Expo Config Plugin, EAS Build & Bare React Native</span>
+  <section class="relative overflow-hidden pt-12 pb-16 lg:pt-20 lg:pb-24 border-b border-cardBorder bg-gradient-to-b from-sky-950/20 via-slate-900/40 to-transparent bg-grid-pattern">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+      
+      <!-- Badges -->
+      <div class="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-slate-800/90 border border-slate-700/80 text-xs text-slate-300 mb-6 shadow-inner">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>100% Declarative UI • Không viết Swift / Kotlin • Expo CNG Ready</span>
       </div>
-      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight">
-        Live Activities & Dynamic Island <br>
+
+      <!-- Main Headline -->
+      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-tight sm:leading-none">
+        Live Activities & Dynamic Island <br class="hidden sm:inline">
         <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-teal-300 to-indigo-400">
-          Chỉ bằng TypeScript Declarative
+          Chỉ với TypeScript & JSX
         </span>
       </h1>
-      <p class="mt-6 text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto">
-        Tạo tiện ích Home Screen Widgets và Live Activities Native cho cả iOS và Android mà 
-        <strong>không cần viết 1 dòng mã Swift hay Kotlin</strong>. Tích hợp sẵn chuẩn cho AI Agent & LLMs.
+
+      <p class="mt-6 text-base sm:text-xl text-slate-300 max-w-3xl mx-auto font-normal leading-relaxed">
+        Giải pháp toàn diện All-in-One cho <strong>Live Activities</strong>, <strong>Dynamic Island</strong> và 
+        <strong>Interactive Home Screen Widgets</strong> trên cả iOS & Android. Tích hợp sẵn bộ mô phỏng <code>&lt;WidgetPreview&gt;</code> và chuẩn dữ liệu mở cho AI Agent.
       </p>
 
-      <div class="mt-8 flex flex-wrap justify-center gap-4">
-        <a href="#quick-start" class="px-6 py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold shadow-lg shadow-sky-600/25 transition flex items-center space-x-2">
-          <i data-lucide="play" class="w-4 h-4"></i>
-          <span>Bắt đầu ngay</span>
+      <!-- CTA Buttons -->
+      <div class="mt-8 flex flex-wrap justify-center items-center gap-4">
+        <a href="#quick-start" class="px-6 py-3.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold shadow-lg shadow-sky-600/30 hover:shadow-sky-500/40 transition-all duration-200 flex items-center space-x-2">
+          <i data-lucide="zap" class="w-4 h-4"></i>
+          <span>Bắt đầu Cài đặt</span>
         </a>
-        <a href="https://github.com/React-Native-Vu/LiveWidgetsExampleExpo" target="_blank" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold transition flex items-center space-x-2">
+        <a href="#interactive-simulator" class="px-6 py-3.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700 font-semibold transition flex items-center space-x-2">
+          <i data-lucide="play" class="w-4 h-4 text-sky-400"></i>
+          <span>Trải nghiệm Live Simulator</span>
+        </a>
+        <a href="https://github.com/React-Native-Vu/LiveWidgetsExampleExpo" target="_blank" class="px-6 py-3.5 rounded-xl bg-indigo-950/70 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-700/50 font-semibold transition flex items-center space-x-2">
           <i data-lucide="smartphone" class="w-4 h-4"></i>
-          <span>Xem Expo Demo</span>
-        </a>
-        <a href="llms.txt" target="_blank" class="px-6 py-3 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-700/50 font-semibold transition flex items-center space-x-2">
-          <i data-lucide="file-code" class="w-4 h-4"></i>
-          <span>Tài liệu cho AI (llms.txt)</span>
+          <span>Expo Sample App ↗</span>
         </a>
       </div>
+
+      <!-- Quick Command Bar -->
+      <div class="mt-8 max-w-lg mx-auto bg-slate-900/90 border border-slate-800 rounded-xl p-2 flex items-center justify-between text-xs sm:text-sm text-slate-300 font-mono">
+        <span class="px-2 text-sky-400 select-all">$ npm install react-native-live-widgets</span>
+        <button onclick="copyText('npm install react-native-live-widgets', this)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center space-x-1">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+          <span>Copy</span>
+        </button>
+      </div>
+
     </div>
   </section>
 
-  <!-- Main Content Layout -->
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 grid grid-cols-1 lg:grid-cols-4 gap-8">
+  <!-- Interactive Live Simulator Section (Mô phỏng thời gian thực) -->
+  <section id="interactive-simulator" class="py-16 border-b border-cardBorder bg-darkBg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-10">
+        <div class="inline-flex items-center space-x-1 text-xs font-semibold uppercase tracking-wider text-sky-400 mb-2">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span>Tương tác trực tiếp trên trình duyệt</span>
+        </div>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white">
+          Live Simulator: Trải Nghiệm Widget & Dynamic Island
+        </h2>
+        <p class="mt-3 text-slate-400 text-sm sm:text-base">
+          Nhấp chuột vào các chế độ bên dưới để xem Dynamic Island co dãn, sóng âm Equalizer chuyển động và nút bấm Home Widget phản hồi tức thì!
+        </p>
+      </div>
+
+      <!-- Simulator Switcher Tabs -->
+      <div class="flex flex-wrap justify-center gap-2 mb-8">
+        <button onclick="switchSimulator('delivery')" id="btn-sim-delivery" class="sim-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-sky-600 text-white shadow-lg shadow-sky-600/30 flex items-center space-x-2">
+          <i data-lucide="bike" class="w-4 h-4"></i>
+          <span>1. Giao đồ ăn (Dynamic Island)</span>
+        </button>
+        <button onclick="switchSimulator('music')" id="btn-sim-music" class="sim-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 flex items-center space-x-2">
+          <i data-lucide="music" class="w-4 h-4"></i>
+          <span>2. Sóng nhạc Equalizer</span>
+        </button>
+        <button onclick="switchSimulator('pomodoro')" id="btn-sim-pomodoro" class="sim-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 flex items-center space-x-2">
+          <i data-lucide="timer" class="w-4 h-4"></i>
+          <span>3. Bấm giờ Phần cứng (UI.Timer)</span>
+        </button>
+        <button onclick="switchSimulator('widget-interactive')" id="btn-sim-widget-interactive" class="sim-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 flex items-center space-x-2">
+          <i data-lucide="layout" class="w-4 h-4"></i>
+          <span>4. Home Widget Tương Tác 2 Chiều</span>
+        </button>
+      </div>
+
+      <!-- Main Simulator Mockup Canvas -->
+      <div class="max-w-4xl mx-auto bg-darkCard border border-cardBorder rounded-2xl p-6 sm:p-8 shadow-2xl relative">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
+          <!-- Virtual Phone Display Area -->
+          <div class="lg:col-span-6 flex flex-col items-center justify-center">
+            
+            <!-- Dynamic Island Container -->
+            <div id="sim-island-box" class="w-full max-w-sm bg-black border border-slate-800 rounded-[28px] p-4 text-white shadow-2xl island-container transition-all duration-300 relative overflow-hidden">
+              <!-- Content injected via JS -->
+            </div>
+
+            <!-- Hint below phone -->
+            <p id="sim-hint" class="mt-4 text-xs text-slate-500 text-center flex items-center space-x-1">
+              <i data-lucide="info" class="w-3.5 h-3.5"></i>
+              <span>Nhấn vào các nút bên trong widget để thấy phản hồi tương tác!</span>
+            </p>
+          </div>
+
+          <!-- Code Snippet for Current Simulator State -->
+          <div class="lg:col-span-6 flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <span id="sim-code-label" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Mã TypeScript Declarative
+              </span>
+              <button onclick="copySimulatorCode()" class="text-xs text-sky-400 hover:text-sky-300 flex items-center space-x-1">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span>Copy Code</span>
+              </button>
+            </div>
+            <div class="relative">
+              <pre class="overflow-x-auto"><code id="sim-code" class="language-typescript">// Mã nguồn tương ứng
+              </code></pre>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Key Architecture Feature Grid -->
+  <section class="py-16 border-b border-cardBorder bg-slate-950/40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-12">
+        <h2 class="text-2xl sm:text-3xl font-bold text-white">Tại sao chọn `react-native-live-widgets`?</h2>
+        <p class="mt-2 text-slate-400 text-sm sm:text-base">Kiến trúc đột phá giúp phát triển Widget Native nhanh gấp 10 lần mà vẫn bảo toàn hiệu năng tối đa.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- Feature 1 -->
+        <div class="bg-darkCard border border-cardBorder hover:border-sky-500/40 rounded-2xl p-6 transition-all duration-200 hover:-translate-y-1">
+          <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center mb-4">
+            <i data-lucide="code-2" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-lg font-bold text-white">100% Không Viết Swift / Kotlin</h3>
+          <p class="mt-2 text-sm text-slate-400 leading-relaxed">
+            Viết giao diện hoàn toàn bằng JavaScript/TypeScript hoặc cú pháp JSX. Thư viện tự động chuyển đổi thành cây Native AST cho WidgetKit và RemoteViews.
+          </p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="bg-darkCard border border-cardBorder hover:border-emerald-500/40 rounded-2xl p-6 transition-all duration-200 hover:-translate-y-1">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-4">
+            <i data-lucide="mouse-pointer-click" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-lg font-bold text-white">Tương Tác 2 Chiều (AppIntents)</h3>
+          <p class="mt-2 text-sm text-slate-400 leading-relaxed">
+            Nút bấm trên Home Widget kích hoạt trực tiếp hàm JavaScript trong React Native qua React Hook <code>useWidgetAction()</code> mà không cần mở toàn màn hình ứng dụng.
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="bg-darkCard border border-cardBorder hover:border-amber-500/40 rounded-2xl p-6 transition-all duration-200 hover:-translate-y-1">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-4">
+            <i data-lucide="battery-charging" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-lg font-bold text-white">Timer Phần Cứng (0% Tiêu Hao Pin)</h3>
+          <p class="mt-2 text-sm text-slate-400 leading-relaxed">
+            <code>UI.Timer</code> tự động đếm giây mượt mà trên Dynamic Island dựa vào chip hệ thống của iOS/Android mà không làm thức giấc CPU hay hao tổn pin thiết bị.
+          </p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="bg-darkCard border border-cardBorder hover:border-purple-500/40 rounded-2xl p-6 transition-all duration-200 hover:-translate-y-1">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-4">
+            <i data-lucide="radio" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-lg font-bold text-white">Sóng Nhạc Động (Equalizer)</h3>
+          <p class="mt-2 text-sm text-slate-400 leading-relaxed">
+            Duy nhất trên thị trường hỗ trợ hiệu ứng sóng âm thanh chuyển động liên tục cho ứng dụng nghe nhạc, podcast, radio trực tiếp trên Dynamic Island & Notification.
+          </p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="bg-darkCard border border-cardBorder hover:border-indigo-500/40 rounded-2xl p-6 transition-all duration-200 hover:-translate-y-1">
+          <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4">
+            <i data-lucide="cloud-lightning" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-lg font-bold text-white">Đồng Bộ Ngầm Khi Kill App</h3>
+          <p class="mt-2 text-sm text-slate-400 leading-relaxed">
+            Hàm <code>Widget.setRemoteConfig()</code> cho phép cấu hình URL API ngầm để hệ điều hành iOS/Android tự động fetch dữ liệu mới cho Widget kể cả khi ứng dụng đã bị tắt.
+          </p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="bg-darkCard border border-cardBorder hover:border-teal-500/40 rounded-2xl p-6 transition-all duration-200 hover:-translate-y-1">
+          <div class="w-12 h-12 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center mb-4">
+            <i data-lucide="bot" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-lg font-bold text-white">Chuẩn AI Agent (llms.txt)</h3>
+          <p class="mt-2 text-sm text-slate-400 leading-relaxed">
+            Sẵn sàng 100% cho ChatGPT, Claude Code, Cursor, Antigravity thông qua <code>llms.txt</code> và <code>SKILL.md</code>. Agent của bạn có thể tự lập trình widget không lỗi.
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Main Content Layout with Sticky Sidebar -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1 grid grid-cols-1 lg:grid-cols-4 gap-10">
     
     <!-- Sidebar Navigation -->
-    <aside class="hidden lg:block lg:col-span-1 space-y-6 sticky top-24 h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar pr-2">
+    <aside class="hidden lg:block lg:col-span-1 space-y-6 sticky top-24 h-[calc(100vh-8rem)] overflow-y-auto pr-2 text-sm">
+      
       <div>
-        <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Bắt đầu</h4>
-        <ul class="space-y-1.5 text-sm">
-          <li><a href="#quick-start" class="text-sky-400 font-medium block py-1 hover:text-sky-300">Cài đặt & Thiết lập</a></li>
-          <li><a href="#expo-setup" class="text-slate-400 hover:text-slate-200 block py-1">Dành cho Expo (CNG)</a></li>
-          <li><a href="#bare-rn-setup" class="text-slate-400 hover:text-slate-200 block py-1">Dành cho Bare React Native</a></li>
+        <h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider mb-2.5 flex items-center space-x-1.5">
+          <i data-lucide="rocket" class="w-4 h-4"></i>
+          <span>Bắt đầu</span>
+        </h4>
+        <ul class="space-y-1 border-l border-slate-800 pl-3">
+          <li><a href="#quick-start" class="text-slate-300 hover:text-white block py-1 transition">Cài đặt All-in-One CLI</a></li>
+          <li><a href="#expo-setup" class="text-slate-400 hover:text-white block py-1 transition">Expo (Config Plugin & CNG)</a></li>
+          <li><a href="#bare-rn-setup" class="text-slate-400 hover:text-white block py-1 transition">Bare React Native CLI</a></li>
         </ul>
       </div>
 
       <div>
-        <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Declarative UI DSL</h4>
-        <ul class="space-y-1.5 text-sm">
-          <li><a href="#dsl-containers" class="text-slate-400 hover:text-slate-200 block py-1">VStack / HStack / ZStack</a></li>
-          <li><a href="#dsl-timer" class="text-slate-400 hover:text-slate-200 block py-1">UI.Timer (Phần cứng)</a></li>
-          <li><a href="#dsl-progress" class="text-slate-400 hover:text-slate-200 block py-1">UI.Progress (Bar, Circular)</a></li>
-          <li><a href="#dsl-equalizer" class="text-slate-400 hover:text-slate-200 block py-1">UI.Equalizer (Sóng nhạc)</a></li>
-          <li><a href="#dsl-interactive" class="text-slate-400 hover:text-slate-200 block py-1">UI.Button (Tương tác 2 chiều)</a></li>
+        <h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider mb-2.5 flex items-center space-x-1.5">
+          <i data-lucide="code" class="w-4 h-4"></i>
+          <span>Cú pháp & Engine</span>
+        </h4>
+        <ul class="space-y-1 border-l border-slate-800 pl-3">
+          <li><a href="#jsx-support" class="text-slate-400 hover:text-white block py-1 transition">Cú pháp JSX / TSX</a></li>
+          <li><a href="#exact-hit-layer" class="text-emerald-400 hover:text-white block py-1 transition font-medium">Exact Hit Layer & Chronometer (v1.2.1)</a></li>
+          <li><a href="#widget-preview-comp" class="text-slate-400 hover:text-white block py-1 transition">Mô phỏng &lt;WidgetPreview&gt;</a></li>
+          <li><a href="#dsl-containers" class="text-slate-400 hover:text-white block py-1 transition">VStack, HStack, ZStack</a></li>
+          <li><a href="#dsl-timer" class="text-slate-400 hover:text-white block py-1 transition">UI.Timer (Đếm giờ phần cứng)</a></li>
+          <li><a href="#dsl-progress" class="text-slate-400 hover:text-white block py-1 transition">UI.Progress (Bar, Circular)</a></li>
+          <li><a href="#dsl-equalizer" class="text-slate-400 hover:text-white block py-1 transition">UI.Equalizer (Sóng âm)</a></li>
+          <li><a href="#dsl-interactive" class="text-slate-400 hover:text-white block py-1 transition">UI.Button & useWidgetAction</a></li>
         </ul>
       </div>
 
       <div>
-        <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">AI Agent & LLM</h4>
-        <ul class="space-y-1.5 text-sm">
-          <li><a href="#llms-ai" class="text-indigo-400 hover:text-indigo-300 font-medium block py-1">llms.txt Standard</a></li>
-          <li><a href="#agent-skill" class="text-indigo-400 hover:text-indigo-300 block py-1">Agent Skill (SKILL.md)</a></li>
+        <h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider mb-2.5 flex items-center space-x-1.5">
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+          <span>Core API Reference</span>
+        </h4>
+        <ul class="space-y-1 border-l border-slate-800 pl-3">
+          <li><a href="#api-liveactivity" class="text-slate-400 hover:text-white block py-1 transition">LiveActivity API</a></li>
+          <li><a href="#api-widget" class="text-slate-400 hover:text-white block py-1 transition">Widget API (Multi-page)</a></li>
+          <li><a href="#api-remote-sync" class="text-slate-400 hover:text-white block py-1 transition">Remote API Sync (Kill App)</a></li>
+          <li><a href="#api-push-token" class="text-slate-400 hover:text-white block py-1 transition">APNs & FCM Push Tokens</a></li>
         </ul>
       </div>
 
       <div>
-        <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tài nguyên & Demo</h4>
-        <ul class="space-y-1.5 text-sm">
-          <li><a href="https://github.com/React-Native-Vu/LiveWidgetsExampleExpo" target="_blank" class="text-slate-400 hover:text-slate-200 block py-1">Expo Demo GitHub ↗</a></li>
-          <li><a href="https://github.com/React-Native-Vu/LiveWidgetsExample" target="_blank" class="text-slate-400 hover:text-slate-200 block py-1">Bare RN Demo GitHub ↗</a></li>
-          <li><a href="GUIDE-VI.md" target="_blank" class="text-slate-400 hover:text-slate-200 block py-1">Tài liệu chi tiết (Tiếng Việt) ↗</a></li>
-          <li><a href="GUIDE-EN.md" target="_blank" class="text-slate-400 hover:text-slate-200 block py-1">Full English Guide ↗</a></li>
+        <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2.5 flex items-center space-x-1.5">
+          <i data-lucide="bot" class="w-4 h-4"></i>
+          <span>AI Agent & LLMs</span>
+        </h4>
+        <ul class="space-y-1 border-l border-indigo-950 pl-3">
+          <li><a href="#llms-ai" class="text-slate-400 hover:text-white block py-1 transition">Chuẩn mở llms.txt</a></li>
+          <li><a href="#agent-skill" class="text-slate-400 hover:text-white block py-1 transition">Agent Skill (SKILL.md)</a></li>
         </ul>
       </div>
+
+      <div>
+        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 flex items-center space-x-1.5">
+          <i data-lucide="external-link" class="w-4 h-4"></i>
+          <span>Tài nguyên ngoài</span>
+        </h4>
+        <ul class="space-y-1 border-l border-slate-800 pl-3 text-xs">
+          <li><a href="https://github.com/React-Native-Vu/LiveWidgetsExampleExpo" target="_blank" class="text-slate-400 hover:text-sky-300 block py-1">Expo Demo GitHub ↗</a></li>
+          <li><a href="https://github.com/React-Native-Vu/LiveWidgetsExample" target="_blank" class="text-slate-400 hover:text-sky-300 block py-1">Bare RN Demo GitHub ↗</a></li>
+          <li><a href="GUIDE-VI.md" target="_blank" class="text-slate-400 hover:text-sky-300 block py-1">Hướng Dẫn Chi Tiết (VI) ↗</a></li>
+          <li><a href="GUIDE-EN.md" target="_blank" class="text-slate-400 hover:text-sky-300 block py-1">English Full Guide ↗</a></li>
+        </ul>
+      </div>
+
     </aside>
 
     <!-- Main Content Area -->
-    <main class="lg:col-span-3 space-y-12">
+    <main class="lg:col-span-3 space-y-16">
       
       <!-- Section: Quick Start -->
       <section id="quick-start" class="space-y-6">
-        <h2 class="text-2xl sm:text-3xl font-bold text-white flex items-center space-x-2">
-          <i data-lucide="zap" class="w-6 h-6 text-sky-400"></i>
-          <span>Cài đặt & Thiết lập tự động</span>
-        </h2>
-        
-        <p class="text-slate-300">
-          Thư viện cung cấp bộ công cụ <strong>All-in-One CLI Scaffolder</strong> giúp tự động tạo Xcode Extension target, 
-          cấu hình App Groups và Android permissions chỉ với 1 câu lệnh duy nhất.
-        </p>
+        <div class="border-b border-cardBorder pb-4">
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white flex items-center space-x-2.5">
+            <i data-lucide="zap" class="w-7 h-7 text-sky-400"></i>
+            <span>Cài đặt & Thiết lập Tự động</span>
+          </h2>
+          <p class="mt-2 text-slate-400 text-sm sm:text-base">
+            Thư viện tích hợp sẵn bộ <strong>All-in-One CLI Scaffolder</strong> giúp cấu hình Xcode Widget Extension, App Groups và Android permissions chỉ với 1 câu lệnh duy nhất.
+          </p>
+        </div>
 
-        <!-- Expo Tab -->
-        <div id="expo-setup" class="bg-cardBg border border-cardBorder rounded-xl p-5 space-y-4">
+        <!-- Expo Setup Card -->
+        <div id="expo-setup" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-4 shadow-lg">
           <div class="flex items-center justify-between">
-            <span class="font-bold text-white flex items-center space-x-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-              <span>1. Quy trình dành cho Expo (SDK 50, 51, 52, 58+)</span>
+            <span class="font-bold text-white text-base sm:text-lg flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
+              <span>1. Quy trình dành cho Expo (SDK 50, 51, 52, 58+ CNG)</span>
             </span>
-            <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">Config Plugin</span>
+            <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/20 font-semibold">
+              Config Plugin
+            </span>
           </div>
 
-          <pre><code class="language-bash"># Bước 1: Cài đặt package
+          <p class="text-sm text-slate-300 leading-relaxed">
+            Thư viện tương thích 100% với <strong>Continuous Native Generation (CNG)</strong> và <strong>EAS Build</strong>:
+          </p>
+
+          <div class="relative">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
+            <pre><code class="language-bash"># Bước 1: Cài đặt thư viện
 npx expo install react-native-live-widgets
 
-# Bước 2: Thêm plugin vào app.json
-# (xem mẫu cấu hình bên dưới)
+# Bước 2: Thêm plugin vào app.json (xem mẫu cấu hình bên dưới)
 
 # Bước 3: Sinh thư mục native
 npx expo prebuild
 
-# Bước 4: Tự động cấu hình Widget Extension target & App Groups
+# Bước 4: Tự động khởi tạo Widget Extension target & App Groups
 npx react-native-live-widgets init --group group.com.yourcompany.app
 
-# Bước 5: Chạy ứng dụng trên Simulator
-npx expo run:ios</code></pre>
+# Bước 5: Chạy ứng dụng trên máy ảo
+npx expo run:ios
+npx expo run:android</code></pre>
+          </div>
 
-          <p class="text-xs text-slate-400">Cấu hình plugin trong <code class="text-sky-300">app.json</code>:</p>
-          <pre><code class="language-json">{
+          <p class="text-xs font-semibold text-slate-300">Cấu hình Config Plugin trong tập tin <code class="text-sky-300">app.json</code>:</p>
+          <div class="relative">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
+            <pre><code class="language-json">{
   "expo": {
+    "name": "MyAwesomeApp",
+    "slug": "my-awesome-app",
     "plugins": [
       [
         "react-native-live-widgets",
@@ -228,189 +528,422 @@ npx expo run:ios</code></pre>
     ]
   }
 }</code></pre>
+          </div>
         </div>
 
-        <!-- Bare RN Tab -->
-        <div id="bare-rn-setup" class="bg-cardBg border border-cardBorder rounded-xl p-5 space-y-4">
-          <span class="font-bold text-white flex items-center space-x-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
-            <span>2. Quy trình dành cho Bare React Native CLI</span>
-          </span>
-          <pre><code class="language-bash">npm install react-native-live-widgets
-# Tự động inject Xcode target, entitlements, podfile và android permissions
+        <!-- Bare RN Setup Card -->
+        <div id="bare-rn-setup" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-4 shadow-lg">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white text-base sm:text-lg flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-sky-400"></span>
+              <span>2. Quy trình dành cho Bare React Native CLI</span>
+            </span>
+            <span class="text-xs bg-sky-500/10 text-sky-400 px-2.5 py-1 rounded-full border border-sky-500/20 font-semibold">
+              CLI Auto-Link
+            </span>
+          </div>
+
+          <div class="relative">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
+            <pre><code class="language-bash"># Cài đặt package
+npm install react-native-live-widgets
+
+# Tự động inject Xcode Widget Extension, Entitlements, Podfile và Android Manifest
 npx react-native-live-widgets init --group group.com.yourcompany.app
-npx react-native run-ios</code></pre>
+
+# Khởi chạy dự án
+npx react-native run-ios
+npx react-native run-android</code></pre>
+          </div>
         </div>
       </section>
 
-      <!-- Section: Declarative UI DSL -->
+      <!-- Section: JSX Syntax & WidgetPreview Component (v1.2.0) -->
+      <section id="jsx-support" class="space-y-6">
+        <div class="border-b border-cardBorder pb-4">
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30 uppercase">v1.2.0 JSX</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">
+              Cú pháp JSX / TSX & Khung Xem Trước <code>&lt;WidgetPreview&gt;</code>
+            </h2>
+          </div>
+          <p class="mt-2 text-slate-400 text-sm sm:text-base">
+            Viết code widget tự nhiên như đang viết React Component thông thường với thẻ JSX và nhúng ngay vào ứng dụng để test giao diện mà không cần ra màn hình chính.
+          </p>
+        </div>
+
+        <div class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-4">
+          <h3 class="font-bold text-white text-base flex items-center space-x-2">
+            <i data-lucide="eye" class="w-5 h-5 text-sky-400"></i>
+            <span>Nhúng &lt;WidgetPreview&gt; vào App để xem trước kích thước Small, Medium, Large</span>
+          </h3>
+
+          <div class="relative">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
+            <pre><code class="language-tsx">import React from 'react';
+import { View } from 'react-native';
+import { 
+  WidgetPreview, 
+  VStack, 
+  HStack, 
+  Text, 
+  Badge, 
+  Button, 
+  Widget 
+} from 'react-native-live-widgets';
+
+export default function HomeScreen() {
+  return (
+    &lt;View style={{ flex: 1, padding: 16 }}&gt;
+      {/* 1. Component Xem trước trực tiếp trong ứng dụng */}
+      &lt;WidgetPreview 
+        size="medium" 
+        showBadge 
+        interactiveSizeSwitch 
+        onAction={(actionId) => console.log('User click button:', actionId)}
+      &gt;
+        &lt;VStack padding={16} backgroundColor="#0F172A" borderRadius={18}&gt;
+          &lt;HStack justifyContent="spaceBetween" alignItems="center"&gt;
+            &lt;Text fontSize={15} fontWeight="bold" color="#FFFFFF"&gt;Ca Làm Việc Hôm Nay&lt;/Text&gt;
+            &lt;Badge text="08:00 - 17:30" backgroundColor="#064E3B" textColor="#6EE7B7" /&gt;
+          &lt;/HStack&gt;
+          
+          &lt;Text fontSize={13} color="#94A3B8" margin={{ top: 8 }}&gt;
+            Vị trí: Văn phòng Fastdo Đà Nẵng
+          &lt;/Text&gt;
+          
+          &lt;Button 
+            title="⚡ Check-in Ngay" 
+            actionId="FASTDO_CHECKIN" 
+            backgroundColor="#0284C7" 
+            color="#FFFFFF"
+            margin={{ top: 12 }} 
+          /&gt;
+        &lt;/VStack&gt;
+      &lt;/WidgetPreview&gt;
+    &lt;/View&gt;
+  );
+}</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Exact Dynamic Hit Layer & Chronometer Countdown (v1.2.1) -->
+      <section id="exact-hit-layer" class="space-y-6">
+        <div class="border-b border-cardBorder pb-4">
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">v1.2.1 Mới</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">
+              Vùng Bấm Động Từng Pixel & Đồng Hồ Native Android
+            </h2>
+          </div>
+          <p class="mt-2 text-slate-400 text-sm sm:text-base">
+            Tối ưu độ chính xác cảm ứng 100% không lệch toạ độ, tích hợp Chronometer đếm ngược thời gian thực và tương thích hoàn toàn Swift 6.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-darkCard border border-cardBorder rounded-2xl p-5 space-y-3">
+            <h3 class="font-bold text-white text-base flex items-center space-x-2">
+              <i data-lucide="crosshair" class="w-5 h-5 text-emerald-400"></i>
+              <span>Exact Dynamic Hit Layer & Canvas Mapping</span>
+            </h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Thay thế hoàn toàn lưới chia ô cố định cũ bằng <code>FrameLayout</code> động (<code>rn_hit_layer</code>). Giải thuật <code>computeCanvasMapping</code> bù trừ viền co giãn <code>fitCenter</code>, giúp bấm trúng 100% nút, triệt tiêu mọi cú chạm ảo vào khoảng trống.
+            </p>
+          </div>
+
+          <div class="bg-darkCard border border-cardBorder rounded-2xl p-5 space-y-3">
+            <h3 class="font-bold text-white text-base flex items-center space-x-2">
+              <i data-lucide="timer" class="w-5 h-5 text-sky-400"></i>
+              <span>Native Chronometer Countdown (Android)</span>
+            </h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Tích hợp trực tiếp <code>android.widget.Chronometer</code> với <code>setChronometerCountDown(true)</code>. Đếm ngược giật lùi 1 giây/lần mượt mà ngay trên Home Screen mà không cần vẽ lại Canvas Bitmap, tiết kiệm tối đa pin.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Declarative UI Catalog -->
       <section id="dsl-catalog" class="space-y-6">
-        <h2 class="text-2xl sm:text-3xl font-bold text-white flex items-center space-x-2">
-          <i data-lucide="layers" class="w-6 h-6 text-sky-400"></i>
-          <span>Declarative UI Engine (`UI.*`)</span>
-        </h2>
-        <p class="text-slate-300">
-          Không cần viết SwiftUI hay Kotlin RemoteViews! Khai báo cây giao diện trực tiếp trong TypeScript và hệ thống sẽ tự động ánh xạ sang Native:
-        </p>
+        <div class="border-b border-cardBorder pb-4">
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white flex items-center space-x-2.5">
+            <i data-lucide="boxes" class="w-7 h-7 text-sky-400"></i>
+            <span>Declarative UI Engine Catalog (`UI.*`)</span>
+          </h2>
+          <p class="mt-2 text-slate-400 text-sm sm:text-base">
+            Nếu không dùng JSX, bạn có thể sử dụng bộ Builder API <code>UI.*</code> với đầy đủ TypeScript autocompletion:
+          </p>
+        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Card: Live Activity Example -->
-          <div class="bg-cardBg border border-cardBorder rounded-xl p-4 space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- UI.Timer -->
+          <div id="dsl-timer" class="bg-darkCard border border-cardBorder rounded-2xl p-5 space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-sm font-semibold text-white">🚀 Live Activity & Dynamic Island</span>
-              <span class="text-xs text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded">iOS 16.1+</span>
+              <span class="font-bold text-white text-base flex items-center space-x-2">
+                <i data-lucide="clock" class="w-4 h-4 text-sky-400"></i>
+                <span>UI.Timer — Đếm giờ Phần cứng</span>
+              </span>
+              <span class="text-[10px] text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded font-mono">0% CPU</span>
             </div>
-            <pre><code class="language-typescript">await LiveActivity.start({
-  activityName: 'Delivery',
-  appGroup: 'group.com.myapp',
-  layout: UI.VStack({
-    padding: 16,
-    backgroundColor: '#0F172A',
-    children: [
-      UI.Text('Tài xế đang giao đơn', { 
-        color: '#FFFFFF', 
-        fontSize: 15, 
-        fontWeight: 'bold' 
-      }),
-      UI.Progress({ 
-        style: 'bar', 
-        value: 0.7, 
-        tintColor: '#38BDF8', 
-        height: 6 
-      })
-    ]
-  }),
-  dynamicIsland: {
-    compactLeading: UI.Text('☕', { fontSize: 13 }),
-    compactTrailing: UI.Text('12m', { color: '#38BDF8', fontWeight: 'bold' }),
-    expanded: {
-      leading: UI.Text('COFFEE EXPRESS', { fontSize: 11 }),
-      trailing: UI.Text('12 mins', { fontSize: 16, fontWeight: 'bold' })
-    }
-  }
-});</code></pre>
+            <p class="text-xs text-slate-400">Tự động đếm lùi hoặc tiến theo thời gian thực:</p>
+            <div class="relative">
+              <button onclick="copyCode(this)" class="absolute top-2 right-2 text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Copy</button>
+              <pre><code class="language-typescript">UI.Timer({
+  // Đếm lùi từ 25 phút
+  targetTimestamp: Date.now() + 25 * 60 * 1000,
+  isCountDown: true,
+  color: '#38BDF8',
+  fontSize: 28,
+  fontWeight: 'heavy'
+})</code></pre>
+            </div>
           </div>
 
-          <!-- Card: Interactive Widget Example -->
-          <div class="bg-cardBg border border-cardBorder rounded-xl p-4 space-y-3">
+          <!-- UI.Equalizer -->
+          <div id="dsl-equalizer" class="bg-darkCard border border-cardBorder rounded-2xl p-5 space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-sm font-semibold text-white">⚡ Home Screen Widget Tương Tác 2 Chiều</span>
-              <span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">AppIntents</span>
+              <span class="font-bold text-white text-base flex items-center space-x-2">
+                <i data-lucide="activity" class="w-4 h-4 text-purple-400"></i>
+                <span>UI.Equalizer — Sóng nhạc liên tục</span>
+              </span>
+              <span class="text-[10px] text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded font-mono">Realtime</span>
             </div>
-            <pre><code class="language-typescript">// Cập nhật Home Screen Widget với nút bấm tương tác
-Widget.reload('main', {
-  layout: UI.VStack({
-    padding: 14,
-    backgroundColor: '#0F172A',
-    alignment: 'center',
-    children: [
-      UI.Text('BỘ ĐẾM TIỆN ÍCH', { color: '#94A3B8', fontSize: 11 }),
-      UI.Text(`${counter}`, { color: '#38BDF8', fontSize: 32, fontWeight: 'heavy' }),
-      UI.Button({
-        title: '+1 TĂNG SỐ',
-        actionId: 'INCREMENT',
-        backgroundColor: '#0284C7',
-        color: '#FFFFFF'
-      })
-    ]
-  })
+            <p class="text-xs text-slate-400">Hiển thị sóng âm chuyển động cho audio/podcast:</p>
+            <div class="relative">
+              <button onclick="copyCode(this)" class="absolute top-2 right-2 text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Copy</button>
+              <pre><code class="language-typescript">UI.Equalizer({
+  barCount: 5,
+  color: '#A855F7',
+  height: 20,
+  animated: true
+})</code></pre>
+            </div>
+          </div>
+
+          <!-- UI.Progress -->
+          <div id="dsl-progress" class="bg-darkCard border border-cardBorder rounded-2xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white text-base flex items-center space-x-2">
+                <i data-lucide="bar-chart-2" class="w-4 h-4 text-emerald-400"></i>
+                <span>UI.Progress — Bar, Segmented & Circle</span>
+              </span>
+              <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded font-mono">ProgressStyle</span>
+            </div>
+            <p class="text-xs text-slate-400">Thanh tiến trình đơn, chia chặng hoặc vòng tròn:</p>
+            <div class="relative">
+              <button onclick="copyCode(this)" class="absolute top-2 right-2 text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Copy</button>
+              <pre><code class="language-typescript">// Thanh chia chặng (Segmented)
+UI.Progress({
+  style: 'segmented',
+  currentSegment: 2,
+  totalSegments: 4,
+  tintColor: '#10B981',
+  height: 6
+})</code></pre>
+            </div>
+          </div>
+
+          <!-- UI.Button -->
+          <div id="dsl-interactive" class="bg-darkCard border border-cardBorder rounded-2xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white text-base flex items-center space-x-2">
+                <i data-lucide="mouse-pointer" class="w-4 h-4 text-amber-400"></i>
+                <span>UI.Button & useWidgetAction</span>
+              </span>
+              <span class="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded font-mono">AppIntents</span>
+            </div>
+            <p class="text-xs text-slate-400">Nút bấm tương tác 2 chiều với React Native:</p>
+            <div class="relative">
+              <button onclick="copyCode(this)" class="absolute top-2 right-2 text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Copy</button>
+              <pre><code class="language-typescript">// 1. Đặt nút trong Widget
+UI.Button({
+  title: 'Check-in',
+  actionId: 'ACTION_CHECKIN',
+  backgroundColor: '#0284C7'
 });
 
-// Cách 1: Dùng React Hook (Khuyến nghị - An toàn tuyệt đối với Fast Refresh)
-useWidgetAction('INCREMENT', () => {
-  setCounter(c => c + 1);
-});
-
-// Cách 2: Lắng nghe toàn cục Imperative
-Widget.onWidgetAction((actionId) => {
-  if (actionId === 'INCREMENT') {
-    setCounter(c => c + 1);
-  }
+// 2. Lắng nghe trong App bằng Hook
+useWidgetAction('ACTION_CHECKIN', () => {
+  doCheckin();
 });</code></pre>
-          </div>
-
-          <!-- Card: JSX Syntax & In-App Widget Preview -->
-          <div class="bg-cardBg border border-cardBorder rounded-xl p-4 space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-semibold text-white">✨ Cú pháp JSX / TSX & Xem Trước Widget Trong App (&lt;WidgetPreview&gt;)</span>
-              <span class="text-xs text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded">v1.2.0 JSX</span>
             </div>
-            <pre><code class="language-typescript">import { WidgetPreview, VStack, HStack, Text, Badge, Button } from 'react-native-live-widgets';
-
-// 1. Nhúng khung xem trước trực tiếp trên màn hình App (hỗ trợ small, medium, large)
-&lt;WidgetPreview size="medium" showBadge interactiveSizeSwitch onAction={(id) => alert(id)}&gt;
-  &lt;VStack padding={16} backgroundColor="#0F172A" borderRadius={16}&gt;
-    &lt;HStack justifyContent="spaceBetween"&gt;
-      &lt;Text fontSize={14} fontWeight="bold" color="#FFFFFF"&gt;Ca làm sáng&lt;/Text&gt;
-      &lt;Badge text="07:54 (Hợp lệ)" backgroundColor="#064E3B" textColor="#6EE7B7" /&gt;
-    &lt;/HStack&gt;
-    &lt;Button title="Làm mới dữ liệu" actionId="refresh" fullWidth /&gt;
-  &lt;/VStack&gt;
-&lt;/WidgetPreview&gt;
-
-// 2. Cập nhật Widget ra Home Screen bằng JSX trực tiếp:
-await Widget.setLayout('main', {
-  medium: (
-    &lt;VStack padding={16} backgroundColor="#0F172A" borderRadius={16}&gt;
-      &lt;Text fontSize={14} color="#FFF"&gt;Xin chào Trần Tuấn Vũ&lt;/Text&gt;
-      &lt;Button title="Check-in" actionId="checkin" /&gt;
-    &lt;/VStack&gt;
-  )
-});</code></pre>
           </div>
+
         </div>
       </section>
 
-      <!-- Section: AI Agent & LLM Hub -->
-      <section id="llms-ai" class="space-y-6 pt-4 border-t border-cardBorder">
-        <div class="flex items-center space-x-3">
-          <div class="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-            <i data-lucide="bot" class="w-6 h-6"></i>
+      <!-- Section: Core API Reference -->
+      <section id="core-api" class="space-y-6">
+        <div class="border-b border-cardBorder pb-4">
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white flex items-center space-x-2.5">
+            <i data-lucide="book-marked" class="w-7 h-7 text-sky-400"></i>
+            <span>Core API Reference</span>
+          </h2>
+          <p class="mt-2 text-slate-400 text-sm sm:text-base">
+            Tài liệu chi tiết các phương thức cốt lõi của thư viện:
+          </p>
+        </div>
+
+        <!-- LiveActivity API -->
+        <div id="api-liveactivity" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-white">LiveActivity API (iOS 16.1+ & Android 16 Live Updates)</h3>
+            <span class="text-xs bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2.5 py-1 rounded-full">Core</span>
           </div>
-          <div>
-            <h2 class="text-2xl sm:text-3xl font-bold text-white">AI Agent & LLM Hub (llms.txt)</h2>
-            <p class="text-sm text-slate-400">Tối ưu 100% cho các mô hình AI: ChatGPT, Claude, Copilot, Cursor, Antigravity</p>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs sm:text-sm border-collapse">
+              <thead>
+                <tr class="border-b border-cardBorder text-slate-400">
+                  <th class="py-2.5 font-semibold">Hàm</th>
+                  <th class="py-2.5 font-semibold">Tham số</th>
+                  <th class="py-2.5 font-semibold">Mô tả</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-cardBorder text-slate-300">
+                <tr>
+                  <td class="py-2.5 font-mono text-sky-400 font-medium">LiveActivity.start(config)</td>
+                  <td class="py-2.5 text-xs text-slate-400 font-mono">LiveActivityStartConfig</td>
+                  <td class="py-2.5">Bắt đầu một Live Activity và kích hoạt Dynamic Island. Trả về <code>activityId</code>.</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-mono text-sky-400 font-medium">LiveActivity.update(id, data)</td>
+                  <td class="py-2.5 text-xs text-slate-400 font-mono">id: string, data: object</td>
+                  <td class="py-2.5">Cập nhật nội dung, tiến trình hoặc trạng thái Live Activity đang chạy.</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-mono text-sky-400 font-medium">LiveActivity.end(id, finalState)</td>
+                  <td class="py-2.5 text-xs text-slate-400 font-mono">id: string, dismissalPolicy?</td>
+                  <td class="py-2.5">Kết thúc Live Activity (chính sách đóng: <code>default</code> hoặc <code>immediate</code>).</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-mono text-sky-400 font-medium">LiveActivity.list()</td>
+                  <td class="py-2.5 text-xs text-slate-400 font-mono">none</td>
+                  <td class="py-2.5">Liệt kê tất cả các Live Activities hiện đang hoạt động.</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-mono text-sky-400 font-medium">LiveActivity.getPushToken(id)</td>
+                  <td class="py-2.5 text-xs text-slate-400 font-mono">id: string</td>
+                  <td class="py-2.5">Lấy Activity Push Token để server có thể push cập nhật trực tiếp qua APNs/FCM.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <p class="text-slate-300">
-          Thư viện tuân thủ chuẩn mở <strong><a href="https://llmstxt.org" target="_blank" class="text-sky-400 hover:underline">llms.txt</a></strong>, 
-          cho phép bất kỳ AI agent nào tự động đọc cấu trúc, API cheat sheet và các nguyên tắc kiến trúc để viết code widget chuẩn xác mà không bị ảo giác (hallucination).
+        <!-- Widget API -->
+        <div id="api-widget" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-white">Widget API (Home Screen Widgets & App Groups)</h3>
+            <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full">WidgetKit</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs sm:text-sm border-collapse">
+              <thead>
+                <tr class="border-b border-cardBorder text-slate-400">
+                  <th class="py-2.5 font-semibold">Hàm</th>
+                  <th class="py-2.5 font-semibold">Tham số</th>
+                  <th class="py-2.5 font-semibold">Mô tả</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-cardBorder text-slate-300">
+                <tr>
+                  <td class="py-2.5 font-mono text-emerald-400 font-medium">Widget.reload(kind, data)</td>
+                  <td class="py-2.5 text-xs text-slate-400 font-mono">kind: string, data: WidgetData</td>
+                  <td class="py-2.5">Cập nhật dữ liệu và yêu cầu hệ điều hành reload lại giao diện widget.</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-mono text-emerald-400 font-medium">Widget.setLayout(kind, sizes)</td>
+                  <td class="py-2.5 text-xs text-slate-400 font-mono">small?, medium?, large?</td>
+                  <td class="py-2.5">Thiết lập bố cục riêng biệt cho từng kích cỡ widget (hỗ trợ cả JSX).</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-mono text-emerald-400 font-medium">Widget.setRemoteConfig(config)</td>
+                  <td class="py-2.5 text-xs text-slate-400 font-mono">RemoteFetchConfig</td>
+                  <td class="py-2.5">Đăng ký URL API ngầm để hệ điều hành tự động kéo dữ liệu kể cả khi ứng dụng bị tắt.</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 font-mono text-emerald-400 font-medium">Widget.pinWidget(kind)</td>
+                  <td class="py-2.5 text-xs text-slate-400 font-mono">kind: string</td>
+                  <td class="py-2.5">Hiển thị hộp thoại hệ thống ghim tiện ích ra Home Screen ngay trong App (Android).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Section: AI Agent & LLM Hub (llms.txt) -->
+      <section id="llms-ai" class="space-y-6">
+        <div class="border-b border-cardBorder pb-4 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+              <i data-lucide="bot" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h2 class="text-2xl sm:text-3xl font-extrabold text-white">AI Agent & LLMs Hub</h2>
+              <p class="text-sm text-slate-400">Chuẩn hóa cho Claude Code, Antigravity, ChatGPT, Cursor Rules</p>
+            </div>
+          </div>
+          <span class="text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full font-semibold">
+            llms.txt Standard
+          </span>
+        </div>
+
+        <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+          Tài liệu của thư viện tuân thủ 100% đặc tả <strong><a href="https://llmstxt.org" target="_blank" class="text-sky-400 hover:underline">llms.txt</a></strong>. 
+          Bất kỳ mô hình ngôn ngữ lớn hoặc coding agent nào cũng có thể đọc trực tiếp các file này qua URL để sinh mã widget chính xác, an toàn và không bị hallucination.
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="bg-cardBg border border-indigo-900/40 rounded-xl p-5 space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- llms.txt card -->
+          <div class="bg-darkCard border border-indigo-900/40 rounded-2xl p-6 space-y-4">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-white flex items-center space-x-2">
-                <i data-lucide="file-text" class="w-4 h-4 text-indigo-400"></i>
+              <span class="font-bold text-white text-base flex items-center space-x-2">
+                <i data-lucide="file-text" class="w-5 h-5 text-indigo-400"></i>
                 <span>Tập tin llms.txt</span>
               </span>
-              <a href="llms.txt" target="_blank" class="text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded hover:bg-indigo-500/20">
-                Xem file raw ↗
+              <a href="llms.txt" target="_blank" class="text-xs text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-md hover:bg-indigo-500/20">
+                Xem trực tiếp ↗
               </a>
             </div>
-            <p class="text-xs text-slate-400">
-              Chứa tóm tắt kiến trúc, bảng hàm DSL và 5 quy tắc vàng giúp AI sinh mã TypeScript widget an toàn.
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Tóm tắt xúc tích về toàn bộ API, cheat sheet cấu trúc JSON AST và 5 quy tắc vàng giúp AI lập trình widget không lỗi.
             </p>
-            <pre><code class="language-bash">curl -s https://react-native-vu.github.io/react-native-live-widgets/llms.txt</code></pre>
+            <div class="relative">
+              <button onclick="copyCode(this)" class="absolute top-2 right-2 text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Copy</button>
+              <pre><code class="language-bash"># Nạp trực tiếp vào Prompt của Agent
+curl -s https://react-native-vu.github.io/react-native-live-widgets/llms.txt</code></pre>
+            </div>
           </div>
 
-          <div id="agent-skill" class="bg-cardBg border border-indigo-900/40 rounded-xl p-5 space-y-3">
+          <!-- SKILL.md card -->
+          <div id="agent-skill" class="bg-darkCard border border-indigo-900/40 rounded-2xl p-6 space-y-4">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-white flex items-center space-x-2">
-                <i data-lucide="cpu" class="w-4 h-4 text-sky-400"></i>
+              <span class="font-bold text-white text-base flex items-center space-x-2">
+                <i data-lucide="cpu" class="w-5 h-5 text-sky-400"></i>
                 <span>Agent Skill (SKILL.md)</span>
               </span>
-              <a href="https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/skills/react-native-live-widgets/SKILL.md" target="_blank" class="text-xs bg-sky-500/10 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded hover:bg-sky-500/20">
-                Xem SKILL.md ↗
+              <a href="https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/skills/react-native-live-widgets/SKILL.md" target="_blank" class="text-xs text-sky-300 bg-sky-500/10 border border-sky-500/20 px-2.5 py-1 rounded-md hover:bg-sky-500/20">
+                GitHub SKILL.md ↗
               </a>
             </div>
-            <p class="text-xs text-slate-400">
-              Tương thích trực tiếp với các hệ thống coding agent như Antigravity, Claude Code, Cursor Rules để kích hoạt tự động theo ngữ cảnh.
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Tương thích trực tiếp với các framework Agent như Antigravity, Claude Code, Cursor Rules để kích hoạt theo ngữ cảnh của lập trình viên.
             </p>
-            <pre><code class="language-bash"># Vị trí skill trong dự án của bạn
+            <div class="relative">
+              <button onclick="copyCode(this)" class="absolute top-2 right-2 text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Copy</button>
+              <pre><code class="language-bash"># Lưu vào thư mục agent trong repo của bạn:
 .agents/skills/react-native-live-widgets/SKILL.md</code></pre>
+            </div>
           </div>
+
         </div>
       </section>
 
@@ -418,23 +951,371 @@ await Widget.setLayout('main', {
   </div>
 
   <!-- Footer -->
-  <footer class="border-t border-cardBorder bg-cardBg/50 py-8 mt-16">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4">
-      <div>
-        Phát triển bởi <strong class="text-white">vu-tran</strong> • Giấy phép MIT • 
-        <a href="https://github.com/React-Native-Vu/react-native-live-widgets" class="text-sky-400 hover:underline">GitHub Repository</a>
+  <footer class="border-t border-cardBorder bg-slate-950/80 py-12 mt-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-400">
+      
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-lg bg-sky-600/20 text-sky-400 flex items-center justify-center font-bold">
+          ⚡
+        </div>
+        <div>
+          <p class="text-slate-300 font-medium">react-native-live-widgets — Phát triển bởi <strong>Trần Tuấn Vũ</strong></p>
+          <p class="text-[11px] text-slate-500">Giấy phép mã nguồn mở MIT • Sẵn sàng cho Production</p>
+        </div>
       </div>
-      <div class="flex items-center space-x-4">
-        <a href="llms.txt" class="hover:text-white transition">llms.txt</a>
-        <a href="llms-full.txt" class="hover:text-white transition">llms-full.txt</a>
-        <a href="EXPO-GUIDE-VI.md" class="hover:text-white transition">Expo Guide</a>
+
+      <div class="flex flex-wrap items-center gap-6">
+        <a href="https://github.com/React-Native-Vu/react-native-live-widgets" target="_blank" class="hover:text-white transition flex items-center space-x-1">
+          <i data-lucide="github" class="w-4 h-4"></i>
+          <span>GitHub</span>
+        </a>
+        <a href="https://www.npmjs.com/package/react-native-live-widgets" target="_blank" class="hover:text-white transition">npm package</a>
+        <a href="llms.txt" class="hover:text-white transition font-mono text-sky-400">llms.txt</a>
+        <a href="llms-full.txt" class="hover:text-white transition font-mono">llms-full.txt</a>
+        <a href="GUIDE-VI.md" class="hover:text-white transition">Tài liệu tiếng Việt</a>
+        <a href="GUIDE-EN.md" class="hover:text-white transition">English Guide</a>
       </div>
+
     </div>
   </footer>
 
+  <!-- Floating Back to Top Button -->
+  <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="fixed bottom-6 right-6 p-3 rounded-full bg-slate-800/90 text-slate-300 hover:text-white border border-slate-700 shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-50">
+    <i data-lucide="arrow-up" class="w-5 h-5"></i>
+  </button>
+
+  <!-- Interactive Simulator & Utility Scripts -->
   <script>
-    // Initialize Lucide icons
-    lucide.createIcons();
+    // State of Simulator
+    let currentSimState = 'delivery';
+    let counterValue = 42;
+    let timerSeconds = 1495; // 24:55
+    let timerInterval = null;
+
+    // Simulator Data Definitions
+    const simulatorPresets = {
+      delivery: {
+        codeLabel: 'TypeScript — LiveActivity.start() & Dynamic Island',
+        render: () => `
+          <div class="flex flex-col space-y-3">
+            <div class="flex items-center justify-between text-xs text-slate-400">
+              <span class="flex items-center space-x-1 text-sky-400 font-semibold">
+                <i data-lucide="bike" class="w-4 h-4"></i>
+                <span>Fastdo Express</span>
+              </span>
+              <span class="bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded-full text-[10px] font-bold">12 phút nữa</span>
+            </div>
+            
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-bold text-base text-white">Tài xế đang giao cà phê</p>
+                <p class="text-xs text-slate-400">Nguyễn Văn A • Winner X (43-D1 888.88)</p>
+              </div>
+              <span class="text-2xl">☕</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+              <div class="bg-gradient-to-r from-sky-400 to-teal-400 h-2.5 rounded-full" style="width: 75%"></div>
+            </div>
+
+            <div class="flex justify-between text-[11px] text-slate-400">
+              <span>Đã nhận đơn</span>
+              <span>Đang pha chế</span>
+              <span class="text-sky-300 font-bold">Đang giao</span>
+              <span>Đến nơi</span>
+            </div>
+          </div>
+        `,
+        code: `await LiveActivity.start({
+  activityName: 'DeliveryTracking',
+  appGroup: 'group.com.fastdo.app',
+  layout: UI.VStack({
+    padding: 16,
+    backgroundColor: '#0F172A',
+    children: [
+      UI.HStack({
+        justifyContent: 'spaceBetween',
+        children: [
+          UI.Text('Fastdo Express', { color: '#38BDF8', fontWeight: 'bold' }),
+          UI.Text('12 phút nữa', { color: '#FFFFFF' })
+        ]
+      }),
+      UI.Text('Tài xế đang giao cà phê', { fontSize: 16, fontWeight: 'bold' }),
+      UI.Progress({ style: 'bar', value: 0.75, tintColor: '#38BDF8' })
+    ]
+  }),
+  dynamicIsland: {
+    compactLeading: UI.Text('☕', { fontSize: 13 }),
+    compactTrailing: UI.Text('12m', { color: '#38BDF8', fontWeight: 'bold' }),
+    expanded: {
+      leading: UI.Text('COFFEE EXPRESS', { fontSize: 11 }),
+      trailing: UI.Text('12 mins', { fontSize: 15, fontWeight: 'bold' })
+    }
+  }
+});`
+      },
+
+      music: {
+        codeLabel: 'TypeScript — UI.Equalizer & Dynamic Island Expanded',
+        render: () => `
+          <div class="flex flex-col space-y-3">
+            <div class="flex items-center justify-between text-xs text-purple-400 font-semibold">
+              <span class="flex items-center space-x-1">
+                <i data-lucide="radio" class="w-4 h-4"></i>
+                <span>Apple Music / Spotify Live</span>
+              </span>
+              <span class="text-[10px] text-purple-300 bg-purple-900/40 px-2 py-0.5 rounded-full">Lossless 24-bit</span>
+            </div>
+
+            <div class="flex items-center space-x-4">
+              <!-- Album cover -->
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-white shadow-lg">
+                <i data-lucide="disc" class="w-6 h-6 animate-spin" style="animation-duration: 8s;"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-bold text-sm text-white truncate">Chạy Ngay Đi (Acoustic Version)</p>
+                <p class="text-xs text-slate-400 truncate">Sơn Tùng M-TP</p>
+              </div>
+              <!-- Animated Equalizer Waves -->
+              <div class="flex items-end space-x-1 h-7 px-2">
+                <div class="w-1 bg-purple-400 rounded-full eq-bar-1"></div>
+                <div class="w-1 bg-purple-400 rounded-full eq-bar-2"></div>
+                <div class="w-1 bg-purple-300 rounded-full eq-bar-3"></div>
+                <div class="w-1 bg-purple-400 rounded-full eq-bar-4"></div>
+                <div class="w-1 bg-pink-400 rounded-full eq-bar-5"></div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-[10px] text-slate-400 font-mono">01:45</span>
+              <div class="flex-1 mx-3 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                <div class="bg-purple-500 h-1.5 rounded-full" style="width: 45%"></div>
+              </div>
+              <span class="text-[10px] text-slate-400 font-mono">03:52</span>
+            </div>
+          </div>
+        `,
+        code: `// Dynamic Island phát nhạc với sóng âm Equalizer tự động
+await LiveActivity.start({
+  activityName: 'MusicPlayer',
+  appGroup: 'group.com.myapp',
+  dynamicIsland: {
+    compactLeading: UI.Text('🎵', { fontSize: 13 }),
+    compactTrailing: UI.Equalizer({ 
+      barCount: 4, 
+      color: '#A855F7', 
+      height: 14 
+    }),
+    expanded: {
+      leading: UI.Text('Chạy Ngay Đi', { fontWeight: 'bold' }),
+      trailing: UI.Equalizer({ 
+        barCount: 5, 
+        color: '#A855F7', 
+        height: 22 
+      })
+    }
+  }
+});`
+      },
+
+      pomodoro: {
+        codeLabel: 'TypeScript — UI.Timer (Phần Cứng Không Tốn Pin)',
+        render: () => {
+          const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+          const s = String(timerSeconds % 60).padStart(2, '0');
+          return `
+            <div class="flex flex-col items-center py-2 space-y-3">
+              <div class="flex items-center space-x-2 text-xs text-amber-400 font-semibold">
+                <i data-lucide="flame" class="w-4 h-4"></i>
+                <span>POMODORO FOCUS SESSION</span>
+              </div>
+              <div class="text-4xl font-extrabold text-white font-mono tracking-wider text-sky-400" id="live-timer-display">
+                ${m}:${s}
+              </div>
+              <p class="text-xs text-slate-400">Bộ đếm phần cứng iOS/Android Native Timer</p>
+              <div class="flex space-x-2 mt-2">
+                <button onclick="resetTimer()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg text-slate-300">Reset 25m</button>
+              </div>
+            </div>
+          `;
+        },
+        code: `// Tự động đếm lùi 25 phút mượt mà mà KHÔNG hao tổn 1% pin nào!
+UI.Timer({
+  targetTimestamp: Date.now() + 25 * 60 * 1000,
+  isCountDown: true,
+  color: '#38BDF8',
+  fontSize: 32,
+  fontWeight: 'heavy'
+})`
+      },
+
+      'widget-interactive': {
+        codeLabel: 'TypeScript / JSX — Home Screen Widget Tương Tác 2 Chiều',
+        render: () => `
+          <div class="flex flex-col space-y-3 bg-slate-900/90 p-2 rounded-2xl">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-400 font-bold uppercase tracking-wider">Tiện ích Điểm Danh</span>
+              <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold">AppIntents Ready</span>
+            </div>
+            
+            <div class="flex items-center justify-between py-1">
+              <div>
+                <p class="text-xs text-slate-400">Số lượt ghi nhận hôm nay</p>
+                <p class="text-3xl font-extrabold text-sky-400 font-mono" id="sim-counter-text">${counterValue}</p>
+              </div>
+              <div class="text-right">
+                <span class="text-xs text-slate-400">Trạng thái</span>
+                <p class="text-xs font-bold text-emerald-400">Đã đồng bộ</p>
+              </div>
+            </div>
+
+            <!-- Interactive Buttons inside the widget -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button onclick="handleSimCounter(1)" class="w-full py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs transition active:scale-95 shadow">
+                +1 Điểm danh
+              </button>
+              <button onclick="handleSimCounter(5)" class="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition active:scale-95 border border-slate-700">
+                +5 Ghi nhận
+              </button>
+            </div>
+          </div>
+        `,
+        code: `// 1. Cập nhật giao diện Widget với nút bấm tương tác
+Widget.reload('attendance', {
+  layout: UI.VStack({
+    padding: 14,
+    backgroundColor: '#0F172A',
+    children: [
+      UI.Text('BỘ ĐẾM ĐIỂM DANH', { color: '#94A3B8', fontSize: 11 }),
+      UI.Text(\`\${counter}\`, { color: '#38BDF8', fontSize: 32, fontWeight: 'heavy' }),
+      UI.Button({
+        title: '+1 Điểm danh',
+        actionId: 'INCREMENT',
+        backgroundColor: '#0284C7'
+      })
+    ]
+  })
+});
+
+// 2. Lắng nghe hành động trực tiếp trong React Native (không gián đoạn)
+useWidgetAction('INCREMENT', () => {
+  setCounter(c => c + 1);
+});`
+      }
+    };
+
+    function switchSimulator(mode) {
+      currentSimState = mode;
+      
+      // Update buttons style
+      document.querySelectorAll('.sim-btn').forEach(btn => {
+        btn.classList.remove('bg-sky-600', 'text-white', 'shadow-lg', 'shadow-sky-600/30');
+        btn.classList.add('bg-slate-800', 'text-slate-300', 'hover:bg-slate-700', 'border', 'border-slate-700');
+      });
+      const activeBtn = document.getElementById('btn-sim-' + mode);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-slate-800', 'text-slate-300', 'hover:bg-slate-700');
+        activeBtn.classList.add('bg-sky-600', 'text-white', 'shadow-lg', 'shadow-sky-600/30');
+      }
+
+      // Render preset
+      const preset = simulatorPresets[mode];
+      document.getElementById('sim-island-box').innerHTML = preset.render();
+      document.getElementById('sim-code-label').innerText = preset.codeLabel;
+      
+      const codeEl = document.getElementById('sim-code');
+      codeEl.textContent = preset.code;
+      Prism.highlightElement(codeEl);
+      lucide.createIcons();
+
+      // Manage Pomodoro timer interval
+      if (mode === 'pomodoro') {
+        startTimerInterval();
+      } else {
+        clearInterval(timerInterval);
+      }
+    }
+
+    function handleSimCounter(delta) {
+      counterValue += delta;
+      const el = document.getElementById('sim-counter-text');
+      if (el) {
+        el.innerText = counterValue;
+        el.classList.add('scale-110');
+        setTimeout(() => el.classList.remove('scale-110'), 150);
+      }
+    }
+
+    function startTimerInterval() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (timerSeconds > 0) {
+          timerSeconds--;
+          const el = document.getElementById('live-timer-display');
+          if (el) {
+            const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+            const s = String(timerSeconds % 60).padStart(2, '0');
+            el.innerText = `${m}:${s}`;
+          }
+        }
+      }, 1000);
+    }
+
+    function resetTimer() {
+      timerSeconds = 1500;
+      startTimerInterval();
+    }
+
+    function copySimulatorCode() {
+      const code = document.getElementById('sim-code').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        alert('Đã sao chép mã ví dụ vào Clipboard!');
+      });
+    }
+
+    function copyCode(btn) {
+      const pre = btn.parentElement.querySelector('pre code');
+      if (!pre) return;
+      navigator.clipboard.writeText(pre.textContent).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'Đã chép!';
+        btn.classList.add('text-emerald-400');
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.classList.remove('text-emerald-400');
+        }, 1800);
+      });
+    }
+
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const span = btn.querySelector('span');
+        if (span) {
+          const old = span.innerText;
+          span.innerText = 'Đã chép!';
+          setTimeout(() => { span.innerText = old; }, 1500);
+        }
+      });
+    }
+
+    // Scroll to top button visibility
+    window.addEventListener('scroll', () => {
+      const topBtn = document.getElementById('back-to-top');
+      if (window.scrollY > 400) {
+        topBtn.classList.remove('opacity-0', 'pointer-events-none');
+        topBtn.classList.add('opacity-100');
+      } else {
+        topBtn.classList.add('opacity-0', 'pointer-events-none');
+        topBtn.classList.remove('opacity-100');
+      }
+    });
+
+    // Initialize initial state
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      switchSimulator('delivery');
+    });
   </script>
 </body>
 </html>

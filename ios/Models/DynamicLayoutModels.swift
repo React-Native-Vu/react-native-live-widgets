@@ -3,11 +3,13 @@ import Foundation
 // MARK: - Declarative Layout Models (Shared between Live Activity & Home Screen Widgets)
 
 public struct LayoutNodeDTO: Codable {
+  public let id: String?
   public let type: String
   public let props: [String: AnyCodable]?
   public let children: [LayoutNodeDTO]?
 
-  public init(type: String, props: [String: AnyCodable]? = nil, children: [LayoutNodeDTO]? = nil) {
+  public init(id: String? = nil, type: String, props: [String: AnyCodable]? = nil, children: [LayoutNodeDTO]? = nil) {
+    self.id = id
     self.type = type
     self.props = props
     self.children = children
@@ -83,6 +85,9 @@ public struct WidgetSinglePageDTO: Codable {
 }
 
 public struct WidgetMultiPagePayloadDTO: Codable {
+  public let root: LayoutNodeDTO?
+  public let version: String?
+  public let semanticSummary: String?
   public let small: LayoutNodeDTO?
   public let medium: LayoutNodeDTO?
   public let large: LayoutNodeDTO?

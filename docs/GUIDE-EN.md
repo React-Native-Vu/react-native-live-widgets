@@ -944,6 +944,247 @@ phases: [
 
 ---
 
+---
+
+## 12. Advanced Styling Modifiers & Platform Capability Matrix
+
+### 12.1. Styling Modifiers Reference
+
+Elevate your widgets and Live Activities with design system fundamentals:
+
+1. **🌈 Linear & Radial Gradients**:
+   ```tsx
+   <VStack
+     gradient={{
+       colors: ['#1E3A8A', '#3B82F6'],
+       startPoint: { x: 0, y: 0 },
+       endPoint: { x: 1, y: 1 },
+       angle: 45,
+     }}
+     padding={16}
+   >
+     <Text typography="headline" color="#FFFFFF">Gradient Card</Text>
+   </VStack>
+   ```
+   > [!TIP]
+   > **Graceful Fallback**: If an older OS version or platform does not support gradient shaders, the renderer automatically uses the first color in `colors` as the solid fallback `backgroundColor`.
+
+2. **🔲 Borders & Dashed Lines**:
+   ```tsx
+   <VStack
+     borderWidth={1.5}
+     borderColor="#38BDF8"
+     borderStyle="dashed"
+     borderRadius={12}
+     padding={12}
+   >
+     <Text fontSize={12} color="#94A3B8">Dashed card border</Text>
+   </VStack>
+   ```
+
+3. **🌑 Shadows & Elevation**:
+   ```tsx
+   <Button
+     title="Confirm"
+     backgroundColor="#2563EB"
+     shadowColor="#2563EB"
+     shadowRadius={6}
+     shadowOpacity={0.4}
+     shadowOffset={{ x: 0, y: 3 }}
+   />
+   ```
+
+4. **🔤 Typography & Dynamic Type (Accessibility Scaling)**:
+   - Scale levels: `largeTitle` (34), `title1` (28), `title2` (22), `title3` (20), `headline` (17 bold), `body` (17 regular), `callout` (16), `subheadline` (15), `footnote` (13), `caption1` (12), `caption2` (11).
+   - `fontDesign`: `'default' | 'monospaced' | 'rounded' | 'serif'`.
+   - `dynamicType`: Defaults to `true` — automatically respects the user's OS Accessibility font size setting.
+
+5. **🌗 Tinted / Dark Mode (iOS 18 Accentable & Android Dynamic Theming)**:
+   ```tsx
+   <Text color={{ light: '#0F172A', dark: '#F8FAFC', tinted: '#38BDF8' }}>
+     Theme-adaptive text
+   </Text>
+   ```
+
+6. **🌍 RTL Internationalization**:
+   ```tsx
+   <HStack direction="rtl" isRTL={true} spacing={8}>
+     <Text>مرحبا بك</Text>
+   </HStack>
+   ```
+
+---
+
+### 12.2. Platform Capability & Fallback Matrix
+
+Rather than making unverified claims of "100% parity", the engine provides an explicit, transparent capability matrix paired with automatic **Graceful Fallbacks**:
+
+| Feature / Modifier | iOS WidgetKit | iOS Live Activity | Android Ongoing Notification | Android Home Widget | Graceful Fallback Strategy |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **Declarative Layouts (`VStack`/`HStack`/`Grid`)** | ✅ SwiftUI | ✅ SwiftUI | ✅ Canvas | ✅ 2D Canvas | 100% pixel-aligned cross-platform |
+| **Linear / Radial Gradients** | ✅ SwiftUI | ✅ SwiftUI | ✅ Shader | ✅ Shader | Automatically falls back to dominant solid `backgroundColor` |
+| **Card & Text Shadows** | ✅ SwiftUI | ✅ SwiftUI | ⚠️ Text Only | ✅ `setShadowLayer` | Falls back to elevation or thin border stroke |
+| **Dashed / Dotted Borders** | ✅ StrokeStyle | ✅ StrokeStyle | ⚠️ Solid | ✅ `DashPathEffect` | Automatically falls back to solid border |
+| **Dynamic Type (Accessibility)** | ✅ Native | ✅ Native | ✅ `fontScale` | ✅ `fontScale` | Automatically scales with OS font multiplier |
+| **RTL Layout Mirroring** | ✅ Native | ✅ Native | ✅ RTL | ✅ RTL | Reverses flex order and flips text alignment |
+| **Accessibility (TalkBack / VoiceOver)** | ✅ Native VoiceOver | ✅ Native VoiceOver | ✅ Notification Text | ✅ A11y Summary + Hit-Zones | Aggregated semantic `contentDescription` ensures full screen-reader readability |
+| **iOS 18 Tinted Mode** | ✅ Accentable | N/A | N/A | ✅ Material You | Resolves `tinted` key on iOS 18; falls back to dark/light color |
+| **Interactive Background Intents** | ✅ iOS 17+ | ✅ iOS 17+ | ✅ PendingIntent | ✅ PendingIntent | Updates local Shared Storage and refreshes timeline |
+
+---
+
+### 12.3. ♿ Accessibility & Semantics (Phase 1 Fallback Layer)
+
+To ensure users with visual impairments or screen-reader users (**VoiceOver on iOS**, **TalkBack on Android**) receive full context, the engine provides standard accessibility props:
+
+```tsx
+<VStack padding={16} backgroundColor="#0F172A">
+  {/* Header with semantic role */}
+  <Text
+    typography="title2"
+    accessibilityRole="header"
+    accessibilityLabel="Shift Attendance Dashboard"
+  >
+    ATTENDANCE DASHBOARD
+  </Text>
+
+  {/* Progress gauge with spoken percentage */}
+  <Progress
+    value={0.86}
+    accessibilityLabel="Shift completion progress"
+    accessibilityValue="86 percent"
+  />
+
+  {/* Interactive button with action hint */}
+  <Button
+    title="Clock In"
+    actionId="CLOCK_IN"
+    accessibilityRole="button"
+    accessibilityLabel="Clock in to shift"
+    accessibilityHint="Double tap to confirm attendance"
+  />
+
+  {/* Decorative element hidden from screen readers */}
+  <Image systemName="sparkles" accessible={false} />
+</VStack>
+```
+
+#### How Phase 1 Accessibility Works:
+1. **iOS (SwiftUI)**: Maps directly to native `.accessibilityLabel()`, `.accessibilityHint()`, `.accessibilityValue()`, and `.accessibilityAddTraits()`. Elements with `accessible={false}` receive `.accessibilityHidden(true)`.
+2. **Android (Canvas 2D)**:
+   - Recursively extracts an intelligent text summary (`extractAccessibilitySummary`) and binds it to the canvas `ImageView`'s `contentDescription`.
+   - Each interactive hit-zone receives its own `contentDescription` and action hint so TalkBack speaks each button individually when focused.
+3. **In-App Preview**: Maps to React Native Web/Mobile accessibility props.
+
+---
+
+### 12.4. Programmatic Capability Inspection (`Widget.getCapabilities`)
+```typescript
+const caps = await Widget.getCapabilities();
+console.log(`Running on: ${caps.platform} (OS: ${caps.osVersion})`);
+
+if (caps.supportsDynamicIsland) {
+  console.log('Device has Dynamic Island hardware!');
+}
+
+if (caps.supportsTintedMode) {
+  console.log('Device supports iOS 18 Tinted Home Screen mode!');
+}
+```
+
+---
+
+### 12.5. 🌲 UI Intermediate Representation (IR) & Semantic Tree (Phase 2)
+
+Rather than compiling directly from `DSL ➔ Canvas Bitmap`, the engine introduces a decoupled **UI Intermediate Representation (IR v2.0)** and a **Renderer Planner**:
+
+```
+React Native DSL (JSX / UI.*)
+       ↓
+UI Intermediate Representation (IR v2.0)
+ ├── UI Tree (unique ID for every node)
+ ├── Semantic Tree (independent of visual renderer)
+ ├── State Bindings (toggle:<key>, page:<id>)
+ └── Renderer Planner (classifies Native RemoteViews vs Canvas Bitmap)
+       ↓
+ ├── [NATIVE] RemoteViews (TextView, Button, ProgressBar)
+ └── [CANVAS] Canvas 2D Bitmap (Gauge 240°, Equalizer, Shader)
+```
+
+#### Inspecting and Compiling IR:
+```typescript
+import { Widget, UI } from 'react-native-live-widgets';
+
+const layout = UI.VStack({
+  padding: 16,
+  backgroundColor: '#0F172A',
+  children: [
+    UI.Text('ATTENDANCE DASHBOARD', { typography: 'title2' }),
+    UI.Progress({ value: 0.86, accessibilityLabel: 'Shift completion' }),
+    UI.Button({ title: 'Clock In', actionId: 'toggle:attendance' }),
+    UI.Gauge({ value: 0.92, label: 'Efficiency' })
+  ]
+});
+
+// 1. Inspect architectural plan and accessibility synthesis
+console.log(Widget.inspectIR(layout));
+
+// 2. Compile to raw IR object
+const ir = Widget.compileIR(layout);
+console.log('Synthesized A11y Summary:', ir.semanticSummary);
+```
+
+---
+
+### 12.6. ⚡ Native State Sync, Sub-renderer Optimization & Automated Test Suite
+
+#### 1. Native State Synchronization (Phase 4):
+- Instant action & toggle responses: Native Android (`LiveActivityReceiver.kt` & `DynamicWidgetStateStore`) immediately updates `SharedPreferences` and triggers a widget redraw with zero UI lag even if the app was killed.
+- React hooks (`useWidgetStorage`, `useWidgetAction`) reconcile the latest state upon app launch.
+
+#### 2. Canvas Sub-renderer Optimization (Phase 5):
+- `renderSubNodeBitmap`: Isolates bitmap allocation solely to the sub-component's bounding box (e.g. 64dp Gauge consumes only ~40KB bitmap) instead of allocating a full-screen canvas bitmap.
+- Completely avoids Android Binder IPC `TransactionTooLargeException`.
+
+#### 3. Advanced JSX Components & Automated Tests (Phase 6):
+- New JSX components: `<Toggle>`, `<Switch>`, and `<Checkbox>` with `checked`/`isChecked`, `tintColor`, and `strikethroughOnCheck`.
+- Automated test suite verifying 100% assertions:
+  ```bash
+  npm test
+  ```
+
+---
+
+### 12.7. 🎯 Exact Dynamic Hit Layer, Live Chronometer Countdown & Swift 6 Compatibility (v1.2.1)
+
+Version **v1.2.1** addresses critical real-world interaction challenges on physical devices:
+
+#### 1. Exact Dynamic Hit Layer
+* **Previous Issue**: With static coordinate grids, layout reflows or dynamic content caused buttons to trigger adjacent items or blank spaces to activate phantom taps.
+* **v1.2.1 Solution**:
+  - Replaced the fixed grid with a dynamic `FrameLayout` container (`rn_hit_layer` paired with `rn_live_widget_hit_zone.xml`).
+  - Implemented the **`computeCanvasMapping`** algorithm to calculate aspect ratio letterboxing (`fitCenter`) between the Canvas Bitmap and the Launcher Widget bounds.
+  - Generates independent RemoteViews hit zones that align 100% with the rendered element bounding box. Empty areas receive no touch events.
+
+#### 2. Native Live Countdown Chronometer (`android.widget.Chronometer`)
+* **Previous Issue**: Drawing countdown text directly on Canvas required broadcasting and re-rendering the bitmap every second, causing battery drain and rate-limiting from Android system schedulers.
+* **v1.2.1 Solution**:
+  - Integrated native `android.widget.Chronometer` into the widget host layout.
+  - Automatically configured with `setChronometerCountDown(true)` and `baseMillis = SystemClock.elapsedRealtime() + remainingMillis`.
+  - The renderer suppresses static timer text when an active chronometer is present, allowing continuous 1-second countdown ticks driven natively by Android OS.
+
+#### 3. Dynamic Template Variable Interpolation & Initial State Store
+* **Variable Interpolation**: Supports dynamic string templates (`{{id}}`, `{{title}}`, counter values) directly in the layout JSON, automatically resolved against action responses and local state.
+* **`defaultChecked` Persistence**: Switches and checkboxes with `checked: true` have their initial state committed to `DynamicWidgetStateStore` on initial render, allowing them to be toggled off immediately on the first tap.
+
+#### 4. Swift 6 Language Mode Compatibility (iOS Xcode)
+* **Resolved `type '()' cannot conform to 'View'`**:
+  - Encapsulated `Font` resolution in `renderText()` within self-invoking closures `{ ... }()`.
+  - Refactored `DynamicNodeAccessibilityModifier` procedural assignments into a dedicated `buildAccessibilityView(content:) -> AnyView` helper method.
+  - Added fallback `else { EmptyView() }` branches to `backgroundView` and `borderOverlay` in `ContainerStyleModifier`.
+
+---
+
 ## 📄 License
 MIT © vu-tran
 

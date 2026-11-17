@@ -943,5 +943,271 @@ phases: [
 
 ---
 
+---
+
+## 12. Hệ thống Styling Modifiers & Bảng Năng lực Nền tảng (Capability & Fallback Matrix)
+
+### 12.1. Styling Modifiers nâng cao
+Bộ thuộc tính thiết kế nền tảng giúp Widget và Live Activity đạt chuẩn giao diện iOS & Android chuyên nghiệp:
+
+1. **🌈 Gradient (Dải màu chuyển sắc)**:
+   ```tsx
+   <VStack
+     gradient={{
+       colors: ['#1E3A8A', '#3B82F6'],
+       startPoint: { x: 0, y: 0 },
+       endPoint: { x: 1, y: 1 },
+       angle: 45
+     }}
+     padding={16}
+   >
+     <Text typography="headline" color="#FFFFFF">Thẻ chuyển sắc</Text>
+   </VStack>
+   ```
+   > [!TIP]
+   > **Graceful Fallback**: Nếu hệ điều hành hoặc thiết bị cũ không hỗ trợ vẽ gradient, engine tự động lấy màu đầu tiên trong danh sách `colors` làm màu nền đơn sắc (`backgroundColor`) thay thế, hoàn toàn không gây lỗi giao diện.
+
+2. **🔲 Border & Dashed Lines (Đường viền nét đứt)**:
+   ```tsx
+   <VStack
+     borderWidth={1.5}
+     borderColor="#38BDF8"
+     borderStyle="dashed"
+     borderRadius={12}
+     padding={12}
+   >
+     <Text fontSize={12} color="#94A3B8">Khu vực kéo thả hoặc ghi chú</Text>
+   </VStack>
+   ```
+
+3. **🌑 Shadow (Đổ bóng có chiều sâu)**:
+   ```tsx
+   <Button
+     title="Xác nhận"
+     backgroundColor="#2563EB"
+     shadowColor="#2563EB"
+     shadowRadius={6}
+     shadowOpacity={0.4}
+     shadowOffset={{ x: 0, y: 3 }}
+   />
+   ```
+
+4. **🔤 Typography & Dynamic Type (Cỡ chữ chuẩn & Trợ năng)**:
+   - Các bậc cỡ chữ chuẩn: `largeTitle` (34), `title1` (28), `title2` (22), `title3` (20), `headline` (17 bold), `body` (17 regular), `callout` (16), `subheadline` (15), `footnote` (13), `caption1` (12), `caption2` (11).
+   - `fontDesign`: `'default' | 'monospaced' | 'rounded' | 'serif'`.
+   - `dynamicType`: Mặc định `true` — tự động co giãn theo cỡ chữ Trợ năng mà người dùng cài đặt trong Cài đặt hệ thống (Accessibility Font Size).
+
+5. **🌗 Tinted / Dark Mode (Chế độ đổi màu iOS 18 & Material You)**:
+   ```tsx
+   <Text color={{ light: '#0F172A', dark: '#F8FAFC', tinted: '#38BDF8' }}>
+     Nội dung tự thích ứng màu sắc
+   </Text>
+   ```
+
+6. **🌍 Hỗ trợ bố cục quốc tế hoá RTL**:
+   ```tsx
+   <HStack direction="rtl" isRTL={true} spacing={8}>
+     <Text>مرحبا بك</Text>
+   </HStack>
+   ```
+
+---
+
+### 12.2. Bảng Tra cứu Năng lực Nền tảng (Platform Capability & Fallback Matrix)
+
+Thay vì tuyên bố chung chung "100% parity", engine phân định rõ ràng các tính năng thực tế được hỗ trợ trên từng hệ điều hành và cơ chế tự động chuyển đổi an toàn (Graceful Fallback):
+
+| Tính năng / Thuộc tính | iOS WidgetKit | iOS Live Activity | Android Ongoing Notification | Android Home Widget | Cơ chế Graceful Fallback khi không hỗ trợ |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **Bố cục Khai báo (`VStack`/`HStack`/`Grid`)** | ✅ SwiftUI | ✅ SwiftUI | ✅ Canvas | ✅ 2D Canvas | Tương thích pixel 100% hai hệ máy |
+| **Linear / Radial Gradient** | ✅ SwiftUI | ✅ SwiftUI | ✅ Shader | ✅ Shader | Tự động lấy màu đầu tiên trong `colors` làm màu nền đơn sắc |
+| **Bóng đổ Thẻ / Chữ (Shadow)** | ✅ SwiftUI | ✅ SwiftUI | ⚠️ Text Shadow | ✅ `setShadowLayer` | Tự động hạ cấp sang viền mỏng hoặc Android Elevation |
+| **Viền nét đứt (Dashed / Dotted)** | ✅ StrokeStyle | ✅ StrokeStyle | ⚠️ Nét liền | ✅ `DashPathEffect` | Tự động hiển thị viền nét liền `solid` |
+| **Dynamic Type (Cỡ chữ Trợ năng)** | ✅ Native | ✅ Native | ✅ `fontScale` | ✅ `fontScale` | Tự động nhân tỉ lệ fontScale của hệ điều hành |
+| **Đảo chiều RTL (Ả Rập, Hebrew)** | ✅ Native | ✅ Native | ✅ RTL | ✅ RTL | Tự động đảo thứ tự hàng ngang sang `row-reverse` |
+| **Accessibility (TalkBack / VoiceOver)** | ✅ Native VoiceOver | ✅ Native VoiceOver | ✅ Notification Text | ✅ A11y Summary + Hit-Zones | Tổng hợp ngữ nghĩa toàn cây gán vào `contentDescription` |
+| **Chế độ Tinted (iOS 18+)** | ✅ Accentable | Không áp dụng | Không áp dụng | ✅ Material You | Tự động dùng màu `dark`/`light` trên iOS 17 trở xuống |
+| **Nút bấm tương tác chạy ngầm** | ✅ iOS 17+ AppIntent | ✅ iOS 17+ | ✅ PendingIntent | ✅ PendingIntent | Lưu trạng thái SharedStorage và kích hoạt làm mới giao diện |
+
+---
+
+### 12.3. ♿ Lớp Trợ năng & Ngữ nghĩa (Accessibility Fallback Layer)
+
+Để đảm bảo người khiếm thị hoặc người sử dụng công cụ đọc màn hình (**VoiceOver trên iOS**, **TalkBack trên Android**) tiếp cận được đầy đủ thông tin trên Widget, engine cung cấp các thuộc tính Trợ năng chuẩn:
+
+```tsx
+<VStack padding={16} backgroundColor="#0F172A">
+  {/* Tiêu đề với vai trò Header */}
+  <Text
+    typography="title2"
+    accessibilityRole="header"
+    accessibilityLabel="Bảng điều khiển chấm công"
+  >
+    BẢNG ĐIỀU KHIỂN CHẤM CÔNG
+  </Text>
+
+  {/* Chỉ số tiến độ với nhãn và giá trị âm thanh */}
+  <Progress
+    value={0.86}
+    accessibilityLabel="Tiến độ hoàn thành ca làm việc"
+    accessibilityValue="86 phần trăm"
+  />
+
+  {/* Nút bấm với nhãn và gợi ý hành động */}
+  <Button
+    title="Check-in vào ca"
+    actionId="CHECK_IN"
+    accessibilityRole="button"
+    accessibilityLabel="Check-in vào ca"
+    accessibilityHint="Chạm hai lần để gửi yêu cầu chấm công"
+  />
+
+  {/* Phần tử trang trí (không đọc lên TalkBack/VoiceOver) */}
+  <Image systemName="sparkles" accessible={false} />
+</VStack>
+```
+
+#### Cơ chế hoạt động của Accessibility Fallback Layer (Phase 1):
+1. **Trên iOS**: Map trực tiếp sang SwiftUI `.accessibilityLabel()`, `.accessibilityHint()`, `.accessibilityValue()`, `.accessibilityAddTraits()`. Nếu `accessible={false}`, áp dụng `.accessibilityHidden(true)`.
+2. **Trên Android (Canvas 2D)**:
+   - Toàn bộ cây DSL được duyệt đệ quy để trích xuất một bản tóm tắt âm thanh thông minh (`extractAccessibilitySummary`) và gán vào `contentDescription` của Canvas `ImageView`.
+   - Các nút bấm tương tác (Hit-Zones) được gán `contentDescription` riêng rẽ kèm `accessibilityHint`, giúp TalkBack phát âm chuẩn xác khi người dùng chạm vào từng nút.
+3. **Trong In-App Preview**: Tự động ánh xạ sang `accessible`, `accessibilityLabel`, `accessibilityHint`, `accessibilityRole` của React Native Web/Mobile.
+
+---
+
+### 12.4. Kiểm tra năng lực thiết bị qua code (`Widget.getCapabilities`)
+```typescript
+const caps = await Widget.getCapabilities();
+console.log(`Đang chạy trên: ${caps.platform} (OS: ${caps.osVersion})`);
+
+if (caps.supportsDynamicIsland) {
+  console.log('Thiết bị có Dynamic Island (iPhone 14 Pro/15/16)!');
+}
+
+if (caps.supportsTintedMode) {
+  console.log('Hỗ trợ chế độ Tinted Home Screen của iOS 18!');
+}
+```
+
+---
+
+### 12.5. 🌲 UI Intermediate Representation (IR) & Semantic Tree (Phase 2)
+
+Thay vì đi thẳng từ `DSL ➔ Canvas Bitmap`, kiến trúc v1.2 giới thiệu tầng **UI Intermediate Representation (IR)** và bộ điều phối **Renderer Planner**:
+
+```
+React Native DSL (JSX / UI.*)
+       ↓
+UI Intermediate Representation (IR v2.0)
+ ├── UI Tree (gán ID duy nhất cho từng Node)
+ ├── Semantic Tree (độc lập hoàn toàn với Renderer)
+ ├── State Bindings (toggle:<key>, page:<id>)
+ └── Renderer Planner (phân loại Native RemoteViews vs Canvas Bitmap)
+       ↓
+ ├── [NATIVE] RemoteViews (TextView, Button, ProgressBar)
+ └── [CANVAS] Canvas 2D Bitmap (Gauge 240°, Equalizer, Shader)
+```
+
+#### Sử dụng API `Widget.inspectIR` và `Widget.compileIR`:
+```typescript
+import { Widget, UI } from 'react-native-live-widgets';
+
+const layout = UI.VStack({
+  padding: 16,
+  backgroundColor: '#0F172A',
+  children: [
+    UI.Text('BẢNG ĐIỀU KHIỂN CHẤM CÔNG', { typography: 'title2' }),
+    UI.Progress({ value: 0.86, accessibilityLabel: 'Tiến độ hoàn thành ca' }),
+    UI.Button({ title: 'Check In', actionId: 'toggle:attendance' }),
+    UI.Gauge({ value: 0.92, label: 'Hiệu suất' })
+  ]
+});
+
+// 1. Phân tích kiến trúc và kế hoạch kết xuất
+console.log(Widget.inspectIR(layout));
+/*
+Output:
+🌲 Widget IR v2.0
+📊 Chiến lược kết xuất: NATIVE_FIRST_HYBRID
+   - Native RemoteViews nodes: 4
+   - Canvas Bitmap nodes: 1
+
+♿ Tóm tắt âm thanh Trợ năng:
+   "BẢNG ĐIỀU KHIỂN CHẤM CÔNG. Tiến độ hoàn thành ca 86%. Nút Check In (Kích hoạt hành động toggle:attendance). Hiệu suất: 92%"
+
+🎯 Kế hoạch phân bổ (Render Plan Tree):
+   [NATIVE] 0.0 <Text> role=header label="BẢNG ĐIỀU KHIỂN CHẤM CÔNG"
+   [NATIVE] 0.1 <Progress> role=progressbar label="Tiến độ hoàn thành ca"
+   [NATIVE] 0.2 <Button> role=button label="Check In" (Action: toggle:attendance)
+   [CANVAS] 0.3 <Gauge> role=progressbar label="Hiệu suất"
+
+⚡ Liên kết trạng thái (State Bindings):
+   - [TOGGLE] action=toggle:attendance target=attendance
+*/
+
+// 2. Biên dịch trực tiếp sang IR Object
+const ir = Widget.compileIR(layout);
+console.log(ir.semanticSummary);
+```
+
+---
+
+### 12.6. ⚡ Đồng bộ Trạng thái Native, Tối ưu Sub-renderer & Bộ Kiểm thử Tự động
+
+#### 1. Đồng bộ Trạng thái Hai chiều Native (Phase 4 State Synchronization):
+- Khi người dùng chạm nút hoặc đổi toggle trên Widget, Android Native (`LiveActivityReceiver.kt` & `DynamicWidgetStateStore`) **ngay lập tức lưu trạng thái mới vào SharedPreferences** và kích hoạt re-render widget ngay tức khắc, không có độ trễ và không bị lệch trạng thái kể cả khi App đã bị tắt (Force-Killed).
+- Khi App React Native mở lên, hook `useWidgetStorage` và `useWidgetAction` tự động đồng bộ lại state mới nhất từ Native Store.
+
+#### 2. Tối ưu Canvas Sub-renderer (Phase 5 RAM & Binder Protection):
+- Thay vì vẽ một tấm Bitmap khổng lồ chiếm hàng Megabyte cho toàn bộ màn hình, phương thức `renderSubNodeBitmap` chỉ vẽ đúng kích thước khung hình hộp bao của thành phần đồ họa (ví dụ Gauge 64dp chỉ tốn ~40KB bitmap).
+- Triệt tiêu hoàn toàn nguy cơ chạm trần bộ nhớ Binder IPC (`TransactionTooLargeException`) trên Android.
+
+#### 3. Bộ linh kiện Nâng cao & Kiểm thử Tự động (Phase 6):
+- Bổ sung các thẻ JSX: `<Toggle>`, `<Switch>`, `<Checkbox>` với trạng thái `checked`/`isChecked`, tự động đổi màu `tintColor` và gạch ngang chữ `strikethroughOnCheck`.
+- Bộ kiểm thử tự động 100% assertions:
+  ```bash
+  npm test
+  ```
+  Xác minh tự động:
+  - Cây IR AST và gán ID duy nhất.
+  - Lọc bỏ phần tử trang trí (`accessible: false`).
+  - Phân loại Native-first vs Canvas-when-needed.
+  - Trích xuất Two-Way State Bindings.
+  - Tổng hợp câu âm thanh trợ năng TalkBack.
+
+---
+
+### 12.7. 🎯 Exact Dynamic Hit Layer, Live Chronometer Countdown & Tương thích Swift 6 (v1.2.1)
+
+Phiên bản **v1.2.1** giải quyết dứt điểm các bài toán thực tế khi triển khai Widget tương tác phức tạp trên thiết bị người dùng thật:
+
+#### 1. Vùng Bấm Động Từng Pixel (Exact Dynamic Hit Layer)
+* **Vấn đề trước đây**: Khi dùng lưới tọa độ cố định, nếu các thành phần trong layout co giãn hoặc nằm lệch dòng, người dùng bấm vào một nút có thể bị ăn sang nút khác, hoặc bấm vào vùng trống lại kích hoạt nhầm sự kiện.
+* **Giải pháp v1.2.1**:
+  - Toàn bộ lưới cố định được thay bằng container `FrameLayout` động (`rn_hit_layer` kết hợp `rn_live_widget_hit_zone.xml`).
+  - Giải thuật **`computeCanvasMapping`** tự động tính toán bù trừ tỷ lệ co giãn (`fitCenter` letterboxing) giữa kích thước Canvas Bitmap thật và màn hình widget Launcher.
+  - Mỗi phần tử tương tác (Button, Checkbox, Switch, Link) được sinh một vùng RemoteViews độc lập khớp chính xác 100% với bounding box được vẽ trên Bitmap.
+  - Vùng trống hoàn toàn không nhận sự kiện, triệt tiêu mọi cú chạm ảo (ghost clicks / phantom taps).
+
+#### 2. Native Live Countdown Chronometer (`android.widget.Chronometer`)
+* **Vấn đề trước đây**: Vẽ chữ đếm ngược tĩnh trên Canvas đòi hỏi phải gửi broadcast và render lại bitmap mỗi giây. Điều này gây hao pin, chậm phản hồi và hệ điều hành Android có thể chặn vì spam update quá tần suất.
+* **Giải pháp v1.2.1**:
+  - Tích hợp thành phần native `android.widget.Chronometer` trong layout host widget.
+  - Tự động cấu hình `setChronometerCountDown(true)` và tính toán `baseMillis = SystemClock.elapsedRealtime() + remainingMillis`.
+  - Renderer tự động ẩn dòng chữ đếm ngược tĩnh trên Bitmap khi có Chronometer hoạt động. Widget đếm ngược mượt mà từng giây trực tiếp từ hệ thống Android mà không cần vẽ lại Bitmap.
+
+#### 3. Nội suy biến động (Template Interpolation) & Quản lý Trạng thái Khởi tạo
+* **Nội suy chuỗi biến số**: Hỗ trợ cú pháp template `{{id}}`, `{{title}}`, và giá trị bộ đếm phẳng `counterVal`. Bạn có thể truyền động mã phiếu, tiêu đề công việc hoặc số lượt đếm từ API vào layout JSON.
+* **Xử lý `defaultChecked`**: Trong `DynamicWidgetStateStore`, trạng thái ban đầu của switch (`checked: true`) được tự động lưu vào store ngay lần kết xuất đầu tiên. Người dùng có thể tắt switch ngay từ lần chạm đầu tiên mà không bị reset về trạng thái mặc định.
+
+#### 4. Tương thích Toàn diện Swift 6 Language Mode (iOS Xcode)
+* **Loại bỏ lỗi `type '()' cannot conform to 'View'`**:
+  - Đóng gói toàn bộ logic tính `Font` trong `renderText()` vào closure độc lập `{ ... }()`, ngăn compiler Swift 6 hiểu nhầm các câu lệnh điều kiện `if/switch` là View `Void`.
+  - Tách logic phân giải `DynamicNodeAccessibilityModifier` sang hàm helper thuần `buildAccessibilityView(content:) -> AnyView`, tránh xung đột với `@ViewBuilder` ngầm định của protocol `ViewModifier`.
+  - Đóng gói `strokeStyle` và bổ sung nhánh fallback `else { EmptyView() }` cho `backgroundView` và `borderOverlay` trong `ContainerStyleModifier`.
+
+---
+
 ## 📄 License
 MIT © vu-tran

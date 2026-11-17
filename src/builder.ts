@@ -19,6 +19,7 @@ import {
   SpacerNode,
   StyleProp,
   TextNode,
+  TextNodeProps,
   TextStyle,
   TimerNode,
   ToggleNode,
@@ -64,12 +65,66 @@ function isLayoutNode(item: any): item is LayoutNode {
   return item && typeof item === 'object' && typeof item.type === 'string';
 }
 
+const TYPOGRAPHY_DEFAULTS: Record<string, { fontSize: number; fontWeight: any }> = {
+  largeTitle: { fontSize: 34, fontWeight: 'bold' },
+  title1: { fontSize: 28, fontWeight: 'bold' },
+  title2: { fontSize: 22, fontWeight: 'bold' },
+  title3: { fontSize: 20, fontWeight: 'semibold' },
+  headline: { fontSize: 17, fontWeight: 'semibold' },
+  body: { fontSize: 17, fontWeight: 'regular' },
+  callout: { fontSize: 16, fontWeight: 'regular' },
+  subheadline: { fontSize: 15, fontWeight: 'regular' },
+  footnote: { fontSize: 13, fontWeight: 'regular' },
+  caption1: { fontSize: 12, fontWeight: 'regular' },
+  caption2: { fontSize: 11, fontWeight: 'regular' },
+};
+
 function normalizeProps<P extends object>(props?: P): P | undefined {
   if (!props) return undefined;
   const p = { ...props } as any;
+
+  // Bo góc alias
   if (p.cornerRadius !== undefined && p.borderRadius === undefined) {
     p.borderRadius = p.cornerRadius;
   }
+
+  // Spacing / Gap alias chuẩn React Native
+  if (p.gap !== undefined && p.spacing === undefined) {
+    p.spacing = p.gap;
+  }
+
+  // Graceful Fallback cho Gradient: nếu nền tảng/OS không hỗ trợ gradient, tự lấy màu đầu tiên làm backgroundColor
+  if (p.gradient && Array.isArray(p.gradient.colors) && p.gradient.colors.length > 0 && !p.backgroundColor) {
+    p.backgroundColor = p.gradient.colors[0];
+  }
+
+  // Typography scale chuẩn
+  if (p.typography && TYPOGRAPHY_DEFAULTS[p.typography]) {
+    const typo = TYPOGRAPHY_DEFAULTS[p.typography];
+    if (p.fontSize === undefined) p.fontSize = typo.fontSize;
+    if (p.fontWeight === undefined) p.fontWeight = typo.fontWeight;
+  }
+
+  // Trợ năng / Accessibility Semantics Fallback (Phase 1):
+  if (p.accessible === undefined) {
+    if (p.text !== undefined || p.title !== undefined || p.actionId !== undefined) {
+      p.accessible = true;
+    }
+  }
+
+  if (p.accessibilityLabel === undefined) {
+    if (p.text !== undefined) p.accessibilityLabel = String(p.text);
+    else if (p.title !== undefined) p.accessibilityLabel = String(p.title);
+  }
+
+  if (p.accessibilityRole === undefined) {
+    if (p.title !== undefined || p.actionId !== undefined) {
+      p.accessibilityRole = 'button';
+    } else if (p.typography && (p.typography.startsWith('title') || p.typography === 'largeTitle' || p.typography === 'headline')) {
+      p.accessibilityRole = 'header';
+    }
+  }
+
   return p as P;
 }
 
@@ -130,10 +185,10 @@ export const UI = {
     const merged = flattenStyle(...styles);
     return {
       type: 'Text',
-      props: {
+      props: normalizeProps<TextNodeProps>({
         text,
         ...(merged || {}),
-      },
+      })!,
     };
   },
 
