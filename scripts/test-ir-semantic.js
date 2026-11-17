@@ -199,6 +199,11 @@ assert.strictEqual(resolveTemplateString('{{attendance.progress|divide:100|multi
 assert.strictEqual(resolveTemplateString('{{attendance.progress|percent:0}}', flatVars), '85%');
 assert.strictEqual(resolveTemplateString('{{attendance.onTime|if:Đúng giờ:Đi trễ}}', flatVars), 'Đúng giờ');
 assert.strictEqual(resolveTemplateString('{{salary|currency:₫}}', flatVars), '15,000,000₫');
+assert.strictEqual(
+  resolveTemplateString('{{wrapped|divide:100}}', { wrapped: '{{92}}' }),
+  '0.92',
+  'Stale {{...}} wrapped values must unwrap cleanly before pipe math'
+);
 
 assert(
   typesDts.includes('cacheTtlSeconds?: number') &&

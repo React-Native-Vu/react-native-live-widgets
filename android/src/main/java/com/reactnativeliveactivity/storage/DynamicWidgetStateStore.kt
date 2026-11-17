@@ -331,8 +331,20 @@ object DynamicWidgetStateStore {
         }
     }
 
+    private fun sanitizeVariableValue(raw: String?): String? {
+        if (raw == null) return null
+        val trimmed = raw.trim()
+        if (trimmed.startsWith("{{") && trimmed.endsWith("}}")) {
+            val inner = trimmed.substring(2, trimmed.length - 2)
+            if (!inner.contains('{') && !inner.contains('}') && !inner.contains('|')) {
+                return inner.trim()
+            }
+        }
+        return raw
+    }
+
     fun evaluateTemplatePipe(rawValue: String?, pipes: List<String>): String {
-        var current = rawValue ?: ""
+        var current = sanitizeVariableValue(rawValue) ?: ""
 
         for (rawPipe in pipes) {
             val colonIdx = rawPipe.indexOf(':')
@@ -822,8 +834,22 @@ object DynamicWidgetStateStore {
                         val targetKey = keys.next()
                         val expr = mapObj.optString(targetKey, "")
                         if (expr.isNotEmpty()) {
-                            val token = if (expr.contains("{{")) expr else "{{$expr}}"
-                            mergedVars[targetKey] = resolveTemplateString(token, mergedVars)
+                            if (expr.contains("{{")) {
+                                mergedVars[targetKey] = resolveTemplateString(expr, mergedVars)
+                            } else {
+                                val parts = expr.split("|")
+                                val pathKey = parts[0].trim()
+                                val pipes = parts.drop(1)
+                                mergedVars[targetKey] = when {
+                                    mergedVars.containsKey(pathKey) -> {
+                                        val existing = mergedVars[pathKey]
+                                        if (pipes.isEmpty()) sanitizeVariableValue(existing) ?: (existing ?: "")
+                                        else evaluateTemplatePipe(existing, pipes)
+                                    }
+                                    pipes.isNotEmpty() -> evaluateTemplatePipe(null, pipes)
+                                    else -> expr
+                                }
+                            }
                         }
                     }
                 }

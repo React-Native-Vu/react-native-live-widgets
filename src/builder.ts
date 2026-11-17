@@ -178,11 +178,19 @@ export function flattenDataObject(
   return out;
 }
 
+function sanitizeVariableValue(rawValue: string | undefined): string | undefined {
+  if (rawValue === undefined || rawValue === null) return rawValue;
+  const trimmed = String(rawValue).trim();
+  const m = trimmed.match(/^\{\{([^{}|]+)\}\}$/);
+  return m ? m[1].trim() : rawValue;
+}
+
 /**
  * Thực thi các phép biến đổi Pipe trên chuỗi giá trị thô (đồng bộ 1:1 với Swift & Kotlin).
  */
 export function evaluateTemplatePipe(rawValue: string | undefined, pipes: string[]): string {
-  let current = rawValue !== undefined && rawValue !== null ? String(rawValue) : '';
+  const cleaned = sanitizeVariableValue(rawValue);
+  let current = cleaned !== undefined && cleaned !== null ? String(cleaned) : '';
 
   for (const rawPipe of pipes) {
     const colonIdx = rawPipe.indexOf(':');

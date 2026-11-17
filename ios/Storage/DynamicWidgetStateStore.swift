@@ -187,8 +187,20 @@ public enum DynamicWidgetStateStore {
     return "\(value)"
   }
 
+  private static func sanitizeVariableValue(_ raw: String?) -> String? {
+    guard let raw = raw else { return nil }
+    let trimmed = raw.trimmingCharacters(in: .whitespaces)
+    if trimmed.hasPrefix("{{"), trimmed.hasSuffix("}}") {
+      let inner = String(trimmed.dropFirst(2).dropLast(2))
+      if !inner.contains("{"), !inner.contains("}"), !inner.contains("|") {
+        return inner.trimmingCharacters(in: .whitespaces)
+      }
+    }
+    return raw
+  }
+
   public static func evaluateTemplatePipe(_ rawValue: String?, pipes: [String]) -> String {
-    var current = rawValue ?? ""
+    var current = sanitizeVariableValue(rawValue) ?? ""
 
     for rawPipe in pipes {
       let colonIdx = rawPipe.firstIndex(of: ":")
@@ -208,19 +220,19 @@ public enum DynamicWidgetStateStore {
           current = arg
         }
       case "divide":
-        if let num = Double(current), let div = Double(arg), div != 0 {
+        if let num = Double(current.trimmingCharacters(in: .whitespaces)), let div = Double(arg), div != 0 {
           current = formatNumber(num / div)
         }
       case "multiply":
-        if let num = Double(current), let mul = Double(arg) {
+        if let num = Double(current.trimmingCharacters(in: .whitespaces)), let mul = Double(arg) {
           current = formatNumber(num * mul)
         }
       case "add":
-        if let num = Double(current), let offset = Double(arg) {
+        if let num = Double(current.trimmingCharacters(in: .whitespaces)), let offset = Double(arg) {
           current = formatNumber(num + offset)
         }
       case "round":
-        if let num = Double(current) {
+        if let num = Double(current.trimmingCharacters(in: .whitespaces)) {
           let decimals = max(0, Int(arg) ?? 0)
           current = decimals == 0 ? "\(Int64(num.rounded()))" : String(format: "%.\(decimals)f", num)
         }
@@ -229,16 +241,17 @@ public enum DynamicWidgetStateStore {
       case "lower":
         current = current.lowercased()
       case "currency":
-        if let num = Double(current) {
+        if let num = Double(current.trimmingCharacters(in: .whitespaces)) {
           let symbol = arg.isEmpty ? "₫" : arg
           let formatter = NumberFormatter()
           formatter.numberStyle = .decimal
-          formatter.locale = Locale(identifier: "en_US_POSIX")
+          formatter.usesGroupingSeparator = true
+          formatter.locale = Locale(identifier: "en_US")
           let formatted = formatter.string(from: NSNumber(value: Int64(num.rounded()))) ?? "\(Int64(num.rounded()))"
           current = "\(formatted)\(symbol)"
         }
       case "percent":
-        if let num = Double(current) {
+        if let num = Double(current.trimmingCharacters(in: .whitespaces)) {
           let decimals = max(0, Int(arg) ?? 0)
           let numStr = decimals == 0 ? "\(Int64(num.rounded()))" : String(format: "%.\(decimals)f", num)
           current = "\(numStr)%"
@@ -635,8 +648,22 @@ public enum DynamicWidgetStateStore {
 
     if let mapping = config.mapping {
       for (targetKey, expr) in mapping {
-        let token = expr.contains("{{") ? expr : "{{\(expr)}}"
-        mergedVars[targetKey] = resolveTemplateString(token, with: mergedVars)
+        if expr.contains("{{") {
+          mergedVars[targetKey] = resolveTemplateString(expr, with: mergedVars)
+        } else {
+          let parts = expr.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+          let pathKey = parts[0].trimmingCharacters(in: .whitespaces)
+          let pipes = Array(parts.dropFirst())
+          if let existing = mergedVars[pathKey] {
+            mergedVars[targetKey] = pipes.isEmpty
+              ? (sanitizeVariableValue(existing) ?? existing)
+              : evaluateTemplatePipe(existing, pipes: pipes)
+          } else if !pipes.isEmpty {
+            mergedVars[targetKey] = evaluateTemplatePipe(nil, pipes: pipes)
+          } else {
+            mergedVars[targetKey] = expr
+          }
+        }
       }
     }
 
