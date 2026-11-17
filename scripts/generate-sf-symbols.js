@@ -30,7 +30,7 @@ function extractSFSymbolsFromSystem() {
           return { symbols: names, source: plistPath };
         }
       } catch (err) {
-        console.warn(`[SF Symbols Extract] Lỗi đọc ${plistPath}:`, err.message);
+        console.warn(`[SF Symbols Extract] Error reading ${plistPath}:`, err.message);
       }
     }
   }
@@ -49,7 +49,7 @@ function generateSFSymbolsFile(outputPath, fallbackList = []) {
   }
 
   if (symbols.length === 0) {
-    console.warn('[SF Symbols] Không tìm thấy symbols nào để tạo.');
+    console.warn('[SF Symbols] No symbols found to generate.');
     return;
   }
 
@@ -71,7 +71,7 @@ function generateSFSymbolsFile(outputPath, fallbackList = []) {
   lines.push('');
 
   fs.writeFileSync(outputPath, lines.join('\n'), 'utf8');
-  console.log(`✨ Đã tự động sinh file SF Symbols (${symbols.length} icons) tại: ${path.basename(outputPath)}`);
+  console.log(`✨ Auto-generated SF Symbols (${symbols.length} icons) at: ${path.basename(outputPath)}`);
   return symbols.length;
 }
 

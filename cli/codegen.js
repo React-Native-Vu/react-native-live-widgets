@@ -75,11 +75,11 @@ function loadWidgetsConfig(projectRoot, customConfigPath = null) {
 
   if (!targetPath || !fs.existsSync(targetPath)) {
     throw new Error(
-      `Không tìm thấy file cấu hình widget! Vui lòng tạo 'widgets.config.ts' ở thư mục gốc của dự án.`
+      `Widget configuration file not found! Please create 'widgets.config.ts' in project root.`
     );
   }
 
-  console.log(`📄 Đang đọc cấu hình từ: ${path.relative(projectRoot, targetPath)}`);
+  console.log(`📄 Reading widget configuration from: ${path.relative(projectRoot, targetPath)}`);
 
   if (targetPath.endsWith('.json')) {
     const raw = fs.readFileSync(targetPath, 'utf8');
@@ -291,7 +291,7 @@ function writeI18nFiles(targetDir, catalog, defaultLocale) {
   const xcstringsPath = path.join(targetDir, 'Localizable.xcstrings');
   fs.writeFileSync(xcstringsPath, JSON.stringify(xcstringsData, null, 2), 'utf8');
 
-  console.log(`🌐 Đã tự động tạo các bản dịch iOS (${locales.join(', ')})`);
+  console.log(`🌐 Successfully generated iOS localizations (${locales.join(', ')})`);
   console.log(`   - String Catalog: ${path.basename(targetDir)}/Localizable.xcstrings`);
 }
 
@@ -379,8 +379,8 @@ function writeAndroidI18nFiles(projectRoot, catalog, defaultLocale) {
     fs.writeFileSync(stringsXmlPath, lines.join('\n'), 'utf8');
   }
 
-  console.log(`🤖 Đã tự động đồng bộ bản dịch Android (${locales.join(', ')})`);
-  console.log(`   - Thư mục: android/app/src/main/res/values-*/strings.xml`);
+  console.log(`🤖 Successfully synced Android localizations (${locales.join(', ')})`);
+  console.log(`   - Directory: android/app/src/main/res/values-*/strings.xml`);
 }
 
 /**
@@ -558,9 +558,9 @@ function findBundleSwiftPath(projectRoot) {
  * Thực thi lệnh Codegen
  */
 function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
-  console.log('\n⚙️ [react-native-live-widgets] Khởi chạy WidgetKit Swift Codegen...');
+  console.log('\n⚙️ [react-native-live-widgets] Starting WidgetKit Swift & Android Codegen...');
 
-  // Đồng bộ lại danh mục SF Symbols từ hệ thống nếu có
+  // Sync SF Symbols from Apple system if available
   try {
     const symbolsScript = path.join(__dirname, '..', 'scripts', 'generate-sf-symbols.js');
     if (fs.existsSync(symbolsScript)) {
@@ -568,12 +568,12 @@ function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
       const targetGenerated = path.join(__dirname, '..', 'src', 'sf-symbols.generated.ts');
       const count = generateSFSymbolsFile(targetGenerated);
       if (count) {
-        console.log(`🍎 Đã đồng bộ ${count} SF Symbols từ hệ thống Apple vào TypeScript Auto-Complete.`);
+        console.log(`🍎 Synced ${count} SF Symbols from Apple system into TypeScript Auto-Complete.`);
       }
     }
   } catch (_e) {}
 
-  // Đồng bộ lại danh mục Google Material Icons nếu có
+  // Sync Google Material Icons if available
   try {
     const materialScript = path.join(__dirname, '..', 'scripts', 'generate-material-icons.js');
     if (fs.existsSync(materialScript)) {
@@ -581,7 +581,7 @@ function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
       const targetGenerated = path.join(__dirname, '..', 'src', 'material-icons.generated.ts');
       const count = generateMaterialIconsFile(targetGenerated);
       if (count) {
-        console.log(`🤖 Đã đồng bộ ${count} Google Material Icons vào TypeScript Auto-Complete.`);
+        console.log(`🤖 Synced ${count} Google Material Icons into TypeScript Auto-Complete.`);
       }
     }
   } catch (_e) {}
@@ -591,7 +591,7 @@ function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
 
   const bundleSwiftPath = findBundleSwiftPath(projectRoot);
   if (!bundleSwiftPath) {
-    throw new Error('Không tìm thấy thư mục ios/ trong dự án.');
+    throw new Error("iOS directory 'ios/' not found in project.");
   }
 
   const targetDir = path.dirname(bundleSwiftPath);
@@ -599,19 +599,19 @@ function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
     fs.mkdirSync(targetDir, { recursive: true });
   }
 
-  // 1. Sinh file i18n Localizable nếu có catalog
+  // 1. Generate i18n Localizable if catalog exists
   if (Object.keys(catalog).length > 0) {
     writeI18nFiles(targetDir, catalog, defaultLocale);
     writeAndroidI18nFiles(projectRoot, catalog, defaultLocale);
   }
 
-  // 2. Sinh mã nguồn Swift
+  // 2. Generate Swift source code
   const swiftCode = generateSwiftSource(config, catalog, defaultLocale);
   fs.writeFileSync(bundleSwiftPath, swiftCode, 'utf8');
 
-  console.log(`✅ Đã tự động sinh file Swift thành công!`);
-  console.log(`📍 Đích: ${path.relative(projectRoot, bundleSwiftPath)}`);
-  console.log(`📊 Số lượng Widget đã đăng ký: ${(config.widgets || []).length}`);
+  console.log(`✅ Successfully generated Swift source bundle!`);
+  console.log(`📍 Destination: ${path.relative(projectRoot, bundleSwiftPath)}`);
+  console.log(`📊 Registered Widgets: ${(config.widgets || []).length}`);
   if (config.widgets && config.widgets.length > 0) {
     const defaultDict = catalog[defaultLocale] || {};
     config.widgets.forEach((w, i) => {
@@ -621,7 +621,7 @@ function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
       console.log(`   ${i + 1}. [${w.key || 'main'}] ${resolved} (${keyName})`);
     });
   }
-  console.log('🎉 Sẵn sàng! Không cần phải sửa file Swift thủ công nữa.\n');
+  console.log('🎉 All set! No manual Swift editing required.\n');
   return bundleSwiftPath;
 }
 

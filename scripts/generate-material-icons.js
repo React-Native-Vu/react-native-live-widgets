@@ -43,12 +43,12 @@ function generateMaterialIconsFile(outputPath) {
       }
       iconNames = Array.from(set).sort();
     } catch (err) {
-      console.warn('[Material Icons] Lỗi đọc glyphmap:', err.message);
+      console.warn('[Material Icons] Error reading glyphmap:', err.message);
     }
   }
 
   if (iconNames.length === 0) {
-    console.warn('[Material Icons] Không tìm thấy danh sách glyphmap, bỏ qua sinh file.');
+    console.warn('[Material Icons] Glyphmap list not found, skipping file generation.');
     return 0;
   }
 
@@ -70,7 +70,7 @@ function generateMaterialIconsFile(outputPath) {
   lines.push('');
 
   fs.writeFileSync(outputPath, lines.join('\n'), 'utf8');
-  console.log(`🤖 Đã tự động sinh file Material Icons (${iconNames.length} icons) tại: ${path.basename(outputPath)}`);
+  console.log(`🤖 Auto-generated Material Icons (${iconNames.length} icons) at: ${path.basename(outputPath)}`);
   return iconNames.length;
 }
 
