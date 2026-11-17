@@ -206,6 +206,27 @@ Version **1.2.1** introduces an industry-grade architecture built on three core 
 - **Renderer-Independent Semantic Tree (UI IR)**: Clean separation of Visual Nodes, Semantic Nodes, and State Bindings (`Widget.inspectIR(layout)`, `Widget.compileIR(layout)`).
 - **Dynamic Variables & Swift 6 Ready**: Built-in template variable interpolation (`{{id}}`, `{{title}}`, counter values), `defaultChecked` initial switch state persistence, and full Swift 6 language mode compliance on Xcode.
 
+### 9. 🔣 Cross-Platform System Icons & 13,000+ Vector Symbols
+- **Cross-Platform Auto-Mapping**: `<Image systemName="bolt" tintColor="#10B981" width={24} height={24} />` works on both iOS and Android.
+- **Platform-Dedicated Props**: Specify dedicated icons for iOS and Android with full TypeScript auto-complete:
+  ```tsx
+  <Image
+    systemNameIos="bolt.horizontal.fill"   // 9,500+ Apple SF Symbols (`KnownSFSymbol`)
+    systemNameAndroid="bolt"               // 3,800+ Google Material Icons (`KnownMaterialIcon`)
+    tintColor="#10B981"
+    width={24}
+    height={24}
+  />
+  ```
+
+### 10. ⚙️ TypeScript-Driven Codegen & Automated i18n (`widgets.config.ts`)
+- Zero manual Swift coding. Define your widgets, bundle name, and multi-language catalogs in `widgets.config.ts`.
+- Run `npx react-native-live-widgets codegen` to automatically generate:
+  - `LiveWidgetsBundle.swift` registering all widgets and Control Center toggles.
+  - Apple String Catalog (`Localizable.xcstrings`).
+  - Android resource strings (`android/app/src/main/res/values-*/strings.xml`).
+  - Latest system SF Symbols & Material Icons type definitions.
+
 ---
 
 ## ⚡ Quick Start

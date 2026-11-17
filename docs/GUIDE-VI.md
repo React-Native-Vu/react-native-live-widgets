@@ -40,6 +40,7 @@ Tài liệu hướng dẫn toàn diện từ cài đặt, thiết lập native (
 11. [Cấu trúc Payload Server Push (APNs & FCM)](#10-cấu-trúc-payload-server-push-apns--fcm)
 12. [Xử lý sự cố thường gặp (Troubleshooting)](#11-xử-lý-sự-cố-thường-gặp-troubleshooting)
 13. [Hệ thống Styling Modifiers, UI IR, Exact Hit Layer & Năng lực Nền tảng (v1.2.1)](#12-hệ-thống-styling-modifiers--bảng-năng-lực-nền-tảng-capability--fallback-matrix)
+14. [TypeScript-Driven Swift Codegen & Tự động Đồng bộ Đa ngôn ngữ i18n (`widgets.config.ts`)](#14-typescript-driven-swift-codegen--tự-động-đồng-bộ-đa-ngôn-ngữ-i18n-widgetsconfigts)
 
 ---
 
@@ -537,13 +538,32 @@ UI.Image({
   cornerRadius: 8,
 })
 
-// 3. Icon hệ thống (SF Symbols trên iOS / Vector Mapping trên Android)
+// 3. Icon hệ thống đa nền tảng (Apple SF Symbols + Google Material Icons)
+// Cách 1: Tự động ánh xạ trên cả 2 nền tảng
 UI.Image({
-  systemName: 'bicycle',
-  tintColor: '#FB923C',
-  width: 18,
-  height: 18,
+  systemName: 'bolt',
+  tintColor: '#10B981',
+  width: 20,
+  height: 20,
 })
+
+// Cách 2: Chỉ định icon chuyên biệt cho từng hệ điều hành (với gợi ý Type Auto-Complete 9500+ SF Symbols & 3800+ Material Icons)
+UI.Image({
+  systemNameIos: 'bolt.horizontal.fill', // 9,500+ Apple SF Symbols chuẩn xịn
+  systemNameAndroid: 'bolt',              // 3,800+ Google Material Icons (hỗ trợ cả snake_case và kebab-case)
+  tintColor: '#10B981',
+  width: 24,
+  height: 24,
+})
+
+// Hoặc sử dụng dạng JSX React Component:
+<Image
+  systemNameIos="person.crop.circle.badge.checkmark"
+  systemNameAndroid="verified_user"
+  tintColor="#10B981"
+  width={24}
+  height={24}
+/>
 ```
 
 ### `UI.Button` (Nút bấm tương tác trực tiếp trên Widget)
@@ -1296,6 +1316,54 @@ await Widget.setRemoteConfig('main', {
 ```
 
 > ⚠️ **Lưu ý quan trọng về Ngân sách Reload của Hệ điều hành:** Không cam kết đồng bộ chính xác từng 15 phút khi ứng dụng bị đóng. **Apple WidgetKit** cấp phát ngân sách reload động cho mỗi Widget (thường khoảng **40–70 lần/ngày** tùy mức độ người dùng xem/tương tác; `refreshIntervalMinutes` map sang `TimelineReloadPolicy.after(...)` như mốc thời gian *sớm nhất được đề xuất*, không phải cron timer tuyệt đối). Trên **Android**, Doze Mode và App Standby Buckets có thể gom hoặc trì hoãn tác vụ nền. Với dữ liệu cần tức thì từng giây (giao hàng, tỷ số), hãy kết hợp Push APNs / FCM.
+
+---
+
+## 14. TypeScript-Driven Swift Codegen & Tự động Đồng bộ Đa ngôn ngữ i18n (`widgets.config.ts`)
+
+Từ phiên bản 1.2.1, bạn không cần phải tự tay chỉnh sửa file Swift (`LiveWidgetsBundle.swift`) hay cấu hình thủ công các file dịch `Localizable.strings` trong Xcode. Toàn bộ cấu hình được định nghĩa bằng **100% TypeScript** qua file `widgets.config.ts` ở thư mục gốc của dự án.
+
+### 1. Cấu hình `widgets.config.ts` mẫu:
+```typescript
+import { defineWidgetConfig } from 'react-native-live-widgets';
+
+export default defineWidgetConfig({
+  bundleName: 'LiveWidgetsBundle',
+  liveActivity: true,       // Bật/tắt Widget Live Activity
+  controlWidgets: true,     // Bật Control Center Widget (iOS 18+)
+  defaultLocale: 'vi',
+  locales: {
+    vi: {
+      'widgets.main.title': 'Tiện ích Live Widgets',
+      'widgets.main.desc': 'Theo dõi KPI và chấm công trực quan',
+    },
+    en: {
+      'widgets.main.title': 'Live Widgets Utility',
+      'widgets.main.desc': 'Visual KPI and attendance tracking',
+    },
+  },
+  widgets: [
+    {
+      key: 'main',
+      kind: 'LiveWidget_main',
+      displayName: 'widgets.main.title',
+      description: 'widgets.main.desc',
+      supportedFamilies: ['systemSmall', 'systemMedium', 'systemLarge'],
+    },
+  ],
+});
+```
+
+### 2. Thực thi lệnh CLI Codegen:
+```bash
+npx react-native-live-widgets codegen
+```
+
+Lệnh này sẽ tự động:
+1. **Trích xuất Icons hệ thống**: Tự động lấy hơn **9,500+ Apple SF Symbols** từ hệ thống macOS và hơn **3,800+ Google Material Icons** vào các file type definitions (`sf-symbols.generated.ts` & `material-icons.generated.ts`) giúp lập trình viên có IntelliSense auto-complete đầy đủ.
+2. **Sinh mã nguồn Swift**: Tạo file `ios/LiveWidgetsExtension/LiveWidgetsBundle.swift` đăng ký đầy đủ các Widget và Control Center Widgets tự động.
+3. **Đồng bộ đa ngôn ngữ iOS**: Tạo file String Catalog hiện đại `ios/LiveWidgetsExtension/Localizable.xcstrings` với đầy đủ các ngôn ngữ đã cấu hình.
+4. **Đồng bộ đa ngôn ngữ Android**: Tự động ghi và cập nhật các file `android/app/src/main/res/values/strings.xml` (ngôn ngữ mặc định) và `values-{lang}/strings.xml` cho Android AppWidget.
 
 ---
 

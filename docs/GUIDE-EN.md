@@ -40,6 +40,7 @@ Comprehensive guide covering installation, native setup (iOS & Android), and bui
 11. [Server Push Payload Structure (APNs & FCM)](#10-server-push-payload-structure-apns--fcm)
 12. [Troubleshooting](#11-troubleshooting)
 13. [Advanced Styling Modifiers, UI IR, Exact Hit Layer & Platform Matrix (v1.2.1)](#12-advanced-styling-modifiers--platform-capability-matrix)
+14. [TypeScript-Driven Swift Codegen & Automated i18n Sync (`widgets.config.ts`)](#14-typescript-driven-swift-codegen--automated-i18n-sync-widgetsconfigts)
 
 ---
 
@@ -537,13 +538,32 @@ UI.Image({
   cornerRadius: 8,
 })
 
-// 3. System Icon (SF Symbols on iOS / Vector Mapping on Android)
+// 3. Cross-Platform System Icons (Apple SF Symbols + Google Material Icons)
+// Option A: Automatically mapped on both platforms
 UI.Image({
-  systemName: 'bicycle',
-  tintColor: '#FB923C',
-  width: 18,
-  height: 18,
+  systemName: 'bolt',
+  tintColor: '#10B981',
+  width: 20,
+  height: 20,
 })
+
+// Option B: Explicitly specify platform-dedicated icons (with 9,500+ SF Symbols & 3,800+ Material Icons Auto-Complete types)
+UI.Image({
+  systemNameIos: 'bolt.horizontal.fill', // 9,500+ Apple SF Symbols
+  systemNameAndroid: 'bolt',              // 3,800+ Google Material Icons (supports snake_case and kebab-case)
+  tintColor: '#10B981',
+  width: 24,
+  height: 24,
+})
+
+// Or using React JSX Component syntax:
+<Image
+  systemNameIos="person.crop.circle.badge.checkmark"
+  systemNameAndroid="verified_user"
+  tintColor="#10B981"
+  width={24}
+  height={24}
+/>
 ```
 
 ### `UI.Button` (Interactive Widget Buttons)
@@ -1269,6 +1289,54 @@ await Widget.setRemoteConfig('main', {
 ```
 
 > ⚠️ **Important OS Reload Budget Disclaimer:** Exact 15-minute background intervals are **not guaranteed** when the app is terminated. **Apple WidgetKit** enforces a dynamic daily reload budget (typically ~**40–70 reloads/day** depending on user engagement; `refreshIntervalMinutes` maps to `TimelineReloadPolicy.after(...)` as an earliest hint, not an exact cron guarantee). **Android** likewise enforces Doze Mode and App Standby Buckets. For real-time second-by-second updates, pair widgets with server pushes (APNs / FCM).
+
+---
+
+## 14. TypeScript-Driven Swift Codegen & Automated i18n Sync (`widgets.config.ts`)
+
+Starting from version 1.2.1, you don't need to manually modify Swift bundle source files (`LiveWidgetsBundle.swift`) or configure localization files in Xcode. The entire configuration is defined in **100% TypeScript** via `widgets.config.ts` in your project root.
+
+### 1. Sample `widgets.config.ts`:
+```typescript
+import { defineWidgetConfig } from 'react-native-live-widgets';
+
+export default defineWidgetConfig({
+  bundleName: 'LiveWidgetsBundle',
+  liveActivity: true,       // Enable/disable Live Activity Widget
+  controlWidgets: true,     // Enable Control Center Widget (iOS 18+)
+  defaultLocale: 'en',
+  locales: {
+    en: {
+      'widgets.main.title': 'Live Widgets Utility',
+      'widgets.main.desc': 'Visual KPI and attendance tracking',
+    },
+    vi: {
+      'widgets.main.title': 'Tiện ích Live Widgets',
+      'widgets.main.desc': 'Theo dõi KPI và chấm công trực quan',
+    },
+  },
+  widgets: [
+    {
+      key: 'main',
+      kind: 'LiveWidget_main',
+      displayName: 'widgets.main.title',
+      description: 'widgets.main.desc',
+      supportedFamilies: ['systemSmall', 'systemMedium', 'systemLarge'],
+    },
+  ],
+});
+```
+
+### 2. Execute Codegen CLI:
+```bash
+npx react-native-live-widgets codegen
+```
+
+This CLI command automatically:
+1. **Syncs System Icons**: Automatically extracts **9,500+ Apple SF Symbols** from macOS and **3,800+ Google Material Icons** into auto-complete type definition files (`sf-symbols.generated.ts` & `material-icons.generated.ts`), providing full TypeScript IntelliSense.
+2. **Generates Swift Source Bundle**: Creates `ios/LiveWidgetsExtension/LiveWidgetsBundle.swift` registering all configured Widgets and Control Center widgets.
+3. **Synchronizes iOS Localization**: Generates modern Apple String Catalog `ios/LiveWidgetsExtension/Localizable.xcstrings` for all defined languages.
+4. **Synchronizes Android Localization**: Automatically updates `android/app/src/main/res/values/strings.xml` (default locale) and `values-{lang}/strings.xml` for Android AppWidget localized names.
 
 ---
 
