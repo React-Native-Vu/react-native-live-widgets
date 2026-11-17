@@ -77,11 +77,52 @@ function loadWidgetsConfig(projectRoot, customConfigPath = null) {
     targetPath = path.join(projectRoot, 'widgets.config.ts');
     const defaultTemplate = `import { defineWidgetConfig } from 'react-native-live-widgets';
 
+/**
+ * ==============================================================================
+ * react-native-live-widgets Configuration (widgets.config.ts)
+ * ==============================================================================
+ *
+ * This configuration file drives the TypeScript codegen engine.
+ * Run the following command whenever you modify this file:
+ *
+ *   npx react-native-live-widgets codegen
+ *
+ * It will automatically:
+ *   1. Generate 'LiveWidgetsBundle.swift' for iOS WidgetKit Extension.
+ *   2. Generate modern Apple String Catalog ('Localizable.xcstrings').
+ *   3. Synchronize Android string resources ('res/values-{lang}/strings.xml').
+ *   4. Synchronize SF Symbols (iOS) & Material Icons (Android) type definitions.
+ * ==============================================================================
+ */
 export default defineWidgetConfig({
+  /**
+   * The name of the Swift WidgetBundle struct generated in the iOS extension.
+   * Default: 'LiveWidgetsBundle'
+   */
   bundleName: 'LiveWidgetsBundle',
+
+  /**
+   * Enable or disable iOS Lock Screen Live Activities & Dynamic Island.
+   * Set to 'false' if your application only uses Home Screen widgets.
+   */
   liveActivity: true,
+
+  /**
+   * Enable or disable iOS 18+ Interactive Control Center widgets.
+   */
   controlWidgets: true,
+
+  /**
+   * Default fallback locale for widget titles, descriptions, and static labels.
+   */
   defaultLocale: 'vi',
+
+  /**
+   * Multi-language translation catalog.
+   * Keys defined here are automatically mapped to:
+   *   - iOS: Localizable.xcstrings (LocalizedStringKey in Swift)
+   *   - Android: res/values-{lang}/strings.xml (R.string in Kotlin/Java)
+   */
   locales: {
     vi: {
       'widgets.main.title': 'Tiện ích Live Widgets',
@@ -92,12 +133,26 @@ export default defineWidgetConfig({
       'widgets.main.desc': 'Automatically syncs and displays layouts defined in your React Native app.',
     },
   },
+
+  /**
+   * List of registered Home Screen widgets.
+   * Each entry maps to a distinct timeline provider and widget kind.
+   */
   widgets: [
     {
+      /** Unique key identifier used in Widget.setLayout('<key>', ...) */
       key: 'main',
+
+      /** Native Swift struct kind name generated in WidgetBundle */
       kind: 'DynamicHomeScreenWidget',
+
+      /** Display name shown in the iOS & Android Widget Gallery picker */
       displayName: 'widgets.main.title',
+
+      /** Description shown below the widget preview in the Widget Gallery */
       description: 'widgets.main.desc',
+
+      /** Supported widget sizes for this widget */
       supportedFamilies: ['systemSmall', 'systemMedium', 'systemLarge'],
     },
   ],
@@ -147,6 +202,7 @@ export default defineWidgetConfig({
     if (id === 'react-native-live-widgets') {
       return {
         defineWidgetsConfig: (c) => c,
+        defineWidgetConfig: (c) => c,
       };
     }
     try {
