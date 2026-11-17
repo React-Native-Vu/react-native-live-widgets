@@ -3,7 +3,6 @@ import { ActionHandler, GlobalActionHandler, registerAction, registerActionHandl
 export type { ActionHandler, GlobalActionHandler };
 export { registerAction, registerActionHandler, unregisterAction };
 export type { WidgetCapabilities, GradientProps, ShadowProps, BorderStyle, TypographyStyle, FontDesign, } from './types';
-export * from './hooks';
 export * from './jsx';
 export * from './preview';
 export declare const LiveActivity: {
@@ -236,4 +235,5 @@ export * from './types';
 export * from './builder';
 export * from './ir';
 export { StyleSheet } from './builder';
+export * from './hooks';
 //# sourceMappingURL=index.d.ts.map

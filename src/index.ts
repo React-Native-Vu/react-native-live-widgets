@@ -54,7 +54,6 @@ export type {
   TypographyStyle,
   FontDesign,
 } from './types';
-export * from './hooks';
 export * from './jsx';
 export * from './preview';
 import { renderToWidget } from './jsx';
@@ -876,3 +875,4 @@ export * from './types';
 export * from './builder';
 export * from './ir';
 export { StyleSheet } from './builder';
+export * from './hooks';

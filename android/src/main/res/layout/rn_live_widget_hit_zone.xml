@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    1 vùng bấm. Root phủ toàn widget nhưng KHÔNG clickable (chạm vào phần padding sẽ rơi xuống view bên dưới).
+    Padding (left, top, right, bottom) được set động => view con rn_hit_zone nằm đúng hình chữ nhật của nút.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rn_hit_zone_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/rn_hit_zone"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent" />
+</FrameLayout>

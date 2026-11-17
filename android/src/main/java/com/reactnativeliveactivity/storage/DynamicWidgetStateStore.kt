@@ -175,13 +175,42 @@ object DynamicWidgetStateStore {
                 writeSharedString(context, "widget_counter_value", "0")
                 state.remoteVariables["counter"] = "0"
             }
+            actionId == "action_demo_checkin" -> {
+                val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+                state.remoteVariables["demo_ts_label"] = "✓ Đã chạy TS ($time)"
+            }
+            actionId == "action_jsx_checkin" -> {
+                val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+                state.remoteVariables["jsx_status"] = "Đã điểm danh • $time"
+            }
+            actionId == "action_jsx_checkout" -> {
+                val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+                state.remoteVariables["jsx_status"] = "Đã Check-out • $time"
+            }
+            actionId == "action_jsx_refresh" -> {
+                val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+                state.remoteVariables["jsx_status"] = "Đồng bộ lúc $time"
+            }
+            actionId == "action_jsx_leave" -> {
+                val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+                state.remoteVariables["jsx_status"] = "Đã xin nghỉ phép • $time"
+            }
+            actionId == "action_jsx_report" -> {
+                val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+                state.remoteVariables["jsx_status"] = "Đã gửi báo cáo • $time"
+            }
         }
 
         saveState(context, state)
     }
 
-    fun isToggled(context: Context, key: String): Boolean {
-        return loadState(context).toggledItems[key] ?: false
+    fun isToggled(context: Context, key: String, defaultChecked: Boolean = false): Boolean {
+        val state = loadState(context)
+        val existing = state.toggledItems[key]
+        if (existing != null) return existing
+        state.toggledItems[key] = defaultChecked
+        saveState(context, state)
+        return defaultChecked
     }
 
     fun resolveLayoutJsonWithVariables(context: Context, widgetKey: String): String? {
@@ -193,9 +222,32 @@ object DynamicWidgetStateStore {
 
         val counterVal = readSharedString(context, "widget_counter_value")
         if (counterVal != null) {
-            raw = raw.replace(Regex("\"text\":\"-?\\d+\",\"props\":\\{\"fontSize\":(26|32)"), "\"text\":\"$counterVal\",\"props\":{\"fontSize\":$1")
-            raw = raw.replace(Regex("\"text\":\"-?\\d+ lượt\","), "\"text\":\"$counterVal lượt\",")
+            raw = Regex("\"text\":\"-?\\d+\",(\"props\":\\{)?\"fontSize\":(26|32)").replace(raw) { m ->
+                "\"text\":\"$counterVal\",${m.groupValues[1]}\"fontSize\":${m.groupValues[2]}"
+            }
+            raw = raw.replace(Regex("\"text\":\"-?\\d+ lượt\""), "\"text\":\"$counterVal lượt\"")
+            raw = raw.replace(Regex("Count: -?\\d+"), "Count: $counterVal")
+            raw = raw.replace(Regex("Số đếm hiện tại: -?\\d+"), "Số đếm hiện tại: $counterVal")
             raw = raw.replace("{{counter}}", counterVal)
+        }
+
+        state.remoteVariables["demo_ts_label"]?.takeIf { it.isNotEmpty() }?.let { label ->
+            val escaped = label.replace("\"", "\\\"")
+            raw = raw.replace("\"title\":\"Chạy hàm TS\"", "\"title\":\"$escaped\"")
+        }
+
+        state.remoteVariables["jsx_status"]?.takeIf { it.isNotEmpty() }?.let { status ->
+            val escaped = status.replace("\"", "\\\"")
+            raw = raw.replace("\"text\":\"Đã chấm công (07:54)\"", "\"text\":\"$escaped\"")
+            raw = raw.replace("\"text\":\"Vào ca sáng (07:54)\"", "\"text\":\"$escaped\"")
+        }
+
+        // Fallback mặc định cho các template variables thông dụng nếu chưa fetch từ API
+        if (!state.remoteVariables.containsKey("id")) {
+            state.remoteVariables["id"] = "2026"
+        }
+        if (!state.remoteVariables.containsKey("title")) {
+            state.remoteVariables["title"] = "Hoàn thành kế hoạch quý 4"
         }
 
         for ((k, v) in state.remoteVariables) {
@@ -211,31 +263,34 @@ object DynamicWidgetStateStore {
      */
     fun performRemoteSync(context: Context, widgetKey: String = "main") {
         val configJson = readSharedString(context, "widget_remote_config_$widgetKey")
-        if (configJson.isNullOrEmpty()) {
-            stampSyncTimeOnly(context)
-            return
-        }
+        val rawUrl = if (!configJson.isNullOrEmpty()) {
+            try {
+                JSONObject(configJson).optString("url", "")
+            } catch (_: Exception) { "" }
+        } else {
+            // Demo API endpoint tự động nạp id và title khi bấm nút Làm mới dữ liệu ngầm
+            "https://jsonplaceholder.typicode.com/todos/{{_randomId}}"
+        }.ifEmpty { "https://jsonplaceholder.typicode.com/todos/{{_randomId}}" }
 
         try {
-            val config = JSONObject(configJson)
-            val rawUrl = config.optString("url", "")
-            if (rawUrl.isEmpty()) {
-                stampSyncTimeOnly(context)
-                return
-            }
-
-            val randomId = Random.nextInt(1, 21)
+            val randomId = Random.nextInt(1, 100)
             val resolvedUrl = rawUrl.replace("{{_randomId}}", randomId.toString())
             val conn = (URL(resolvedUrl).openConnection() as HttpURLConnection).apply {
-                requestMethod = config.optString("method", "GET")
+                requestMethod = "GET"
                 connectTimeout = 8000
                 readTimeout = 8000
-                config.optJSONObject("headers")?.let { headers ->
-                    val keys = headers.keys()
-                    while (keys.hasNext()) {
-                        val k = keys.next()
-                        setRequestProperty(k, headers.optString(k))
-                    }
+                if (!configJson.isNullOrEmpty()) {
+                    try {
+                        val cfg = JSONObject(configJson)
+                        requestMethod = cfg.optString("method", "GET")
+                        cfg.optJSONObject("headers")?.let { headers ->
+                            val keys = headers.keys()
+                            while (keys.hasNext()) {
+                                val k = keys.next()
+                                setRequestProperty(k, headers.optString(k))
+                            }
+                        }
+                    } catch (_: Exception) {}
                 }
             }
 
@@ -262,11 +317,14 @@ object DynamicWidgetStateStore {
             }
             saveState(context, state)
 
-            val intervalMins = if (config.has("refreshIntervalMinutes")) {
-                config.optInt("refreshIntervalMinutes", 15)
-            } else {
-                config.optInt("intervalMinutes", 15)
-            }.coerceAtLeast(1)
+            val intervalMins = try {
+                val cfg = if (!configJson.isNullOrEmpty()) JSONObject(configJson) else null
+                if (cfg?.has("refreshIntervalMinutes") == true) {
+                    cfg.optInt("refreshIntervalMinutes", 15)
+                } else {
+                    cfg?.optInt("intervalMinutes", 15) ?: 15
+                }
+            } catch (_: Exception) { 15 }.coerceAtLeast(1)
             scheduleBackgroundWidgetSync(context, widgetKey, intervalMins)
         } catch (_: Exception) {
             stampSyncTimeOnly(context)

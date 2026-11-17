@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text as RNText,
@@ -21,6 +21,7 @@ import {
   ImageNode,
 } from './types';
 import { renderToWidget, extractPropsAndStyle } from './jsx';
+import { actionHandlers, globalActionHandlers } from './dispatcher';
 
 export type WidgetPreviewSize = 'small' | 'medium' | 'large' | 'lockScreen' | 'dynamicIsland';
 
@@ -107,6 +108,12 @@ function extractShadowStyle(p: any): ViewStyle {
  * </WidgetPreview>
  * ```
  */
+type PreviewSyncVars = {
+  _lastSyncTime: string;
+  id: string;
+  title: string;
+};
+
 export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
   size: initialSize = 'medium',
   layout,
@@ -118,9 +125,41 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
 }: WidgetPreviewProps) => {
   const [activeSize, setActiveSize] = useState<WidgetPreviewSize>(initialSize);
 
+  const pageConfigObj =
+    !children && layout && typeof layout === 'object' && (layout as any).pages
+      ? (layout as any)
+      : null;
+  const pageOrder: string[] = pageConfigObj
+    ? Array.isArray(pageConfigObj.pageOrder) && pageConfigObj.pageOrder.length > 0
+      ? pageConfigObj.pageOrder
+      : Object.keys(pageConfigObj.pages)
+    : [];
+  const defaultPage: string = pageConfigObj
+    ? pageConfigObj.initialPage || pageOrder[0] || ''
+    : '';
+
+  const [activePage, setActivePage] = useState<string>(defaultPage);
+  const [syncVars, setSyncVars] = useState<PreviewSyncVars>(() => ({
+    _lastSyncTime: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+    id: '2026',
+    title: 'Hoàn thành kế hoạch quý 4',
+  }));
+
+  useEffect(() => {
+    if (defaultPage) {
+      setActivePage((prev) => (pageConfigObj?.pages?.[prev] ? prev : defaultPage));
+    }
+  }, [defaultPage, pageConfigObj]);
+
   // Trích xuất LayoutNode từ props hoặc JSX children
   let rootNode: LayoutNode | null = null;
   let rawTarget: any = null;
+  const currentPageKey =
+    pageConfigObj && pageConfigObj.pages
+      ? pageConfigObj.pages[activePage]
+        ? activePage
+        : defaultPage
+      : '';
 
   if (children) {
     rawTarget = children;
@@ -129,6 +168,15 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
       rawTarget = layout;
     } else if ((layout as any).type && typeof (layout as any).type === 'string' && (layout as any).props !== undefined) {
       rawTarget = layout;
+    } else if (pageConfigObj && currentPageKey) {
+      const pageConfig = pageConfigObj.pages[currentPageKey] || {};
+      rawTarget =
+        pageConfig[activeSize] ||
+        pageConfig.medium ||
+        pageConfig.large ||
+        pageConfig.small ||
+        pageConfig.accessoryRectangular ||
+        null;
     } else {
       const pageConfig = layout as WidgetSinglePageConfig;
       rawTarget =
@@ -140,6 +188,41 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
         null;
     }
   }
+
+  const handlePreviewAction = (actionId: string) => {
+    if (actionId.startsWith('page:') && pageConfigObj && pageOrder.length > 0) {
+      const target = actionId.slice('page:'.length);
+      if (target === 'next') {
+        const idx = pageOrder.indexOf(currentPageKey);
+        const nextPage = idx >= 0 ? pageOrder[(idx + 1) % pageOrder.length] : pageOrder[0];
+        setActivePage(nextPage);
+      } else if (target === 'prev') {
+        const idx = pageOrder.indexOf(currentPageKey);
+        const prevPage =
+          idx >= 0 ? pageOrder[(idx - 1 + pageOrder.length) % pageOrder.length] : pageOrder[0];
+        setActivePage(prevPage);
+      } else if (pageConfigObj.pages[target]) {
+        setActivePage(target);
+      }
+    } else if (actionId === 'refresh' || actionId.startsWith('refresh:')) {
+      const nowTime = new Date().toLocaleTimeString('en-GB', { hour12: false });
+      const sampleNotes = [
+        'Đồng bộ báo cáo tiến độ OKRs',
+        'Kiểm tra chấm công ca hành chính',
+        'Rà soát task Sprint tuần này',
+        'Cập nhật số liệu Realtime API',
+      ];
+      const nextId = String(Math.floor(Math.random() * 90) + 10);
+      setSyncVars({
+        _lastSyncTime: nowTime,
+        id: nextId,
+        title: sampleNotes[Number(nextId) % sampleNotes.length],
+      });
+    }
+    if (onAction) {
+      onAction(actionId);
+    }
+  };
 
   if (rawTarget) {
     if (React.isValidElement(rawTarget) || (rawTarget as any)?.$$typeof || typeof (rawTarget as any)?.type === 'function') {
@@ -189,7 +272,7 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
         ]}
       >
         {rootNode ? (
-          renderPreviewNode(rootNode, onAction, true, 'column')
+          renderPreviewNode(rootNode, handlePreviewAction, true, 'column', syncVars)
         ) : (
           <View style={styles.emptyContainer}>
             <RNText style={styles.emptyText}>Chưa có cấu hình layout cho kích thước {activeSize}</RNText>
@@ -205,18 +288,166 @@ export const VoltraWidgetPreview = WidgetPreview;
 
 // ─── RECURSIVE NODE RENDERER ─────────────────────────────────────────────────
 
+const PreviewToggleItem: React.FC<{
+  node: any;
+  onAction?: (actionId: string) => void;
+}> = ({ node, onAction }) => {
+  const p = node.props || {};
+  const [isChecked, setIsChecked] = useState<boolean>(!!p.checked || !!p.isChecked);
+  const tint = parseDynamicColor(p.tintColor) || '#38BDF8';
+  const isSwitch = p.style === 'switch';
+
+  const handlePress = () => {
+    const nextVal = !isChecked;
+    setIsChecked(nextVal);
+    if (p.actionId) {
+      if (onAction) {
+        onAction(p.actionId);
+      }
+      const registered = actionHandlers.get(p.actionId);
+      if (registered) {
+        try {
+          registered({ actionId: p.actionId, isChecked: nextVal });
+        } catch (e) {
+          console.warn(`[WidgetPreview] Action '${p.actionId}' error:`, e);
+        }
+      }
+      for (const globalHandler of globalActionHandlers) {
+        try {
+          globalHandler(p.actionId, { isChecked: nextVal });
+        } catch (e) {
+          console.warn(`[WidgetPreview] Global action handler error:`, e);
+        }
+      }
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      accessible={p.accessible !== false}
+      accessibilityLabel={p.accessibilityLabel || p.label}
+      accessibilityHint={p.accessibilityHint}
+      accessibilityRole="switch"
+      accessibilityValue={{ text: isChecked ? 'Đã chọn' : 'Chưa chọn' }}
+      activeOpacity={0.7}
+      onPress={handlePress}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 2,
+        width: '100%',
+        alignSelf: 'stretch',
+      }}
+    >
+      {isSwitch ? (
+        <View
+          style={{
+            width: 34,
+            height: 20,
+            borderRadius: 10,
+            backgroundColor: isChecked ? tint : '#475569',
+            justifyContent: 'center',
+            paddingHorizontal: 3,
+          }}
+        >
+          <View
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: 7,
+              backgroundColor: '#FFFFFF',
+              alignSelf: isChecked ? 'flex-end' : 'flex-start',
+            }}
+          />
+        </View>
+      ) : (
+        <View
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: 4,
+            borderWidth: 1.5,
+            borderColor: isChecked ? tint : '#64748B',
+            backgroundColor: isChecked ? tint : 'transparent',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {isChecked && (
+            <RNText style={{ color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' }}>✓</RNText>
+          )}
+        </View>
+      )}
+      <RNText
+        style={{
+          flex: 1,
+          color:
+            isChecked && p.strikethroughOnCheck
+              ? '#64748B'
+              : parseDynamicColor(p.textColor) || '#F8FAFC',
+          fontSize: p.fontSize ?? 13,
+          textDecorationLine:
+            isChecked && p.strikethroughOnCheck ? 'line-through' : 'none',
+        }}
+      >
+        {p.label}
+      </RNText>
+    </TouchableOpacity>
+  );
+};
+
+const PreviewTimerText: React.FC<{
+  nodeProps: any;
+  parentDirection: 'row' | 'column';
+}> = ({ nodeProps: p, parentDirection }) => {
+  const formatRemaining = () => {
+    const target = Number(p.targetTimestamp ?? 0);
+    if (!target) return '00:00';
+    const diff = Math.max(0, Math.round(Math.abs(target - Date.now() / 1000)));
+    const hrs = Math.floor(diff / 3600);
+    const mins = Math.floor((diff % 3600) / 60);
+    const secs = diff % 60;
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    return hrs > 0 ? `${hrs}:${pad(mins)}:${pad(secs)}` : `${pad(mins)}:${pad(secs)}`;
+  };
+
+  const [display, setDisplay] = useState<string>(formatRemaining);
+
+  useEffect(() => {
+    setDisplay(formatRemaining());
+    const id = setInterval(() => {
+      setDisplay(formatRemaining());
+    }, 1000);
+    return () => clearInterval(id);
+  }, [p.targetTimestamp, p.mode]);
+
+  return (
+    <RNText
+      style={[
+        { color: parseDynamicColor(p.color) || '#2563EB', fontSize: p.fontSize ?? 14, fontWeight: 'bold' },
+        parentDirection === 'row' ? { flexShrink: 0 } : undefined,
+      ]}
+    >
+      {p.prefix || ''}{display}{p.suffix || ''}
+    </RNText>
+  );
+};
+
 function renderPreviewNode(
   node: any,
   onAction?: (actionId: string) => void,
   isRoot: boolean = false,
-  parentDirection: 'row' | 'column' = 'column'
+  parentDirection: 'row' | 'column' = 'column',
+  syncVars?: PreviewSyncVars
 ): React.ReactNode {
   if (!node) return null;
 
   if (React.isValidElement(node) || (node as any)?.$$typeof || typeof (node as any)?.type === 'function') {
     const converted = renderToWidget(node);
     if (!converted) return null;
-    return renderPreviewNode(converted, onAction, isRoot, parentDirection);
+    return renderPreviewNode(converted, onAction, isRoot, parentDirection, syncVars);
   }
 
   switch (node.type) {
@@ -275,7 +506,7 @@ function renderPreviewNode(
         <View style={containerStyle}>
           {vnode.children?.map((child, idx) => (
             <React.Fragment key={idx}>
-              {renderPreviewNode(child, onAction, false, 'column')}
+              {renderPreviewNode(child, onAction, false, 'column', syncVars)}
             </React.Fragment>
           ))}
         </View>
@@ -337,7 +568,7 @@ function renderPreviewNode(
         <View style={containerStyle}>
           {hnode.children?.map((child, idx) => (
             <React.Fragment key={idx}>
-              {renderPreviewNode(child, onAction, false, 'row')}
+              {renderPreviewNode(child, onAction, false, 'row', syncVars)}
             </React.Fragment>
           ))}
         </View>
@@ -369,7 +600,7 @@ function renderPreviewNode(
                   : { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' }
               }
             >
-              {renderPreviewNode(child, onAction, false, parentDirection)}
+              {renderPreviewNode(child, onAction, false, parentDirection, syncVars)}
             </View>
           ))}
         </View>
@@ -392,7 +623,7 @@ function renderPreviewNode(
         >
           {gnode.children?.map((child: any, idx: number) => (
             <View key={idx} style={{ flexBasis: `${Math.floor(100 / cols) - 3}%` }}>
-              {renderPreviewNode(child, onAction, false, 'column')}
+              {renderPreviewNode(child, onAction, false, 'column', syncVars)}
             </View>
           ))}
         </View>
@@ -404,6 +635,15 @@ function renderPreviewNode(
       const p = extractPropsAndStyle(tnode.props);
       const isRtl = p.direction === 'rtl' || p.isRTL;
       const shadowColor = parseDynamicColor(p.shadowColor);
+
+      const rawText = String(p.text ?? '');
+      const resolvedText = syncVars
+        ? rawText
+            .replace(/\{\{_lastSyncTime\}\}/g, syncVars._lastSyncTime)
+            .replace(/\{\{id\}\}/g, syncVars.id)
+            .replace(/\{\{title\}\}/g, syncVars.title)
+        : rawText;
+      const isRedacted = Boolean(p.redacted);
 
       const textStyle: RNTextStyle = {
         color: parseDynamicColor(p.color) || '#FFFFFF',
@@ -420,6 +660,7 @@ function renderPreviewNode(
         textAlign: p.textAlign ?? (isRtl ? 'right' : 'left'),
         lineHeight: p.lineHeight,
         letterSpacing: p.letterSpacing,
+        opacity: isRedacted ? 0.45 : undefined,
         textShadowColor: shadowColor,
         textShadowOffset: p.shadowOffset
           ? { width: p.shadowOffset.x ?? 0, height: p.shadowOffset.y ?? 1 }
@@ -429,7 +670,7 @@ function renderPreviewNode(
       return (
         <RNText
           accessible={p.accessible !== false}
-          accessibilityLabel={p.accessibilityLabel || p.text}
+          accessibilityLabel={p.accessibilityLabel || resolvedText}
           accessibilityHint={p.accessibilityHint}
           accessibilityRole={p.accessibilityRole as any}
           numberOfLines={p.numberOfLines}
@@ -438,7 +679,7 @@ function renderPreviewNode(
             parentDirection === 'row' ? { flexShrink: 1 } : undefined,
           ]}
         >
-          {p.text}
+          {isRedacted ? '••••••••' : resolvedText}
         </RNText>
       );
     }
@@ -461,7 +702,7 @@ function renderPreviewNode(
         alignItems: 'center',
         justifyContent: 'center',
         alignSelf: p.fullWidth ? 'stretch' : 'auto',
-        width: p.fullWidth ? '100%' : undefined,
+        ...(p.fullWidth ? (parentDirection === 'row' ? { flex: 1 } : { width: '100%' }) : {}),
         ...extractShadowStyle(p),
       };
       const textStyle: RNTextStyle = {
@@ -479,8 +720,25 @@ function renderPreviewNode(
           accessibilityRole="button"
           activeOpacity={0.7}
           onPress={() => {
-            if (p.actionId && onAction) {
-              onAction(p.actionId);
+            if (p.actionId) {
+              if (onAction) {
+                onAction(p.actionId);
+              }
+              const registered = actionHandlers.get(p.actionId);
+              if (registered) {
+                try {
+                  registered({ actionId: p.actionId });
+                } catch (e) {
+                  console.warn(`[WidgetPreview] Action '${p.actionId}' error:`, e);
+                }
+              }
+              for (const globalHandler of globalActionHandlers) {
+                try {
+                  globalHandler(p.actionId);
+                } catch (e) {
+                  console.warn(`[WidgetPreview] Global action handler error:`, e);
+                }
+              }
             }
           }}
           style={btnStyle}
@@ -565,16 +823,7 @@ function renderPreviewNode(
     case 'Timer': {
       const tnode = node as TimerNode;
       const p = tnode.props || {};
-      return (
-        <RNText
-          style={[
-            { color: parseDynamicColor(p.color) || '#2563EB', fontSize: p.fontSize ?? 14, fontWeight: 'bold' },
-            parentDirection === 'row' ? { flexShrink: 0 } : undefined,
-          ]}
-        >
-          {p.prefix || ''}1:29:55{p.suffix || ''}
-        </RNText>
-      );
+      return <PreviewTimerText nodeProps={p} parentDirection={parentDirection} />;
     }
 
     case 'Image': {
@@ -654,7 +903,7 @@ function renderPreviewNode(
         >
           {lnode.children?.map((child: any, idx: number) => (
             <React.Fragment key={idx}>
-              {renderPreviewNode(child, onAction, false, parentDirection)}
+              {renderPreviewNode(child, onAction, false, parentDirection, syncVars)}
             </React.Fragment>
           ))}
         </TouchableOpacity>
@@ -710,81 +959,12 @@ function renderPreviewNode(
     }
 
     case 'Toggle': {
-      const tnode = node as any;
-      const p = tnode.props || {};
-      const isChecked = !!p.checked || !!p.isChecked;
-      const tint = parseDynamicColor(p.tintColor) || '#38BDF8';
-      const isSwitch = p.style === 'switch';
-
       return (
-        <TouchableOpacity
-          accessible={p.accessible !== false}
-          accessibilityLabel={p.accessibilityLabel || p.label}
-          accessibilityHint={p.accessibilityHint}
-          accessibilityRole="switch"
-          accessibilityValue={{ text: isChecked ? 'Đã chọn' : 'Chưa chọn' }}
-          activeOpacity={0.7}
-          onPress={() => {
-            if (p.actionId && onAction) {
-              onAction(p.actionId);
-            }
-          }}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            paddingVertical: 4,
-          }}
-        >
-          {isSwitch ? (
-            <View
-              style={{
-                width: 32,
-                height: 18,
-                borderRadius: 9,
-                backgroundColor: isChecked ? tint : '#475569',
-                justifyContent: 'center',
-                paddingHorizontal: 2,
-              }}
-            >
-              <View
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: 7,
-                  backgroundColor: '#FFFFFF',
-                  alignSelf: isChecked ? 'flex-end' : 'flex-start',
-                }}
-              />
-            </View>
-          ) : (
-            <View
-              style={{
-                width: 18,
-                height: 18,
-                borderRadius: 4,
-                borderWidth: 1.5,
-                borderColor: isChecked ? tint : '#64748B',
-                backgroundColor: isChecked ? tint : 'transparent',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {isChecked && (
-                <RNText style={{ color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' }}>✓</RNText>
-              )}
-            </View>
-          )}
-          <RNText
-            style={{
-              color: isChecked && p.strikethroughOnCheck ? '#64748B' : (parseDynamicColor(p.textColor) || '#F8FAFC'),
-              fontSize: p.fontSize ?? 13,
-              textDecorationLine: isChecked && p.strikethroughOnCheck ? 'line-through' : 'none',
-            }}
-          >
-            {p.label}
-          </RNText>
-        </TouchableOpacity>
+        <PreviewToggleItem
+          key={`toggle-${(node as any).id || (node as any).props?.actionId || Math.random()}`}
+          node={node}
+          onAction={onAction}
+        />
       );
     }
 

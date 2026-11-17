@@ -25,29 +25,6 @@ export interface WidgetPreviewProps {
     /** Style tùy biến cho wrapper bên ngoài */
     style?: ViewStyle;
 }
-/**
- * 📱 Bộ Component xem trước tiện ích trực tiếp trong ứng dụng React Native (In-App Widget Preview).
- * Cho phép lập trình viên và người dùng trải nghiệm giao diện & bấm thử tương tác của Widget
- * ngay trong màn hình App mà không cần ra ngoài Home Screen.
- *
- * Cách dùng 1 (Truyền layout prop):
- * ```tsx
- * <WidgetPreview size="medium" layout={myLayout} onAction={(act) => alert(act)} />
- * ```
- *
- * Cách dùng 2 (Truyền JSX children trực tiếp):
- * ```tsx
- * <WidgetPreview size="medium">
- *   <VStack padding={16} backgroundColor="#0F172A" borderRadius={16}>
- *     <HStack justifyContent="spaceBetween">
- *       <Text fontSize={14} fontWeight="bold" color="#FFFFFF">Vào ca sáng</Text>
- *       <Badge text="07:54" backgroundColor="#064E3B" textColor="#6EE7B7" />
- *     </HStack>
- *     <Button title="Làm mới" actionId="refresh" />
- *   </VStack>
- * </WidgetPreview>
- * ```
- */
 export declare const WidgetPreview: React.FC<WidgetPreviewProps>;
 /** Alias tương thích */
 export declare const VoltraWidgetPreview: React.FC<WidgetPreviewProps>;

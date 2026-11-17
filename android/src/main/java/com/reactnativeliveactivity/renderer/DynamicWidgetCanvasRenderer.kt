@@ -11,12 +11,22 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import android.os.SystemClock
 import org.json.JSONObject
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+
+data class WidgetTimerInfo(
+    val baseMillis: Long,
+    val isCountDown: Boolean,
+    val leftPx: Int,
+    val topPx: Int,
+    val fontSizePx: Float,
+    val color: Int
+)
 
 data class ButtonActionBinding(
     val actionId: String,
@@ -27,10 +37,15 @@ data class ButtonActionBinding(
     val widthFraction: Float = 1.0f,
     val title: String = "",
     val accessibilityLabel: String? = null,
-    val accessibilityHint: String? = null
+    val accessibilityHint: String? = null,
+    val leftFraction: Float = 0f,
+    val rightFraction: Float = 1f,
+    val topFraction: Float = 0f,
+    val bottomFraction: Float = 1f
 )
 
 object DynamicWidgetCanvasRenderer {
+    var activeTimerInfo: WidgetTimerInfo? = null
 
     private fun isFlexibleSpacer(node: JSONObject?): Boolean {
         if (node == null || node.optString("type") != "Spacer") return false
@@ -180,6 +195,7 @@ object DynamicWidgetCanvasRenderer {
         family: String,
         bindings: MutableList<ButtonActionBinding>
     ): Bitmap {
+        activeTimerInfo = null
         val bmp = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG)
@@ -207,7 +223,7 @@ object DynamicWidgetCanvasRenderer {
 
         val naturalH = measureNodeHeight(context, rootNode, widthPx.toFloat(), baseDensity)
         val fitScale = if (naturalH > heightPx * 0.96f && naturalH > 0f) {
-            ((heightPx * 0.95f) / naturalH).coerceIn(0.62f, 1.0f)
+            ((heightPx * 0.95f) / naturalH).coerceIn(0.55f, 1.0f)
         } else {
             1.0f
         }
@@ -436,24 +452,83 @@ object DynamicWidgetCanvasRenderer {
                             curLeft += w + spacing
                         }
                     } else {
-                        var curLeft = left + pad
+                        var fullWidthCount = 0
                         for (i in 0 until children.length()) {
                             val c = children.optJSONObject(i) ?: continue
-                            if (c.optString("type") == "Spacer") {
-                                val gapW = (c.optJSONObject("props")?.optDouble("minLength", 6.0) ?: 6.0).toFloat() * density
-                                curLeft += gapW
-                                continue
+                            if (c.optJSONObject("props")?.optBoolean("fullWidth", false) == true) {
+                                fullWidthCount++
                             }
-                            val remainingW = (left + availWidth - pad - curLeft).coerceAtLeast(20f)
-                            val w = if (i == children.length() - 1 && c.optString("type") in listOf("VStack", "Progress", "Text")) {
-                                remainingW
-                            } else {
-                                min(remainingW, measureNodeWidth(context, c, innerW, density))
+                        }
+
+                        val justify = props?.optString("justifyContent", "") ?: ""
+                        if (fullWidthCount > 0) {
+                            var fixedW = 0f
+                            for (i in 0 until children.length()) {
+                                val c = children.optJSONObject(i) ?: continue
+                                if (c.optString("type") == "Spacer") {
+                                    fixedW += (c.optJSONObject("props")?.optDouble("minLength", 6.0) ?: 6.0).toFloat() * density
+                                } else if (c.optJSONObject("props")?.optBoolean("fullWidth", false) != true) {
+                                    fixedW += measureNodeWidth(context, c, innerW, density)
+                                }
                             }
-                            val childH = measureNodeHeight(context, c, w, density)
-                            val childTop = top + pad + ((innerH - childH) / 2f).coerceAtLeast(0f)
-                            drawNode(context, canvas, c, curLeft, childTop, w, childH, totalHeight, density, false, bindings)
-                            curLeft += w + spacing
+                            val totalSpacing = spacing * (children.length() - 1).coerceAtLeast(0)
+                            val fullWidthW = ((innerW - fixedW - totalSpacing) / fullWidthCount).coerceAtLeast(30f)
+
+                            var curLeft = left + pad
+                            for (i in 0 until children.length()) {
+                                val c = children.optJSONObject(i) ?: continue
+                                if (c.optString("type") == "Spacer") {
+                                    val gapW = (c.optJSONObject("props")?.optDouble("minLength", 6.0) ?: 6.0).toFloat() * density
+                                    curLeft += gapW + spacing
+                                    continue
+                                }
+                                val isFull = c.optJSONObject("props")?.optBoolean("fullWidth", false) == true
+                                val w = if (isFull) fullWidthW else measureNodeWidth(context, c, innerW, density)
+                                val childH = measureNodeHeight(context, c, w, density)
+                                val childTop = top + pad + ((innerH - childH) / 2f).coerceAtLeast(0f)
+                                drawNode(context, canvas, c, curLeft, childTop, w, childH, totalHeight, density, false, bindings)
+                                curLeft += w + spacing
+                            }
+                        } else if (justify in listOf("spaceBetween", "spaceAround") && children.length() == 2) {
+                            val c0 = children.optJSONObject(0)
+                            val c1 = children.optJSONObject(1)
+                            if (c0 != null && c1 != null) {
+                                val w1 = min(innerW * 0.72f, measureNodeWidth(context, c1, innerW, density))
+                                val h1 = measureNodeHeight(context, c1, w1, density)
+                                val top1 = top + pad + ((innerH - h1) / 2f).coerceAtLeast(0f)
+                                val rightLeft = left + availWidth - pad - w1
+                                drawNode(context, canvas, c1, rightLeft, top1, w1, h1, totalHeight, density, false, bindings)
+
+                                val maxLeftAreaW = (rightLeft - spacing - (left + pad)).coerceAtLeast(30f)
+                                val w0 = if (c0.optString("type") == "VStack") {
+                                    maxLeftAreaW
+                                } else {
+                                    min(maxLeftAreaW, measureNodeWidth(context, c0, maxLeftAreaW, density))
+                                }
+                                val h0 = measureNodeHeight(context, c0, w0, density)
+                                val top0 = top + pad + ((innerH - h0) / 2f).coerceAtLeast(0f)
+                                drawNode(context, canvas, c0, left + pad, top0, w0, h0, totalHeight, density, false, bindings)
+                            }
+                        } else {
+                            var curLeft = left + pad
+                            for (i in 0 until children.length()) {
+                                val c = children.optJSONObject(i) ?: continue
+                                if (c.optString("type") == "Spacer") {
+                                    val gapW = (c.optJSONObject("props")?.optDouble("minLength", 6.0) ?: 6.0).toFloat() * density
+                                    curLeft += gapW
+                                    continue
+                                }
+                                val remainingW = (left + availWidth - pad - curLeft).coerceAtLeast(20f)
+                                val w = if (i == children.length() - 1 && c.optString("type") in listOf("VStack", "Progress", "Text")) {
+                                    remainingW
+                                } else {
+                                    min(remainingW, measureNodeWidth(context, c, innerW, density))
+                                }
+                                val childH = measureNodeHeight(context, c, w, density)
+                                val childTop = top + pad + ((innerH - childH) / 2f).coerceAtLeast(0f)
+                                drawNode(context, canvas, c, curLeft, childTop, w, childH, totalHeight, density, false, bindings)
+                                curLeft += w + spacing
+                            }
                         }
                     }
                 }
@@ -517,22 +592,56 @@ object DynamicWidgetCanvasRenderer {
                 val display = ellipsizeText(text, paint, availWidth)
                 val fm = paint.fontMetrics
                 val textH = fm.descent - fm.ascent
-                canvas.drawText(display, left, top - fm.ascent, paint)
+                if (props?.optBoolean("redacted", false) == true) {
+                    val redW = min(availWidth, paint.measureText(display).coerceAtLeast(24f * density))
+                    val c = paint.color
+                    paint.style = Paint.Style.FILL
+                    paint.color = Color.argb(95, Color.red(c), Color.green(c), Color.blue(c))
+                    val rr = 4f * density
+                    canvas.drawRoundRect(
+                        RectF(left, top + textH * 0.14f, left + redW, top + textH * 0.86f),
+                        rr,
+                        rr,
+                        paint
+                    )
+                } else {
+                    canvas.drawText(display, left, top - fm.ascent, paint)
+                }
                 paint.clearShadowLayer()
                 textH + 1.5f * density
             }
 
             "Timer" -> {
-                val formatted = formatTimerString(props)
+                val targetTs = props?.optDouble("targetTimestamp", 0.0) ?: 0.0
                 val fontSize = (props?.optDouble("fontSize", 13.0) ?: 13.0).toFloat() * density
                 val colorHex = props?.optString("color", "#2563EB") ?: "#2563EB"
+                val tintColor = parseHexColor(colorHex, Color.BLUE)
 
-                paint.color = parseHexColor(colorHex, Color.BLUE)
+                paint.color = tintColor
                 paint.textSize = fontSize
                 paint.typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
                 val fm = paint.fontMetrics
-                canvas.drawText(formatted, left, top - fm.ascent, paint)
-                (fm.descent - fm.ascent) + 1.5f * density
+                val formatted = formatTimerString(props)
+                val textH = (fm.descent - fm.ascent) + 1.5f * density
+
+                if (targetTs > 0.0) {
+                    val targetEpochMillis = (targetTs * 1000.0).toLong()
+                    val remainingMillis = targetEpochMillis - System.currentTimeMillis()
+                    val baseMillis = SystemClock.elapsedRealtime() + remainingMillis
+                    val isCountdown = props?.optString("mode", "countdown") != "timer"
+
+                    activeTimerInfo = WidgetTimerInfo(
+                        baseMillis = baseMillis,
+                        isCountDown = isCountdown,
+                        leftPx = left.roundToInt(),
+                        topPx = top.roundToInt(),
+                        fontSizePx = fontSize,
+                        color = tintColor
+                    )
+                } else {
+                    canvas.drawText(formatted, left, top - fm.ascent, paint)
+                }
+                textH
             }
 
             "Progress" -> {
@@ -772,14 +881,20 @@ object DynamicWidgetCanvasRenderer {
                 }
 
                 if (actionId.isNotEmpty() || !deepLink.isNullOrEmpty()) {
+                    val canvasW = canvas.width.toFloat().coerceAtLeast(1f)
+                    val canvasH = canvas.height.toFloat().coerceAtLeast(1f)
                     val zone = when {
-                        top < totalHeight * 0.25f -> "top"
-                        top > totalHeight * 0.76f -> "bot"
+                        top < canvasH * 0.17f -> "top"
+                        top > canvasH * 0.80f -> "bot"
                         else -> "mid"
                     }
-                    val xF = ((left + btnW / 2f) / availWidth).coerceIn(0f, 1f)
-                    val yF = ((top + btnH / 2f) / totalHeight).coerceIn(0f, 1f)
-                    val wF = (btnW / availWidth).coerceIn(0.1f, 1f)
+                    val lF = (left / canvasW).coerceIn(0f, 1f)
+                    val rF = ((left + btnW) / canvasW).coerceIn(0f, 1f)
+                    val tF = (top / canvasH).coerceIn(0f, 1f)
+                    val bF = ((top + btnH) / canvasH).coerceIn(0f, 1f)
+                    val xF = ((lF + rF) / 2f).coerceIn(0f, 1f)
+                    val yF = ((tF + bF) / 2f).coerceIn(0f, 1f)
+                    val wF = (rF - lF).coerceIn(0.05f, 1f)
                     bindings.add(
                         ButtonActionBinding(
                             actionId = actionId,
@@ -790,7 +905,11 @@ object DynamicWidgetCanvasRenderer {
                             widthFraction = if (fullWidth) 1.0f else wF,
                             title = displayTitle,
                             accessibilityLabel = props?.optString("accessibilityLabel", "")?.takeIf { it.isNotEmpty() },
-                            accessibilityHint = props?.optString("accessibilityHint", "")?.takeIf { it.isNotEmpty() }
+                            accessibilityHint = props?.optString("accessibilityHint", "")?.takeIf { it.isNotEmpty() },
+                            leftFraction = lF,
+                            rightFraction = rF,
+                            topFraction = tF,
+                            bottomFraction = bF
                         )
                     )
                 }
@@ -1009,7 +1128,8 @@ object DynamicWidgetCanvasRenderer {
                 val rawActionId = props?.optString("actionId", "toggle:default") ?: "toggle:default"
                 val normalizedActionId = if (rawActionId.startsWith("toggle:")) rawActionId else "toggle:$rawActionId"
                 val key = normalizedActionId.removePrefix("toggle:")
-                val isChecked = DynamicWidgetStateStore.isToggled(context, key) || (props?.optBoolean("checked", false) == true)
+                val defaultChecked = (props?.optBoolean("checked", false) == true) || (props?.optBoolean("isChecked", false) == true)
+                val isChecked = DynamicWidgetStateStore.isToggled(context, key, defaultChecked)
                 val label = props?.optString("label", "") ?: ""
                 val style = props?.optString("style", "checkbox") ?: "checkbox"
                 val tintHex = props?.optString("tintColor", "#10B981") ?: "#10B981"
@@ -1069,19 +1189,31 @@ object DynamicWidgetCanvasRenderer {
                 canvas.drawText(display, textStartLeft, ty, paint)
                 paint.isStrikeThruText = false
 
+                val canvasW = canvas.width.toFloat().coerceAtLeast(1f)
+                val canvasH = canvas.height.toFloat().coerceAtLeast(1f)
                 val zone = when {
-                    top < totalHeight * 0.25f -> "top"
-                    top > totalHeight * 0.76f -> "bot"
+                    top < canvasH * 0.17f -> "top"
+                    top > canvasH * 0.80f -> "bot"
                     else -> "mid"
                 }
+                val tF = (top / canvasH).coerceIn(0f, 1f)
+                val bF = ((top + rowH) / canvasH).coerceIn(0f, 1f)
+                val yF = ((tF + bF) / 2f).coerceIn(0f, 1f)
                 bindings.add(
                     ButtonActionBinding(
                         actionId = normalizedActionId,
                         deepLink = null,
                         zone = zone,
+                        xFraction = 0.5f,
+                        yFraction = yF,
+                        widthFraction = 1.0f,
                         title = label,
                         accessibilityLabel = props?.optString("accessibilityLabel", "")?.takeIf { it.isNotEmpty() } ?: label,
-                        accessibilityHint = if (isChecked) "Đã chọn, bấm để bỏ chọn" else "Chưa chọn, bấm để chọn"
+                        accessibilityHint = if (isChecked) "Đã chọn, bấm để bỏ chọn" else "Chưa chọn, bấm để chọn",
+                        leftFraction = (left / canvasW).coerceIn(0f, 1f),
+                        rightFraction = ((left + availWidth) / canvasW).coerceIn(0f, 1f),
+                        topFraction = tF,
+                        bottomFraction = bF
                     )
                 )
                 rowH + 2f * density
@@ -1132,13 +1264,19 @@ object DynamicWidgetCanvasRenderer {
                 val asVStack = JSONObject(node.toString()).apply { put("type", "VStack") }
                 val usedH = drawNode(context, canvas, asVStack, left, top, availWidth, availHeight, totalHeight, density, false, bindings)
                 if (actionId.isNotEmpty() || !deepLink.isNullOrEmpty()) {
+                    val canvasW = canvas.width.toFloat().coerceAtLeast(1f)
+                    val canvasH = canvas.height.toFloat().coerceAtLeast(1f)
                     val zone = when {
-                        top < totalHeight * 0.25f -> "top"
-                        top > totalHeight * 0.76f -> "bot"
+                        top < canvasH * 0.17f -> "top"
+                        top > canvasH * 0.80f -> "bot"
                         else -> "mid"
                     }
-                    val xF = ((left + availWidth / 2f) / availWidth).coerceIn(0f, 1f)
-                    val yF = ((top + usedH / 2f) / totalHeight).coerceIn(0f, 1f)
+                    val lF = (left / canvasW).coerceIn(0f, 1f)
+                    val rF = ((left + availWidth) / canvasW).coerceIn(0f, 1f)
+                    val tF = (top / canvasH).coerceIn(0f, 1f)
+                    val bF = ((top + usedH) / canvasH).coerceIn(0f, 1f)
+                    val xF = ((lF + rF) / 2f).coerceIn(0f, 1f)
+                    val yF = ((tF + bF) / 2f).coerceIn(0f, 1f)
                     bindings.add(
                         ButtonActionBinding(
                             actionId = actionId,
@@ -1146,10 +1284,14 @@ object DynamicWidgetCanvasRenderer {
                             zone = zone,
                             xFraction = xF,
                             yFraction = yF,
-                            widthFraction = 1.0f,
+                            widthFraction = (rF - lF).coerceIn(0.05f, 1f),
                             title = props?.optString("accessibilityLabel", "")?.takeIf { it.isNotEmpty() } ?: "Liên kết",
                             accessibilityLabel = props?.optString("accessibilityLabel", "")?.takeIf { it.isNotEmpty() },
-                            accessibilityHint = props?.optString("accessibilityHint", "")?.takeIf { it.isNotEmpty() }
+                            accessibilityHint = props?.optString("accessibilityHint", "")?.takeIf { it.isNotEmpty() },
+                            leftFraction = lF,
+                            rightFraction = rF,
+                            topFraction = tF,
+                            bottomFraction = bF
                         )
                     )
                 }
@@ -1452,8 +1594,17 @@ object DynamicWidgetCanvasRenderer {
     }
 
     private fun parseHexColor(hex: String, fallback: Int): Int {
+        val trimmed = hex.trim()
+        if (trimmed.isEmpty()) return fallback
+        if (trimmed.startsWith("{")) {
+            return try {
+                parseDynamicColor(JSONObject(trimmed), fallback)
+            } catch (_: Exception) {
+                fallback
+            }
+        }
         return try {
-            Color.parseColor(hex)
+            Color.parseColor(trimmed)
         } catch (_: Exception) {
             fallback
         }
