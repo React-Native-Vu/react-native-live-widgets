@@ -312,8 +312,36 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
                     DynamicWidgetStateStore.initializeFromLayoutJson(reactContext, value)
                 }
 
+                if (key.startsWith("widget_bound_data_")) {
+                    val wKey = key.removePrefix("widget_bound_data_")
+                    DynamicWidgetStateStore.getPrefs(reactContext, appGroup)
+                        .edit()
+                        .remove("widget_remote_config_$wKey")
+                        .apply()
+                    runCatching {
+                        val state = DynamicWidgetStateStore.loadState(reactContext)
+                        val jsonObj = JSONObject(value)
+                        DynamicWidgetStateStore.flattenJson(jsonObj, "", state.remoteVariables)
+                        val syncTime = state.remoteVariables["_lastSyncTime"]
+                        if (!syncTime.isNullOrEmpty()) {
+                            state.lastSyncTime = syncTime
+                        }
+                        val status = state.remoteVariables["_syncStatus"]?.takeIf { it.isNotEmpty() } ?: "ok"
+                        state.syncStatus = status
+                        state.remoteVariables["_syncStatus"] = status
+                        state.lastSyncError = null
+                        state.remoteVariables["_syncError"] = ""
+                        state.updatedAt = System.currentTimeMillis()
+                        DynamicWidgetStateStore.saveState(reactContext, state)
+                    }
+                }
+
                 if (key.startsWith("widget_remote_config_")) {
                     val wKey = key.removePrefix("widget_remote_config_")
+                    DynamicWidgetStateStore.getPrefs(reactContext, appGroup)
+                        .edit()
+                        .remove("widget_bound_data_$wKey")
+                        .apply()
                     runCatching {
                         val cfg = JSONObject(value)
                         val mins = if (cfg.has("refreshIntervalMinutes")) {
@@ -323,6 +351,7 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
                         }.coerceAtLeast(1)
                         DynamicWidgetStateStore.scheduleBackgroundWidgetSync(reactContext, wKey, mins)
                     }
+                    DynamicWidgetStateStore.performRemoteSync(reactContext, wKey, forceRefresh = true)
                 }
 
                 if (key.startsWith("widget_control_")) {

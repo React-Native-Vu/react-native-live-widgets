@@ -137,7 +137,19 @@ public struct DynamicWidgetProvider: TimelineProvider {
       return f.string(from: Date())
     }()
 
-    var allVars = state.remoteVariables ?? [:]
+    var allVars: [String: String] = [:]
+    let boundJson = Self.readSharedString(forKey: "widget_bound_data_\(widgetKey)", appGroup: appGroup)
+      ?? (widgetKey != "main" ? Self.readSharedString(forKey: "widget_bound_data_main", appGroup: appGroup) : nil)
+    if let boundJson = boundJson,
+       let boundData = boundJson.data(using: .utf8),
+       let jsonObj = try? JSONSerialization.jsonObject(with: boundData) {
+      DynamicWidgetStateStore.flattenJsonObject(jsonObj, prefix: "", into: &allVars)
+    }
+    if let remoteVars = state.remoteVariables {
+      for (k, v) in remoteVars {
+        allVars[k] = v
+      }
+    }
     allVars["_lastSyncTime"] = syncTime
     allVars["_syncStatus"] = state.syncStatus ?? allVars["_syncStatus"] ?? "ok"
     allVars["_syncError"] = state.lastSyncError ?? allVars["_syncError"] ?? ""

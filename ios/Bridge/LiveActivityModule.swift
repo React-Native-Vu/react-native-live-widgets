@@ -777,6 +777,16 @@ public class LiveActivityModule: RCTEventEmitter {
 
   // MARK: - Shared Storage (App Group)
 
+  private func removeSharedStorageKey(_ targetKey: String, appGroup: String) {
+    if let fileURL = DynamicWidgetProvider.sharedFileURL(key: targetKey, appGroup: appGroup) {
+      try? FileManager.default.removeItem(at: fileURL)
+    }
+    getDefaults(appGroup: appGroup).removeObject(forKey: targetKey)
+    #if targetEnvironment(simulator)
+    try? FileManager.default.removeItem(atPath: "/tmp/rn_live_widgets_\(targetKey).json")
+    #endif
+  }
+
   @objc(setSharedItem:value:appGroup:resolver:rejecter:)
   public func setSharedItem(
     key: String,
@@ -808,14 +818,7 @@ public class LiveActivityModule: RCTEventEmitter {
       // để Widget không bị gọi API ngầm không cần thiết khi đổi kích thước.
       if !value.contains("{{") {
         let wKey = String(key.dropFirst("widget_layout_".count))
-        let remoteKey = "widget_remote_config_\(wKey)"
-        if let remoteFileURL = DynamicWidgetProvider.sharedFileURL(key: remoteKey, appGroup: appGroup) {
-          try? FileManager.default.removeItem(at: remoteFileURL)
-        }
-        getDefaults(appGroup: appGroup).removeObject(forKey: remoteKey)
-        #if targetEnvironment(simulator)
-        try? FileManager.default.removeItem(atPath: "/tmp/rn_live_widgets_\(remoteKey).json")
-        #endif
+        removeSharedStorageKey("widget_remote_config_\(wKey)", appGroup: appGroup)
       }
     } else if key == "widget_counter_value" {
       var state = DynamicWidgetStateStore.loadState()
@@ -824,6 +827,29 @@ public class LiveActivityModule: RCTEventEmitter {
       state.remoteVariables = vars
       state.updatedAt = Date().timeIntervalSince1970
       DynamicWidgetStateStore.saveState(state)
+    } else if key.hasPrefix("widget_bound_data_"),
+              let data = value.data(using: .utf8),
+              let jsonObj = try? JSONSerialization.jsonObject(with: data) {
+      let wKey = String(key.dropFirst("widget_bound_data_".count))
+      removeSharedStorageKey("widget_remote_config_\(wKey)", appGroup: appGroup)
+
+      var state = DynamicWidgetStateStore.loadState()
+      var vars = state.remoteVariables ?? [:]
+      DynamicWidgetStateStore.flattenJsonObject(jsonObj, prefix: "", into: &vars)
+      if let syncTime = vars["_lastSyncTime"], !syncTime.isEmpty {
+        state.lastSyncTime = syncTime
+      }
+      let status = (vars["_syncStatus"]?.isEmpty == false) ? vars["_syncStatus"]! : "ok"
+      state.syncStatus = status
+      vars["_syncStatus"] = status
+      state.lastSyncError = nil
+      vars["_syncError"] = ""
+      state.remoteVariables = vars
+      state.updatedAt = Date().timeIntervalSince1970
+      DynamicWidgetStateStore.saveState(state)
+    } else if key.hasPrefix("widget_remote_config_") {
+      let wKey = String(key.dropFirst("widget_remote_config_".count))
+      removeSharedStorageKey("widget_bound_data_\(wKey)", appGroup: appGroup)
     }
 
     let defaults = getDefaults(appGroup: appGroup)
@@ -836,6 +862,10 @@ public class LiveActivityModule: RCTEventEmitter {
     #endif
 
     Task {
+      if key.hasPrefix("widget_remote_config_") {
+        let wKey = String(key.dropFirst("widget_remote_config_".count))
+        await DynamicWidgetStateStore.performRemoteSync(widgetKey: wKey, forceRefresh: true)
+      }
       await DynamicWidgetImageCache.prefetchUrls(in: value)
       WidgetCenter.shared.reloadAllTimelines()
       if #available(iOS 18.0, *), key.hasPrefix("widget_control_") {

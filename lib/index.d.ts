@@ -173,6 +173,15 @@ export declare const Widget: {
      */
     setRemoteConfig: (widgetKeyOrConfig: string | WidgetRemoteConfig, remoteConfigOrAppGroup?: WidgetRemoteConfig | string, maybeAppGroup?: string) => Promise<boolean>;
     /**
+     * Đẩy dữ liệu có cấu trúc (Structured Data Binding) từ JS/TS xuống Native Shared Storage
+     * để Home Screen Widget cập nhật tức thì mà không cần dựng lại toàn bộ cây layout.
+     *
+     * Hỗ trợ gọi linh hoạt:
+     * - `Widget.setData('main', data, appGroup?)`
+     * - `Widget.setData(data, appGroup?)` (tự động gán widgetKey = 'main')
+     */
+    setData: (widgetKeyOrData: string | Record<string, any>, dataOrAppGroup?: Record<string, any> | string, maybeAppGroup?: string) => Promise<boolean>;
+    /**
      * Tạo Proxy Data Binding có cấu trúc & gợi ý kiểu TypeScript cho JSX/DSL Widget (`data.user.name`, `data.attendance.progress.divide(100)`).
      */
     createDataBinding: typeof createDataBinding;

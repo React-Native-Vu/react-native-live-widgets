@@ -460,7 +460,15 @@ object DynamicWidgetStateStore {
         val syncTime = state.lastSyncTime
             ?: SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 
-        val vars = state.remoteVariables.toMutableMap()
+        val vars = mutableMapOf<String, String>()
+        val boundJson = readSharedString(context, "widget_bound_data_$widgetKey")
+            ?: if (widgetKey != "main") readSharedString(context, "widget_bound_data_main") else null
+        if (!boundJson.isNullOrEmpty()) {
+            runCatching {
+                flattenJson(JSONObject(boundJson), "", vars)
+            }
+        }
+        vars.putAll(state.remoteVariables)
         vars["_lastSyncTime"] = syncTime
         vars["_syncStatus"] = state.syncStatus ?: vars["_syncStatus"] ?: "ok"
         vars["_syncError"] = state.lastSyncError ?: vars["_syncError"] ?: ""

@@ -16,7 +16,7 @@ import {
   WidgetIR,
 } from './types';
 import { compileToIR, inspectIR } from './ir';
-import { UI, createDataBinding } from './builder';
+import { UI, createDataBinding, flattenDataObject } from './builder';
 
 declare const __DEV__: boolean | undefined;
 
@@ -760,6 +760,43 @@ export const Widget = {
       return await Widget.reloadAll();
     } catch (error) {
       console.warn('[react-native-live-widgets] setRemoteConfig error:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Đẩy dữ liệu có cấu trúc (Structured Data Binding) từ JS/TS xuống Native Shared Storage
+   * để Home Screen Widget cập nhật tức thì mà không cần dựng lại toàn bộ cây layout.
+   *
+   * Hỗ trợ gọi linh hoạt:
+   * - `Widget.setData('main', data, appGroup?)`
+   * - `Widget.setData(data, appGroup?)` (tự động gán widgetKey = 'main')
+   */
+  setData: async (
+    widgetKeyOrData: string | Record<string, any>,
+    dataOrAppGroup?: Record<string, any> | string,
+    maybeAppGroup?: string
+  ): Promise<boolean> => {
+    try {
+      let widgetKey = 'main';
+      let dataObj: Record<string, any>;
+      let appGroup: string | undefined;
+
+      if (typeof widgetKeyOrData === 'string') {
+        widgetKey = widgetKeyOrData;
+        dataObj = (dataOrAppGroup as Record<string, any>) || {};
+        appGroup = maybeAppGroup;
+      } else {
+        dataObj = widgetKeyOrData || {};
+        appGroup = typeof dataOrAppGroup === 'string' ? dataOrAppGroup : undefined;
+      }
+
+      const flattened = flattenDataObject(dataObj);
+      const saved = await SharedStorage.set(`widget_bound_data_${widgetKey}`, flattened, appGroup);
+      if (!saved) return false;
+      return await Widget.reloadAll();
+    } catch (error) {
+      console.warn('[react-native-live-widgets] setData error:', error);
       return false;
     }
   },
