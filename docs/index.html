@@ -120,9 +120,9 @@
   <!-- Top Announcement Bar -->
   <div class="bg-gradient-to-r from-sky-900/50 via-indigo-900/40 to-purple-900/50 border-b border-sky-500/20 py-2 px-4 text-center text-xs text-sky-200">
     <span class="inline-flex items-center space-x-1.5 font-medium">
-      <span class="px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-semibold text-[10px] uppercase tracking-wide">Mới v1.2.0</span>
-      <span>Hỗ trợ Cú pháp <strong>JSX/TSX</strong>, xem trước <code>&lt;WidgetPreview&gt;</code> & Chuẩn hóa <strong>AI llms.txt</strong></span>
-      <a href="#quick-start" class="underline hover:text-white ml-2">Khám phá ngay &rarr;</a>
+      <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold text-[10px] uppercase tracking-wide">Mới v1.2.1</span>
+      <span>Exact Dynamic Hit Layer, Native Chronometer Countdown, Swift 6 Ready & Chuẩn hoá <strong>UI IR</strong></span>
+      <a href="#exact-hit-layer" class="underline hover:text-white ml-2">Xem chi tiết &rarr;</a>
     </span>
   </div>
 
@@ -141,8 +141,8 @@
           </a>
           <span class="text-[11px] text-slate-400 hidden sm:inline">Declarative Widgets & Dynamic Island Engine</span>
         </div>
-        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
-          v1.2.0
+        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          v1.2.1
         </span>
       </div>
 
@@ -410,7 +410,8 @@
           <span>Cú pháp & Engine</span>
         </h4>
         <ul class="space-y-1 border-l border-slate-800 pl-3">
-          <li><a href="#jsx-support" class="text-slate-400 hover:text-white block py-1 transition">Cú pháp JSX / TSX (v1.2.0)</a></li>
+          <li><a href="#jsx-support" class="text-slate-400 hover:text-white block py-1 transition">Cú pháp JSX / TSX</a></li>
+          <li><a href="#exact-hit-layer" class="text-emerald-400 hover:text-white block py-1 transition font-medium">Exact Hit Layer & Chronometer (v1.2.1)</a></li>
           <li><a href="#widget-preview-comp" class="text-slate-400 hover:text-white block py-1 transition">Mô phỏng &lt;WidgetPreview&gt;</a></li>
           <li><a href="#dsl-containers" class="text-slate-400 hover:text-white block py-1 transition">VStack, HStack, ZStack</a></li>
           <li><a href="#dsl-timer" class="text-slate-400 hover:text-white block py-1 transition">UI.Timer (Đếm giờ phần cứng)</a></li>
@@ -623,6 +624,43 @@ export default function HomeScreen() {
     &lt;/View&gt;
   );
 }</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Exact Dynamic Hit Layer & Chronometer Countdown (v1.2.1) -->
+      <section id="exact-hit-layer" class="space-y-6">
+        <div class="border-b border-cardBorder pb-4">
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">v1.2.1 Mới</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">
+              Vùng Bấm Động Từng Pixel & Đồng Hồ Native Android
+            </h2>
+          </div>
+          <p class="mt-2 text-slate-400 text-sm sm:text-base">
+            Tối ưu độ chính xác cảm ứng 100% không lệch toạ độ, tích hợp Chronometer đếm ngược thời gian thực và tương thích hoàn toàn Swift 6.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-darkCard border border-cardBorder rounded-2xl p-5 space-y-3">
+            <h3 class="font-bold text-white text-base flex items-center space-x-2">
+              <i data-lucide="crosshair" class="w-5 h-5 text-emerald-400"></i>
+              <span>Exact Dynamic Hit Layer & Canvas Mapping</span>
+            </h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Thay thế hoàn toàn lưới chia ô cố định cũ bằng <code>FrameLayout</code> động (<code>rn_hit_layer</code>). Giải thuật <code>computeCanvasMapping</code> bù trừ viền co giãn <code>fitCenter</code>, giúp bấm trúng 100% nút, triệt tiêu mọi cú chạm ảo vào khoảng trống.
+            </p>
+          </div>
+
+          <div class="bg-darkCard border border-cardBorder rounded-2xl p-5 space-y-3">
+            <h3 class="font-bold text-white text-base flex items-center space-x-2">
+              <i data-lucide="timer" class="w-5 h-5 text-sky-400"></i>
+              <span>Native Chronometer Countdown (Android)</span>
+            </h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Tích hợp trực tiếp <code>android.widget.Chronometer</code> với <code>setChronometerCountDown(true)</code>. Đếm ngược giật lùi 1 giây/lần mượt mà ngay trên Home Screen mà không cần vẽ lại Canvas Bitmap, tiết kiệm tối đa pin.
+            </p>
           </div>
         </div>
       </section>

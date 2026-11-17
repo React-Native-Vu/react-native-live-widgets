@@ -130,3 +130,29 @@ export interface WidgetRemoteConfig {
    iOS limits daily widget reloads (~40-70/day). Android Doze Mode batches periodic tasks. Use `Widget.setRemoteConfig` for general background polling, but use Server Push (APNs / FCM) for second-by-second updates.
 3. **App Group Setup**:
    The App Group string passed to `SharedStorage.setAppGroup('group.com.yourcompany.app')` must match the entitlement configured in Xcode and `app.json`.
+
+---
+
+## 5. Architecture & Native Parity Engine (v1.2.1)
+
+### 1. Three Core Architectural Pillars
+- **Native Semantic Coverage**: Replaced unrealistic 100% semantics with guaranteed accessibility coverage for all critical interactive nodes and graphical fallbacks (`contentDescription` for TalkBack, accessibility traits for VoiceOver).
+- **Native-first, Canvas-when-needed**: Native components handle interactions and chronometers directly (`android.widget.Chronometer`, `FrameLayout` hit zones); Canvas 2D is reserved for custom graphics, sparklines, and complex vector nodes.
+- **Semantic Tree Independent from Renderer (UI IR)**: Abstract Intermediate Representation (AST) containing Visual Nodes, Semantic Nodes, and Two-Way Event Bindings (`Widget.inspectIR(layout)`, `Widget.compileIR(layout)`).
+
+### 2. Android Exact Dynamic Hit Layer
+- Replaced fixed grid layout with dynamic `FrameLayout` (`rn_hit_layer` + `rn_live_widget_hit_zone.xml`).
+- Utilizes `computeCanvasMapping` to resolve `fitCenter` aspect ratio letterboxing, eliminating touch offsets and misclicks.
+
+### 3. Native Live Countdown Chronometer
+- Integrated native `android.widget.Chronometer` with `setChronometerCountDown(true)` and `baseMillis = SystemClock.elapsedRealtime() + remainingMillis`.
+- Suppresses static text rendering during active countdowns to provide 1-second continuous tick updates without Canvas bitmap redrawing.
+
+### 4. Dynamic Template Variable Interpolation
+- Layout strings dynamically interpolate `{{id}}`, `{{title}}`, and counter values.
+- `defaultChecked` persistence in `DynamicWidgetStateStore` enables toggling off pre-checked switches on the first tap.
+
+### 5. Swift 6 Language Mode Compatibility (iOS Xcode)
+- Encapsulated `Font` resolution in `renderText()` within self-invoking closures `{ ... }()`.
+- Refactored `DynamicNodeAccessibilityModifier` procedural assignments into a dedicated `buildAccessibilityView(content:) -> AnyView` helper method.
+- Added fallback `else { EmptyView() }` branches to `backgroundView` and `borderOverlay` in `ContainerStyleModifier`.
