@@ -560,6 +560,19 @@ function findBundleSwiftPath(projectRoot) {
 function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
   console.log('\n⚙️ [react-native-live-widgets] Khởi chạy WidgetKit Swift Codegen...');
 
+  // Đồng bộ lại danh mục SF Symbols từ hệ thống nếu có
+  try {
+    const symbolsScript = path.join(__dirname, '..', 'scripts', 'generate-sf-symbols.js');
+    if (fs.existsSync(symbolsScript)) {
+      const { generateSFSymbolsFile } = require(symbolsScript);
+      const targetGenerated = path.join(__dirname, '..', 'src', 'sf-symbols.generated.ts');
+      const count = generateSFSymbolsFile(targetGenerated);
+      if (count) {
+        console.log(`🍎 Đã đồng bộ ${count} SF Symbols từ hệ thống Apple vào TypeScript Auto-Complete.`);
+      }
+    }
+  } catch (_e) {}
+
   const { config, configPath } = loadWidgetsConfig(projectRoot, customConfigPath);
   const { catalog, defaultLocale } = buildI18nCatalog(projectRoot, config);
 

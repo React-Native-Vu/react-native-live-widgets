@@ -303,115 +303,13 @@ export interface ProgressNode extends BaseNode {
   };
 }
 
+import type { KnownSFSymbol } from './sf-symbols.generated';
+
 /**
- * Danh sách gợi ý các biểu tượng SF Symbols chính thức của Apple (iOS 14+ / 16+ / 17+ / 18+).
- * Tự động kích hoạt gợi ý Auto-Complete / IntelliSense trong IDE (VS Code, Cursor, WebStorm)
- * và vẫn cho phép nhập bất kỳ chuỗi SF Symbol hợp lệ nào khác nhờ kỹ thuật `(string & {})`.
+ * Biểu tượng hệ thống SF Symbols trên iOS (tự động đồng bộ từ Apple Xcode/SF Symbols).
+ * Hỗ trợ Auto-Complete hơn 9,500+ biểu tượng chuẩn và cho phép nhập chuỗi tùy ý nhờ `(string & {})`.
  */
-export type SFSymbolName =
-  // ── Biểu tượng Hoạt động & Công việc ──
-  | 'bolt.fill'
-  | 'bolt.horizontal.fill'
-  | 'chart.line.uptrend.xyaxis'
-  | 'chart.line.downtrend.xyaxis'
-  | 'chart.bar.fill'
-  | 'chart.pie.fill'
-  | 'gauge.with.needle.fill'
-  | 'gauge.badge.plus'
-  | 'timer'
-  | 'stopwatch.fill'
-  | 'clock.fill'
-  | 'clock.badge.checkmark'
-  | 'calendar'
-  | 'calendar.badge.clock'
-  | 'calendar.badge.plus'
-  | 'calendar.badge.exclamationmark'
-  | 'checkmark'
-  | 'checkmark.circle'
-  | 'checkmark.circle.fill'
-  | 'checkmark.seal.fill'
-  | 'xmark'
-  | 'xmark.circle'
-  | 'xmark.circle.fill'
-  | 'exclamationmark.circle.fill'
-  | 'exclamationmark.triangle.fill'
-
-  // ── Người dùng, Tổ chức & Trạng thái ──
-  | 'person.fill'
-  | 'person.crop.circle.fill'
-  | 'person.crop.circle.badge.checkmark'
-  | 'person.crop.circle.badge.xmark'
-  | 'person.2.fill'
-  | 'person.3.fill'
-  | 'briefcase.fill'
-  | 'building.2.fill'
-  | 'star.fill'
-  | 'star.leadinghalf.filled'
-  | 'heart.fill'
-  | 'flame.fill'
-  | 'sparkles'
-  | 'trophy.fill'
-  | 'medal.fill'
-  | 'flag.fill'
-  | 'target'
-
-  // ── Điều khiển, Media & Âm thanh ──
-  | 'play.fill'
-  | 'pause.fill'
-  | 'stop.fill'
-  | 'forward.fill'
-  | 'backward.fill'
-  | 'speaker.wave.2.fill'
-  | 'speaker.slash.fill'
-  | 'shuffle'
-  | 'repeat'
-
-  // ── Hệ thống, Thiết bị & Kết nối ──
-  | 'gearshape.fill'
-  | 'lock.fill'
-  | 'lock.open.fill'
-  | 'shield.fill'
-  | 'shield.checkered'
-  | 'bell.fill'
-  | 'bell.badge.fill'
-  | 'bell.slash.fill'
-  | 'wifi'
-  | 'wifi.slash'
-  | 'battery.100'
-  | 'battery.75'
-  | 'battery.25'
-  | 'battery.100.bolt'
-
-  // ── Tài chính & Giao dịch ──
-  | 'dollarsign.circle.fill'
-  | 'banknote.fill'
-  | 'creditcard.fill'
-  | 'cart.fill'
-  | 'bag.fill'
-
-  // ── Thao tác cơ bản ──
-  | 'plus'
-  | 'plus.circle.fill'
-  | 'minus'
-  | 'minus.circle.fill'
-  | 'arrow.clockwise'
-  | 'arrow.counterclockwise'
-  | 'arrow.up.right'
-  | 'arrow.down.left'
-  | 'trash.fill'
-  | 'folder.fill'
-  | 'doc.text.fill'
-  | 'envelope.fill'
-  | 'phone.fill'
-  | 'message.fill'
-  | 'bubble.left.fill'
-  | 'location.fill'
-  | 'map.fill'
-  | 'sun.max.fill'
-  | 'moon.fill'
-  | 'cloud.fill'
-  | 'cloud.rain.fill'
-  | (string & {});
+export type SFSymbolName = KnownSFSymbol | (string & {});
 
 export interface ImageNode extends BaseNode {
   type: 'Image';

@@ -37,6 +37,17 @@ function build() {
   console.log('📦 [react-native-live-widgets] Cleaning lib/ directory...');
   cleanLib();
 
+  // Đảm bảo file sf-symbols.generated.ts đã được sinh sẵn
+  try {
+    const { generateSFSymbolsFile } = require('./generate-sf-symbols');
+    const symbolsOutput = path.join(rootDir, 'src', 'sf-symbols.generated.ts');
+    if (!fs.existsSync(symbolsOutput)) {
+      generateSFSymbolsFile(symbolsOutput);
+    }
+  } catch (err) {
+    console.warn('ℹ️ [build] Không thể trích xuất SF Symbols tự động:', err.message);
+  }
+
   const tscBin = findTscBinary();
   console.log(`🔨 [react-native-live-widgets] Compiling TypeScript -> JavaScript + Type Definitions (.d.ts)...`);
   execFileSync(tscBin, ['-p', tsconfigPath], {
