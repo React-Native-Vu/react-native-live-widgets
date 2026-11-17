@@ -58,60 +58,28 @@ object DynamicWidgetCanvasRenderer {
         return materialTypeface
     }
 
-    private fun resolveMaterialCodepoint(symbol: String): String? {
-        if (symbol.isEmpty()) return null
+    private fun normalizeMaterialName(symbol: String): String {
+        if (symbol.isEmpty()) return ""
         val s = symbol.lowercase().replace('.', '_').replace('-', '_')
         return when {
-            s == "bolt" || s.contains("bolt") || s.contains("flash") -> "\uea0b"
-            s == "trending_up" || s.contains("uptrend") || s.contains("trend_up") -> "\ue8e5"
-            s == "trending_down" || s.contains("downtrend") -> "\ue8e3"
-            s == "check_circle" || s.contains("check_circle") || s.contains("seal") -> "\ue86c"
-            s == "check" || s.contains("checkmark") -> "\ue5ca"
-            s == "close" || s == "cancel" || s.contains("xmark") -> "\ue5cd"
-            s == "notifications" || s.contains("bell") -> "\ue7f4"
-            s == "schedule" || s.contains("clock") || s.contains("timer") || s.contains("stopwatch") -> "\ue8b5"
-            s == "calendar_today" || s == "event" || s.contains("calendar") -> "\ue878"
-            s == "person" || s.contains("person") -> "\ue7fd"
-            s == "group" || s.contains("team") -> "\ue7ef"
-            s == "star" || s.contains("star") -> "\ue838"
-            s == "favorite" || s.contains("heart") -> "\ue87d"
-            s == "lock" || s.contains("lock") -> "\ue897"
-            s == "security" || s == "shield" || s.contains("shield") -> "\ue8e8"
-            s == "verified" || s.contains("verified") -> "\uef76"
-            s == "speed" || s.contains("gauge") -> "\ue9e4"
-            s == "play_arrow" || s.contains("play") -> "\ue037"
-            s == "pause" || s.contains("pause") -> "\ue034"
-            s == "stop" -> "\ue047"
-            s == "volume_up" || s.contains("speaker") -> "\ue050"
-            s == "settings" || s.contains("gear") -> "\ue8b8"
-            s == "sync" || s == "refresh" || s.contains("clockwise") -> "\ue627"
-            s == "add" || s == "add_circle" || s.contains("plus") -> "\ue145"
-            s == "remove" || s == "remove_circle" || s.contains("minus") -> "\ue15b"
-            s == "delete" || s.contains("trash") -> "\ue872"
-            s == "edit" -> "\ue3c9"
-            s == "share" -> "\ue80d"
-            s == "search" -> "\ue887"
-            s == "home" -> "\ue88a"
-            s == "work" || s == "business" || s.contains("briefcase") -> "\ue8f9"
-            s == "shopping_cart" || s.contains("cart") -> "\ue8cc"
-            s == "shopping_bag" || s.contains("bag") -> "\uef62"
-            s == "payments" || s == "attach_money" || s.contains("dollar") -> "\uef63"
-            s == "credit_card" -> "\ue870"
-            s == "bar_chart" -> "\ue26b"
-            s == "pie_chart" -> "\ue6c4"
-            s == "show_chart" || s.contains("chart") -> "\ue6e1"
-            s == "mail" || s == "email" || s.contains("envelope") -> "\ue158"
-            s == "phone" -> "\ue0cd"
-            s == "chat" || s == "comment" || s.contains("message") || s.contains("bubble") -> "\ue0b7"
-            s == "camera_alt" || s.contains("camera") -> "\ue3b0"
-            s == "image" || s.contains("photo") -> "\ue3f4"
-            s == "location_on" || s.contains("location") || s.contains("map") -> "\ue0c8"
-            s == "wifi" -> "\ue63e"
-            s == "battery_full" || s.contains("battery") -> "\ue1a4"
-            s == "visibility" || s.contains("eye") -> "\ue8f4"
-            s == "trophy" || s.contains("trophy") || s.contains("medal") -> "\ue9e4"
-            s == "flame" || s.contains("flame") -> "\ue80e"
-            else -> null
+            s == "bolt_horizontal_fill" || s == "bolt_fill" -> "bolt"
+            s == "chart_line_uptrend_xyaxis" -> "trending_up"
+            s == "chart_line_downtrend_xyaxis" -> "trending_down"
+            s == "person_crop_circle_badge_checkmark" -> "verified_user"
+            s == "checkmark_circle_fill" || s == "checkmark_circle" -> "check_circle"
+            s == "xmark_circle_fill" || s == "xmark_circle" -> "cancel"
+            s == "bell_fill" || s == "bell" -> "notifications"
+            s == "clock_fill" || s == "clock" -> "schedule"
+            s == "star_fill" -> "star"
+            s == "heart_fill" -> "favorite"
+            s == "lock_fill" -> "lock"
+            s == "shield_fill" -> "security"
+            s == "gearshape_fill" || s == "gearshape" -> "settings"
+            s == "arrow_clockwise" -> "sync"
+            s == "cart_fill" -> "shopping_cart"
+            s == "envelope_fill" -> "mail"
+            s == "trash_fill" -> "delete"
+            else -> s.removeSuffix("_fill")
         }
     }
 
@@ -867,15 +835,16 @@ object DynamicWidgetCanvasRenderer {
                         ?.ifEmpty { props.optString("materialName", "") }
                         ?.ifEmpty { props.optString("systemName", "") } ?: "").lowercase()
 
+                    val matName = normalizeMaterialName(symbol)
                     val matTypeface = getMaterialTypeface(context)
-                    val codepoint = resolveMaterialCodepoint(symbol)
 
-                    if (matTypeface != null && codepoint != null) {
+                    if (matTypeface != null && matName.isNotEmpty()) {
                         paint.typeface = matTypeface
                         paint.textSize = min(w, h) * 0.58f
                         val fm = paint.fontMetrics
                         val cy = top + h / 2f - (fm.ascent + fm.descent) / 2f
-                        canvas.drawText(codepoint, left + w / 2f, cy, paint)
+                        // Tận dụng OpenType Ligatures của Google: Font tự ghép chuỗi ký tự thành icon vector!
+                        canvas.drawText(matName, left + w / 2f, cy, paint)
                         paint.typeface = null
                     } else {
                         paint.textSize = min(w, h) * 0.48f
