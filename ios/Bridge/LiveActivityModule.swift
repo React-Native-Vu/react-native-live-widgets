@@ -20,6 +20,7 @@ public class LiveActivityModule: RCTEventEmitter {
   private static var isObservingTokens = false
   private static var isObservingActivities = false
   private var hasListeners = false
+  private var lastDispatchedUpdatedAt: Double = 0
 
   private static func setActivityUpdateToken(_ token: String, for activityId: String) {
     tokenLock.lock()
@@ -163,16 +164,31 @@ public class LiveActivityModule: RCTEventEmitter {
   private func checkPendingAction() {
     let state = DynamicWidgetStateStore.loadState()
     guard let actionId = state.lastActionId, !actionId.isEmpty else { return }
-    if Date().timeIntervalSince1970 - state.updatedAt < 60 {
-      let body: [String: Any] = [
-        "actionId": actionId,
-        "updatedAt": state.updatedAt
-      ]
+    let actionTs = state.actionUpdatedAt ?? state.updatedAt
 
-      DispatchQueue.main.async {
-        if self.hasListeners {
-          self.sendEvent(withName: "LiveActivityActionClicked", body: body)
-        }
+    Self.tokenLock.lock()
+    let alreadyDispatched = actionTs <= lastDispatchedUpdatedAt
+    if !alreadyDispatched && Date().timeIntervalSince1970 - actionTs < 60 {
+      lastDispatchedUpdatedAt = actionTs
+    } else {
+      Self.tokenLock.unlock()
+      return
+    }
+    Self.tokenLock.unlock()
+
+    var body: [String: Any] = [
+      "actionId": actionId,
+      "updatedAt": actionTs,
+      "fromNativeWidget": true,
+    ]
+    if let counterVal = DynamicWidgetProvider.readSharedString(forKey: "widget_counter_value", appGroup: "")
+        ?? state.remoteVariables?["counter"] {
+      body["counterValue"] = counterVal
+    }
+
+    DispatchQueue.main.async {
+      if self.hasListeners {
+        self.sendEvent(withName: "LiveActivityActionClicked", body: body)
       }
     }
   }
@@ -801,6 +817,13 @@ public class LiveActivityModule: RCTEventEmitter {
         try? FileManager.default.removeItem(atPath: "/tmp/rn_live_widgets_\(remoteKey).json")
         #endif
       }
+    } else if key == "widget_counter_value" {
+      var state = DynamicWidgetStateStore.loadState()
+      var vars = state.remoteVariables ?? [:]
+      vars["counter"] = value.trimmingCharacters(in: .whitespacesAndNewlines)
+      state.remoteVariables = vars
+      state.updatedAt = Date().timeIntervalSince1970
+      DynamicWidgetStateStore.saveState(state)
     }
 
     let defaults = getDefaults(appGroup: appGroup)

@@ -148,6 +148,12 @@ public struct DynamicWidgetProvider: TimelineProvider {
       allVars["_selectedConfigId"] = selectedConfig
       allVars["selectedConfigId"] = selectedConfig
     }
+    let storedCounter = Self.readSharedString(forKey: "widget_counter_value", appGroup: appGroup)?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    let counterVal: String? = (storedCounter?.isEmpty == false ? storedCounter : nil) ?? allVars["counter"]
+    if let counterVal = counterVal {
+      allVars["counter"] = counterVal
+    }
 
     var raw: String?
     if state.syncStatus == "error",
@@ -166,7 +172,11 @@ public struct DynamicWidgetProvider: TimelineProvider {
     guard let rawLayout = raw else {
       return nil
     }
-    return DynamicWidgetStateStore.resolveTemplateString(rawLayout, with: allVars, escapeForJson: true)
+    var resolved = DynamicWidgetStateStore.resolveTemplateString(rawLayout, with: allVars, escapeForJson: true)
+    if let counterVal = counterVal {
+      resolved = DynamicWidgetStateStore.applyCounterReplacement(in: resolved, counterValue: counterVal)
+    }
+    return resolved
   }
 
   public static func readSharedString(forKey key: String, appGroup: String) -> String? {

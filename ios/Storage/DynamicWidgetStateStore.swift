@@ -56,10 +56,67 @@ public enum DynamicWidgetStateStore {
     }
   }
 
-  public static func handleAction(_ actionId: String) {
+  private static let counterStorageKey = "widget_counter_value"
+
+  public static func isCounterAction(_ actionId: String) -> Bool {
+    return actionId == "action_counter_inc"
+      || actionId.hasPrefix("counter:inc")
+      || actionId == "action_counter_dec"
+      || actionId.hasPrefix("counter:dec")
+      || actionId == "action_counter_reset"
+      || actionId.hasPrefix("counter:reset")
+  }
+
+  public static func readCounterValue(appGroup: String = "", state: InteractiveWidgetState? = nil) -> Int? {
+    if let stored = DynamicWidgetProvider.readSharedString(forKey: counterStorageKey, appGroup: appGroup),
+       let parsed = Int(stored.trimmingCharacters(in: .whitespacesAndNewlines)) {
+      return parsed
+    }
+    let resolvedState = state ?? loadState()
+    if let remoteStr = resolvedState.remoteVariables?["counter"],
+       let parsed = Int(remoteStr.trimmingCharacters(in: .whitespacesAndNewlines)) {
+      return parsed
+    }
+    return nil
+  }
+
+  private static func updateCounterValue(delta: Int?, resetTo: Int? = nil, in state: inout InteractiveWidgetState) {
+    let current = readCounterValue(state: state) ?? 10
+    let nextValue = resetTo ?? (current + (delta ?? 0))
+    let nextStr = "\(nextValue)"
+    DynamicWidgetProvider.writeSharedString(nextStr, forKey: counterStorageKey, appGroup: "")
+    var vars = state.remoteVariables ?? [:]
+    vars["counter"] = nextStr
+    state.remoteVariables = vars
+  }
+
+  public static func applyCounterReplacement(in json: String, counterValue: String) -> String {
+    let escaped = NSRegularExpression.escapedTemplate(for: counterValue)
+    let rules: [(String, String)] = [
+      (##"("text"\s*:\s*)"-?\d+"(\s*,\s*(?:"style"\s*:\s*\{\s*)?"fontSize"\s*:\s*(?:26|32)\b)"##, "$1\"\(escaped)\"$2"),
+      (##"("text"\s*:\s*)"-?\d+"(\s*,\s*(?:"style"\s*:\s*\{\s*)?"color"\s*:\s*"#10B981"\s*,\s*"fontSize"\s*:\s*(?:11|12)\b)"##, "$1\"\(escaped)\"$2"),
+      (##"-?\d+(\s+lượt)"##, "\(escaped)$1"),
+      (##"Count:\s*-?\d+"##, "Count: \(escaped)"),
+      (##"Số đếm hiện tại:\s*-?\d+"##, "Số đếm hiện tại: \(escaped)"),
+    ]
+
+    var working = json
+    for (pattern, template) in rules {
+      if let regex = try? NSRegularExpression(pattern: pattern) {
+        let range = NSRange(location: 0, length: (working as NSString).length)
+        working = regex.stringByReplacingMatches(in: working, range: range, withTemplate: template)
+      }
+    }
+    return working
+  }
+
+  @discardableResult
+  public static func handleAction(_ actionId: String) -> InteractiveWidgetState {
     var state = loadState()
+    let now = Date().timeIntervalSince1970
     state.lastActionId = actionId
-    state.updatedAt = Date().timeIntervalSince1970
+    state.actionUpdatedAt = now
+    state.updatedAt = now
 
     if actionId.hasPrefix("page:") {
       let target = String(actionId.dropFirst(5))
@@ -85,9 +142,36 @@ public enum DynamicWidgetStateStore {
       let key = String(actionId.dropFirst(7))
       let current = state.toggledItems[key] ?? false
       state.toggledItems[key] = !current
+    } else if actionId == "action_counter_inc" || actionId.hasPrefix("counter:inc") {
+      updateCounterValue(delta: 1, in: &state)
+    } else if actionId == "action_counter_dec" || actionId.hasPrefix("counter:dec") {
+      updateCounterValue(delta: -1, in: &state)
+    } else if actionId == "action_counter_reset" || actionId.hasPrefix("counter:reset") {
+      updateCounterValue(delta: nil, resetTo: 0, in: &state)
+    } else {
+      let formatter = DateFormatter()
+      formatter.dateFormat = "HH:mm:ss"
+      let timeStr = formatter.string(from: Date())
+      let jsxLabels: [String: String] = [
+        "action_jsx_checkin": "Đã điểm danh • \(timeStr)",
+        "action_jsx_checkout": "Đã Check-out • \(timeStr)",
+        "action_jsx_refresh": "Đồng bộ lúc \(timeStr)",
+        "action_jsx_leave": "Đã xin nghỉ phép • \(timeStr)",
+        "action_jsx_report": "Đã gửi báo cáo • \(timeStr)",
+      ]
+      if actionId == "action_demo_checkin" {
+        var vars = state.remoteVariables ?? [:]
+        vars["demo_ts_label"] = "✓ Đã chạy TS (\(timeStr))"
+        state.remoteVariables = vars
+      } else if let label = jsxLabels[actionId] {
+        var vars = state.remoteVariables ?? [:]
+        vars["jsx_status"] = label
+        state.remoteVariables = vars
+      }
     }
 
     saveState(state)
+    return state
   }
 
   public static func isToggled(_ key: String) -> Bool {

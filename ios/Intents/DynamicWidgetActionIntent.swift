@@ -1,3 +1,4 @@
+import ActivityKit
 import AppIntents
 import WidgetKit
 
@@ -24,7 +25,24 @@ public struct DynamicWidgetActionIntent: AppIntent {
       let key = actionId.hasPrefix("refresh:") ? String(actionId.dropFirst(8)) : "main"
       await DynamicWidgetStateStore.performRemoteSync(widgetKey: key, forceRefresh: true)
     } else {
-      DynamicWidgetStateStore.handleAction(actionId)
+      let updatedState = DynamicWidgetStateStore.handleAction(actionId)
+      if DynamicWidgetStateStore.isCounterAction(actionId),
+         let newCounter = updatedState.remoteVariables?["counter"] {
+        for activity in Activity<DynamicActivityAttributes>.activities {
+          let oldJson = activity.content.state.payloadJson
+          let updatedJson = DynamicWidgetStateStore.applyCounterReplacement(in: oldJson, counterValue: newCounter)
+          if updatedJson != oldJson {
+            let nextContentState = DynamicActivityAttributes.ContentState(payloadJson: updatedJson)
+            await activity.update(
+              ActivityContent(
+                state: nextContentState,
+                staleDate: activity.content.staleDate,
+                relevanceScore: activity.content.relevanceScore
+              )
+            )
+          }
+        }
+      }
     }
 
     // Thông báo cho Main App nếu đang chạy ngầm hoặc nền

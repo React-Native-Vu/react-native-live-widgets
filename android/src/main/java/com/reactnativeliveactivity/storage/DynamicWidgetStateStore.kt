@@ -497,12 +497,12 @@ object DynamicWidgetStateStore {
         var working = raw!!
         val counterVal = readSharedString(context, "widget_counter_value")
         if (counterVal != null) {
-            working = Regex("\"text\":\"-?\\d+\",(\"props\":\\{)?\"fontSize\":(26|32)").replace(working) { m ->
-                "\"text\":\"$counterVal\",${m.groupValues[1]}\"fontSize\":${m.groupValues[2]}"
+            working = Regex("(\"text\"\\s*:\\s*)\"-?\\d+\"(\\s*,\\s*(?:\"style\"\\s*:\\s*\\{\\s*)?\"fontSize\"\\s*:\\s*(?:26|32)\\b)").replace(working) { m ->
+                "${m.groupValues[1]}\"$counterVal\"${m.groupValues[2]}"
             }
-            working = working.replace(Regex("\"text\":\"-?\\d+ lượt\""), "\"text\":\"$counterVal lượt\"")
-            working = working.replace(Regex("Count: -?\\d+"), "Count: $counterVal")
-            working = working.replace(Regex("Số đếm hiện tại: -?\\d+"), "Số đếm hiện tại: $counterVal")
+            working = working.replace(Regex("-?\\d+(\\s+lượt)"), "$counterVal$1")
+            working = working.replace(Regex("Count:\\s*-?\\d+"), "Count: $counterVal")
+            working = working.replace(Regex("Số đếm hiện tại:\\s*-?\\d+"), "Số đếm hiện tại: $counterVal")
             working = working.replace("{{counter}}", counterVal)
         }
 

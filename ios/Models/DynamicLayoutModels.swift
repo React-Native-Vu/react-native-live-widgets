@@ -219,6 +219,7 @@ public struct InteractiveWidgetState: Codable {
   public var pageOrder: [String]?
   public var toggledItems: [String: Bool]
   public var lastActionId: String?
+  public var actionUpdatedAt: Double?
   public var lastSyncTime: String?
   public var remoteVariables: [String: String]?
   public var updatedAt: Double
@@ -234,6 +235,7 @@ public struct InteractiveWidgetState: Codable {
     pageOrder: [String]? = nil,
     toggledItems: [String: Bool] = [:],
     lastActionId: String? = nil,
+    actionUpdatedAt: Double? = nil,
     lastSyncTime: String? = nil,
     remoteVariables: [String: String]? = nil,
     updatedAt: Double = Date().timeIntervalSince1970,
@@ -248,6 +250,7 @@ public struct InteractiveWidgetState: Codable {
     self.pageOrder = pageOrder
     self.toggledItems = toggledItems
     self.lastActionId = lastActionId
+    self.actionUpdatedAt = actionUpdatedAt
     self.lastSyncTime = lastSyncTime
     self.remoteVariables = remoteVariables
     self.updatedAt = updatedAt
