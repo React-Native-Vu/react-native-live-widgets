@@ -10,9 +10,8 @@ const path = require('path');
 
 function findGlyphMapPath() {
   const possiblePaths = [
-    path.join(__dirname, '..', '..', 'FastdoNative', 'node_modules', '@react-native-vector-icons', 'material-icons', 'glyphmaps', 'MaterialIcons.json'),
-    path.join(__dirname, '..', '..', 'FastdoNative', 'node_modules', 'react-native-vector-icons', 'glyphmaps', 'MaterialIcons.json'),
     path.join(__dirname, '..', 'assets', 'MaterialIcons.json'),
+    path.join(__dirname, '..', 'android', 'src', 'main', 'assets', 'MaterialIcons.json'),
   ];
 
   for (const p of possiblePaths) {
