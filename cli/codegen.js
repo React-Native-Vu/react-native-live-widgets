@@ -222,13 +222,13 @@ export default defineWidgetConfig({
       targetPath
     );
   } catch (err) {
-    throw new Error(`Lỗi thực thi file cấu hình (${path.basename(targetPath)}): ${err.message}`);
+    throw new Error(`Failed to execute config file (${path.basename(targetPath)}): ${err.message}`);
   }
 
   const loadedConfig = moduleContext.exports.default || moduleContext.exports.config || moduleContext.exports;
   if (!loadedConfig || typeof loadedConfig !== 'object') {
     throw new Error(
-      `File cấu hình (${path.basename(targetPath)}) không export đối tượng cấu hình hợp lệ.`
+      `Config file (${path.basename(targetPath)}) does not export a valid configuration object.`
     );
   }
 
@@ -267,7 +267,7 @@ function buildI18nCatalog(projectRoot, config) {
             const flat = flattenObject(parsed);
             Object.assign(catalog[locale], flat);
           } catch (e) {
-            console.warn(`⚠️ [i18n] Không thể đọc file dịch ${file}:`, e.message);
+            console.warn(`⚠️ [i18n] Failed to read locale file ${file}:`, e.message);
           }
         }
       }
@@ -486,13 +486,13 @@ function generateSwiftSource(config, catalog = {}, defaultLocale = 'vi') {
       kind = base.endsWith('HomeScreenWidget') ? base : `${base}HomeScreenWidget`;
     }
 
-    // Xử lý displayName (key i18n hoặc plain string)
-    let displayNameKey = w._resolvedDisplayNameKey || w.displayName || `Tiện ích ${key}`;
+    // Process displayName (i18n key or plain string)
+    let displayNameKey = w._resolvedDisplayNameKey || w.displayName || `Widget ${key}`;
     if (typeof displayNameKey === 'object') {
-      displayNameKey = displayNameKey[defaultLocale] || Object.values(displayNameKey)[0] || `Tiện ích ${key}`;
+      displayNameKey = displayNameKey[defaultLocale] || Object.values(displayNameKey)[0] || `Widget ${key}`;
     }
 
-    // Xử lý description (key i18n hoặc plain string)
+    // Process description (i18n key or plain string)
     let descriptionKey = w._resolvedDescriptionKey || w.description || '';
     if (typeof descriptionKey === 'object') {
       descriptionKey = descriptionKey[defaultLocale] || Object.values(descriptionKey)[0] || '';
@@ -537,8 +537,8 @@ function generateSwiftSource(config, catalog = {}, defaultLocale = 'vi') {
   lines.push('import react_native_live_widgets');
   lines.push('#endif');
   lines.push('');
-  lines.push('/// Bundle mở rộng hỗ trợ cả Live Activity (Lock Screen & Dynamic Island)');
-  lines.push('/// và Home Screen Widgets (Màn hình chính iOS 16.1 -> iOS 17/18/27+)');
+  lines.push('/// Bundle extension supporting both Live Activities (Dynamic Island / Lock Screen)');
+  lines.push('/// and Home Screen Widgets (iOS 16.1 -> iOS 17/18+)');
   lines.push('@main');
   lines.push(`struct ${bundleName}: WidgetBundle {`);
   lines.push('  var body: some Widget {');
@@ -554,7 +554,7 @@ function generateSwiftSource(config, catalog = {}, defaultLocale = 'vi') {
 
   // Home Screen Widgets
   if (processedWidgets.length > 0) {
-    lines.push('    // 2. Home Screen Widgets đăng ký từ TypeScript config');
+    lines.push('    // 2. Home Screen Widgets registered from TypeScript configuration');
     for (const w of processedWidgets) {
       lines.push(`    ${w.kind}()`);
     }
