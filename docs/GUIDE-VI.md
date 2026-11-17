@@ -1178,5 +1178,36 @@ console.log(ir.semanticSummary);
 
 ---
 
+### 12.7. 🎯 Exact Dynamic Hit Layer, Live Chronometer Countdown & Tương thích Swift 6 (v1.2.1)
+
+Phiên bản **v1.2.1** giải quyết dứt điểm các bài toán thực tế khi triển khai Widget tương tác phức tạp trên thiết bị người dùng thật:
+
+#### 1. Vùng Bấm Động Từng Pixel (Exact Dynamic Hit Layer)
+* **Vấn đề trước đây**: Khi dùng lưới tọa độ cố định, nếu các thành phần trong layout co giãn hoặc nằm lệch dòng, người dùng bấm vào một nút có thể bị ăn sang nút khác, hoặc bấm vào vùng trống lại kích hoạt nhầm sự kiện.
+* **Giải pháp v1.2.1**:
+  - Toàn bộ lưới cố định được thay bằng container `FrameLayout` động (`rn_hit_layer` kết hợp `rn_live_widget_hit_zone.xml`).
+  - Giải thuật **`computeCanvasMapping`** tự động tính toán bù trừ tỷ lệ co giãn (`fitCenter` letterboxing) giữa kích thước Canvas Bitmap thật và màn hình widget Launcher.
+  - Mỗi phần tử tương tác (Button, Checkbox, Switch, Link) được sinh một vùng RemoteViews độc lập khớp chính xác 100% với bounding box được vẽ trên Bitmap.
+  - Vùng trống hoàn toàn không nhận sự kiện, triệt tiêu mọi cú chạm ảo (ghost clicks / phantom taps).
+
+#### 2. Native Live Countdown Chronometer (`android.widget.Chronometer`)
+* **Vấn đề trước đây**: Vẽ chữ đếm ngược tĩnh trên Canvas đòi hỏi phải gửi broadcast và render lại bitmap mỗi giây. Điều này gây hao pin, chậm phản hồi và hệ điều hành Android có thể chặn vì spam update quá tần suất.
+* **Giải pháp v1.2.1**:
+  - Tích hợp thành phần native `android.widget.Chronometer` trong layout host widget.
+  - Tự động cấu hình `setChronometerCountDown(true)` và tính toán `baseMillis = SystemClock.elapsedRealtime() + remainingMillis`.
+  - Renderer tự động ẩn dòng chữ đếm ngược tĩnh trên Bitmap khi có Chronometer hoạt động. Widget đếm ngược mượt mà từng giây trực tiếp từ hệ thống Android mà không cần vẽ lại Bitmap.
+
+#### 3. Nội suy biến động (Template Interpolation) & Quản lý Trạng thái Khởi tạo
+* **Nội suy chuỗi biến số**: Hỗ trợ cú pháp template `{{id}}`, `{{title}}`, và giá trị bộ đếm phẳng `counterVal`. Bạn có thể truyền động mã phiếu, tiêu đề công việc hoặc số lượt đếm từ API vào layout JSON.
+* **Xử lý `defaultChecked`**: Trong `DynamicWidgetStateStore`, trạng thái ban đầu của switch (`checked: true`) được tự động lưu vào store ngay lần kết xuất đầu tiên. Người dùng có thể tắt switch ngay từ lần chạm đầu tiên mà không bị reset về trạng thái mặc định.
+
+#### 4. Tương thích Toàn diện Swift 6 Language Mode (iOS Xcode)
+* **Loại bỏ lỗi `type '()' cannot conform to 'View'`**:
+  - Đóng gói toàn bộ logic tính `Font` trong `renderText()` vào closure độc lập `{ ... }()`, ngăn compiler Swift 6 hiểu nhầm các câu lệnh điều kiện `if/switch` là View `Void`.
+  - Tách logic phân giải `DynamicNodeAccessibilityModifier` sang hàm helper thuần `buildAccessibilityView(content:) -> AnyView`, tránh xung đột với `@ViewBuilder` ngầm định của protocol `ViewModifier`.
+  - Đóng gói `strokeStyle` và bổ sung nhánh fallback `else { EmptyView() }` cho `backgroundView` và `borderOverlay` trong `ContainerStyleModifier`.
+
+---
+
 ## 📄 License
 MIT © vu-tran

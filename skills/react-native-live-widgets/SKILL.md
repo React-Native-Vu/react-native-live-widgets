@@ -234,3 +234,8 @@ export function useLiveWidgetCounter() {
    - For real-time second-by-second updates, always prefer Server Push Notifications (APNs / FCM) with `LiveActivity.getAllPushTokens()`.
 3. **Android Platform Parity**:
    - Android does not have hardware Dynamic Island; the library maps `dynamicIsland` to Android Ongoing Promoted Notifications (`Notification.ProgressStyle`).
+4. **Android Exact Dynamic Hit Layer & Chronometer Countdown (v1.2.1+)**:
+   - Touch interactions on Android widgets use dynamic `FrameLayout` hit zones (`rn_hit_layer`) with letterbox compensation (`computeCanvasMapping`).
+   - Timers with `targetTimestamp` utilize native `android.widget.Chronometer` with `setChronometerCountDown(true)` for real-time 1s ticks without redrawing the Canvas Bitmap.
+5. **Swift 6 ViewBuilder Conventions (iOS)**:
+   - When customizing native Swift code in `DynamicNodeView.swift`, never place top-level variable assignment statements or non-view-producing if/switch branches directly inside `@ViewBuilder` methods. Always wrap them in self-invoking closures `{ ... }()`.

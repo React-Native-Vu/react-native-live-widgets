@@ -1155,6 +1155,36 @@ console.log('Synthesized A11y Summary:', ir.semanticSummary);
 
 ---
 
+### 12.7. 🎯 Exact Dynamic Hit Layer, Live Chronometer Countdown & Swift 6 Compatibility (v1.2.1)
+
+Version **v1.2.1** addresses critical real-world interaction challenges on physical devices:
+
+#### 1. Exact Dynamic Hit Layer
+* **Previous Issue**: With static coordinate grids, layout reflows or dynamic content caused buttons to trigger adjacent items or blank spaces to activate phantom taps.
+* **v1.2.1 Solution**:
+  - Replaced the fixed grid with a dynamic `FrameLayout` container (`rn_hit_layer` paired with `rn_live_widget_hit_zone.xml`).
+  - Implemented the **`computeCanvasMapping`** algorithm to calculate aspect ratio letterboxing (`fitCenter`) between the Canvas Bitmap and the Launcher Widget bounds.
+  - Generates independent RemoteViews hit zones that align 100% with the rendered element bounding box. Empty areas receive no touch events.
+
+#### 2. Native Live Countdown Chronometer (`android.widget.Chronometer`)
+* **Previous Issue**: Drawing countdown text directly on Canvas required broadcasting and re-rendering the bitmap every second, causing battery drain and rate-limiting from Android system schedulers.
+* **v1.2.1 Solution**:
+  - Integrated native `android.widget.Chronometer` into the widget host layout.
+  - Automatically configured with `setChronometerCountDown(true)` and `baseMillis = SystemClock.elapsedRealtime() + remainingMillis`.
+  - The renderer suppresses static timer text when an active chronometer is present, allowing continuous 1-second countdown ticks driven natively by Android OS.
+
+#### 3. Dynamic Template Variable Interpolation & Initial State Store
+* **Variable Interpolation**: Supports dynamic string templates (`{{id}}`, `{{title}}`, counter values) directly in the layout JSON, automatically resolved against action responses and local state.
+* **`defaultChecked` Persistence**: Switches and checkboxes with `checked: true` have their initial state committed to `DynamicWidgetStateStore` on initial render, allowing them to be toggled off immediately on the first tap.
+
+#### 4. Swift 6 Language Mode Compatibility (iOS Xcode)
+* **Resolved `type '()' cannot conform to 'View'`**:
+  - Encapsulated `Font` resolution in `renderText()` within self-invoking closures `{ ... }()`.
+  - Refactored `DynamicNodeAccessibilityModifier` procedural assignments into a dedicated `buildAccessibilityView(content:) -> AnyView` helper method.
+  - Added fallback `else { EmptyView() }` branches to `backgroundView` and `borderOverlay` in `ContainerStyleModifier`.
+
+---
+
 ## 📄 License
 MIT © vu-tran
 
