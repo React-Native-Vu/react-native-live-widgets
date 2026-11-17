@@ -17,10 +17,12 @@ try {
     withInfoPlist,
     withEntitlementsPlist,
     withAndroidManifest,
+    withDangerousMod,
     createRunOncePlugin,
   } = require('@expo/config-plugins');
 
   const pkg = require('./package.json');
+  const { runCodegen } = require('./cli/codegen');
 
   /**
    * Configures iOS Info.plist to enable Live Activities support
@@ -94,12 +96,32 @@ try {
   };
 
   /**
+   * Tự động chạy TypeScript-driven Widget Codegen & i18n Sync trong quá trình expo prebuild
+   */
+  const withLiveWidgetsCodegen = (config, options = {}) => {
+    return withDangerousMod(config, [
+      'ios',
+      async (modConfig) => {
+        const projectRoot = modConfig.modRequest.projectRoot;
+        try {
+          runCodegen(projectRoot, options.configPath);
+        } catch (error) {
+          // Nếu chưa có file widgets.config.ts thì chỉ thông báo log, không làm fail build prebuild
+          console.log(`ℹ️ [Expo Plugin] LiveWidgets Codegen: ${error.message}`);
+        }
+        return modConfig;
+      },
+    ]);
+  };
+
+  /**
    * Main Expo Config Plugin composite function
    */
   const plugin = (config, options = {}) => {
     config = withLiveWidgetsInfoPlist(config, options);
     config = withLiveWidgetsEntitlements(config, options);
     config = withLiveWidgetsAndroidManifest(config, options);
+    config = withLiveWidgetsCodegen(config, options);
     return config;
   };
 
