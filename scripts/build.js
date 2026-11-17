@@ -37,7 +37,7 @@ function build() {
   console.log('📦 [react-native-live-widgets] Cleaning lib/ directory...');
   cleanLib();
 
-  // Đảm bảo file sf-symbols.generated.ts đã được sinh sẵn
+  // Đảm bảo file sf-symbols.generated.ts và material-icons.generated.ts đã được sinh sẵn
   try {
     const { generateSFSymbolsFile } = require('./generate-sf-symbols');
     const symbolsOutput = path.join(rootDir, 'src', 'sf-symbols.generated.ts');
@@ -46,6 +46,16 @@ function build() {
     }
   } catch (err) {
     console.warn('ℹ️ [build] Không thể trích xuất SF Symbols tự động:', err.message);
+  }
+
+  try {
+    const { generateMaterialIconsFile } = require('./generate-material-icons');
+    const materialOutput = path.join(rootDir, 'src', 'material-icons.generated.ts');
+    if (!fs.existsSync(materialOutput)) {
+      generateMaterialIconsFile(materialOutput);
+    }
+  } catch (err) {
+    console.warn('ℹ️ [build] Không thể trích xuất Material Icons tự động:', err.message);
   }
 
   const tscBin = findTscBinary();

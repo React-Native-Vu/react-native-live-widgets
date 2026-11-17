@@ -573,6 +573,19 @@ function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
     }
   } catch (_e) {}
 
+  // Đồng bộ lại danh mục Google Material Icons nếu có
+  try {
+    const materialScript = path.join(__dirname, '..', 'scripts', 'generate-material-icons.js');
+    if (fs.existsSync(materialScript)) {
+      const { generateMaterialIconsFile } = require(materialScript);
+      const targetGenerated = path.join(__dirname, '..', 'src', 'material-icons.generated.ts');
+      const count = generateMaterialIconsFile(targetGenerated);
+      if (count) {
+        console.log(`🤖 Đã đồng bộ ${count} Google Material Icons vào TypeScript Auto-Complete.`);
+      }
+    }
+  } catch (_e) {}
+
   const { config, configPath } = loadWidgetsConfig(projectRoot, customConfigPath);
   const { catalog, defaultLocale } = buildI18nCatalog(projectRoot, config);
 

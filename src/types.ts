@@ -304,6 +304,7 @@ export interface ProgressNode extends BaseNode {
 }
 
 import type { KnownSFSymbol } from './sf-symbols.generated';
+import type { KnownMaterialIcon } from './material-icons.generated';
 
 /**
  * Biểu tượng hệ thống SF Symbols trên iOS (tự động đồng bộ từ Apple Xcode/SF Symbols).
@@ -312,88 +313,11 @@ import type { KnownSFSymbol } from './sf-symbols.generated';
 export type SFSymbolName = KnownSFSymbol | (string & {});
 
 /**
- * Danh sách gợi ý các biểu tượng Google Material Symbols & Icons chính thức trên Android.
+ * Danh sách gợi ý toàn bộ hơn 3,800+ biểu tượng Google Material Symbols & Icons chính thức trên Android.
  * Tự động kích hoạt gợi ý Auto-Complete / IntelliSense trong IDE (VS Code, Cursor, WebStorm)
  * và vẫn cho phép nhập bất kỳ tên Material Symbol nào khác nhờ `(string & {})`.
  */
-export type MaterialIconName =
-  // ── Thường dùng nhất trong App & Widget ──
-  | 'trending_up'
-  | 'trending_down'
-  | 'bolt'
-  | 'check'
-  | 'check_circle'
-  | 'check_box'
-  | 'close'
-  | 'cancel'
-  | 'notifications'
-  | 'notifications_active'
-  | 'schedule'
-  | 'timer'
-  | 'alarm'
-  | 'calendar_today'
-  | 'event'
-  | 'person'
-  | 'person_outline'
-  | 'group'
-  | 'account_circle'
-  | 'star'
-  | 'star_border'
-  | 'favorite'
-  | 'favorite_border'
-  | 'lock'
-  | 'lock_open'
-  | 'security'
-  | 'verified'
-  | 'shield'
-  | 'speed'
-  | 'play_arrow'
-  | 'pause'
-  | 'stop'
-  | 'skip_next'
-  | 'skip_previous'
-  | 'volume_up'
-  | 'volume_off'
-  | 'settings'
-  | 'tune'
-  | 'sync'
-  | 'refresh'
-  | 'add'
-  | 'add_circle'
-  | 'remove'
-  | 'remove_circle'
-  | 'delete'
-  | 'edit'
-  | 'share'
-  | 'search'
-  | 'home'
-  | 'dashboard'
-  | 'work'
-  | 'business'
-  | 'shopping_cart'
-  | 'shopping_bag'
-  | 'payments'
-  | 'credit_card'
-  | 'attach_money'
-  | 'bar_chart'
-  | 'pie_chart'
-  | 'show_chart'
-  | 'mail'
-  | 'email'
-  | 'phone'
-  | 'chat'
-  | 'comment'
-  | 'camera_alt'
-  | 'image'
-  | 'location_on'
-  | 'map'
-  | 'wifi'
-  | 'battery_full'
-  | 'battery_charging_full'
-  | 'flash_on'
-  | 'visibility'
-  | 'visibility_off'
-  | (string & {});
+export type MaterialIconName = KnownMaterialIcon | (string & {});
 
 export interface ImageNode extends BaseNode {
   type: 'Image';
