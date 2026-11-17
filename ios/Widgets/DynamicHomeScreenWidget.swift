@@ -79,11 +79,11 @@ public struct DynamicWidgetProvider: TimelineProvider {
 
     // 2. Chạy cơ chế đơn mốc mặc định (Layout snapshot hiện tại)
     let rawLayout = Self.readSharedString(forKey: "widget_layout_\(wKey)", appGroup: group)
-    let hasTemplateVars = rawLayout?.contains("{{") == true
     let hasRemoteConfig = Self.readSharedString(forKey: "widget_remote_config_\(wKey)", appGroup: group) != nil
     let state = DynamicWidgetStateStore.loadState()
-    let secondsSinceLastUpdate = Date().timeIntervalSince1970 - (state.updatedAt ?? 0)
-    let needsRemoteSync = hasRemoteConfig && hasTemplateVars && (state.lastSyncTime == nil || secondsSinceLastUpdate >= 20)
+    let secondsSinceLastUpdate = Date().timeIntervalSince1970 - state.updatedAt
+    let effectiveTtl = Double(readCacheTtlSeconds())
+    let needsRemoteSync = hasRemoteConfig && (state.lastSyncTime == nil || secondsSinceLastUpdate >= effectiveTtl)
     let needsImagePrefetch = rawLayout.map { DynamicWidgetImageCache.hasUncachedUrls(in: $0) } ?? false
 
     // Trả Timeline ngay lập tức để chuyển đổi giữa các mẫu Widget mượt mà tức thì
@@ -106,46 +106,67 @@ public struct DynamicWidgetProvider: TimelineProvider {
     }
   }
 
-  private func readRefreshIntervalMinutes() -> Int {
+  private func readRemoteConfig() -> WidgetRemoteConfigDTO? {
     let configKey = "widget_remote_config_\(widgetKey)"
-    if let json = Self.readSharedString(forKey: configKey, appGroup: appGroup),
-       let data = json.data(using: .utf8),
-       let config = try? JSONDecoder().decode(WidgetRemoteConfigDTO.self, from: data) {
+    guard let json = Self.readSharedString(forKey: configKey, appGroup: appGroup),
+          let data = json.data(using: .utf8) else {
+      return nil
+    }
+    return try? JSONDecoder().decode(WidgetRemoteConfigDTO.self, from: data)
+  }
+
+  private func readRefreshIntervalMinutes() -> Int {
+    if let config = readRemoteConfig() {
       return max(1, config.effectiveIntervalMinutes)
     }
     return 15
   }
 
-  private func readLayoutJson() -> String? {
-    let key = "widget_layout_\(widgetKey)"
-    var raw: String? = Self.readSharedString(forKey: key, appGroup: appGroup)
-    if raw == nil && widgetKey != "main" {
-      raw = Self.readSharedString(forKey: "widget_layout_main", appGroup: appGroup)
+  private func readCacheTtlSeconds() -> Int {
+    if let ttl = readRemoteConfig()?.cacheTtlSeconds {
+      return max(0, ttl)
     }
-    guard var raw = raw else {
-      return nil
-    }
+    return 20
+  }
 
+  private func readLayoutJson() -> String? {
     let state = DynamicWidgetStateStore.loadState()
     let syncTime = state.lastSyncTime ?? {
       let f = DateFormatter()
       f.dateFormat = "HH:mm:ss"
       return f.string(from: Date())
     }()
-    raw = raw.replacingOccurrences(of: "{{_lastSyncTime}}", with: syncTime)
 
-    if let vars = state.remoteVariables {
-      for (k, v) in vars {
-        let escaped = v.replacingOccurrences(of: "\"", with: "\\\"")
-        raw = raw.replacingOccurrences(of: "{{\(k)}}", with: escaped)
+    var allVars = state.remoteVariables ?? [:]
+    allVars["_lastSyncTime"] = syncTime
+    allVars["_syncStatus"] = state.syncStatus ?? allVars["_syncStatus"] ?? "ok"
+    allVars["_syncError"] = state.lastSyncError ?? allVars["_syncError"] ?? ""
+    if let httpStatus = state.lastHttpStatus {
+      allVars["_httpStatus"] = "\(httpStatus)"
+    }
+    if let selectedConfig = Self.readSharedString(forKey: "widget_selected_config_\(widgetKey)", appGroup: appGroup) {
+      allVars["_selectedConfigId"] = selectedConfig
+      allVars["selectedConfigId"] = selectedConfig
+    }
+
+    var raw: String?
+    if state.syncStatus == "error",
+       let errNode = readRemoteConfig()?.errorFallback,
+       let errData = try? JSONEncoder().encode(["root": errNode]),
+       let errJson = String(data: errData, encoding: .utf8) {
+      raw = errJson
+    } else {
+      let key = "widget_layout_\(widgetKey)"
+      raw = Self.readSharedString(forKey: key, appGroup: appGroup)
+      if raw == nil && widgetKey != "main" {
+        raw = Self.readSharedString(forKey: "widget_layout_main", appGroup: appGroup)
       }
     }
 
-    if let selectedConfig = Self.readSharedString(forKey: "widget_selected_config_\(widgetKey)", appGroup: appGroup) {
-      raw = raw.replacingOccurrences(of: "{{_selectedConfigId}}", with: selectedConfig)
-      raw = raw.replacingOccurrences(of: "{{selectedConfigId}}", with: selectedConfig)
+    guard let rawLayout = raw else {
+      return nil
     }
-    return raw
+    return DynamicWidgetStateStore.resolveTemplateString(rawLayout, with: allVars, escapeForJson: true)
   }
 
   public static func readSharedString(forKey key: String, appGroup: String) -> String? {

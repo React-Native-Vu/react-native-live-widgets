@@ -166,10 +166,46 @@ public struct WidgetTimelineConfigDTO: Codable {
   public let afterDate: Double?
 }
 
-public struct WidgetRemoteConfigDTO: Codable {
+public struct WidgetDataSchemaDTO: Codable {
+  public let requiredKeys: [String]?
+  public let types: [String: String]?
+  public let defaults: [String: AnyCodable]?
+}
+
+public struct WidgetAuthRefreshConfigDTO: Codable {
   public let url: String
   public let method: String?
   public let headers: [String: String]?
+  public let body: AnyCodable?
+  public let tokenPath: String?
+  public let headerName: String?
+  public let headerPrefix: String?
+}
+
+public struct WidgetRemoteSourceConfigDTO: Codable {
+  public let url: String
+  public let method: String?
+  public let headers: [String: String]?
+  public let body: AnyCodable?
+  public let timeoutMs: Int?
+  public let enableETag: Bool?
+}
+
+public struct WidgetRemoteConfigDTO: Codable {
+  public let url: String?
+  public let method: String?
+  public let headers: [String: String]?
+  public let body: AnyCodable?
+  public let timeoutMs: Int?
+  public let cacheTtlSeconds: Int?
+  public let enableETag: Bool?
+  public let maxRetries: Int?
+  public let retryDelayMs: Int?
+  public let sources: [String: WidgetRemoteSourceConfigDTO]?
+  public let mapping: [String: String]?
+  public let schema: WidgetDataSchemaDTO?
+  public let authRefresh: WidgetAuthRefreshConfigDTO?
+  public let errorFallback: LayoutNodeDTO?
   public let refreshIntervalMinutes: Int?
   public let intervalMinutes: Int?
 
@@ -186,6 +222,12 @@ public struct InteractiveWidgetState: Codable {
   public var lastSyncTime: String?
   public var remoteVariables: [String: String]?
   public var updatedAt: Double
+  public var etags: [String: String]?
+  public var lastModified: [String: String]?
+  public var syncStatus: String?
+  public var lastSyncError: String?
+  public var lastHttpStatus: Int?
+  public var accessToken: String?
 
   public init(
     activePage: String? = nil,
@@ -194,7 +236,13 @@ public struct InteractiveWidgetState: Codable {
     lastActionId: String? = nil,
     lastSyncTime: String? = nil,
     remoteVariables: [String: String]? = nil,
-    updatedAt: Double = Date().timeIntervalSince1970
+    updatedAt: Double = Date().timeIntervalSince1970,
+    etags: [String: String]? = nil,
+    lastModified: [String: String]? = nil,
+    syncStatus: String? = nil,
+    lastSyncError: String? = nil,
+    lastHttpStatus: Int? = nil,
+    accessToken: String? = nil
   ) {
     self.activePage = activePage
     self.pageOrder = pageOrder
@@ -203,6 +251,12 @@ public struct InteractiveWidgetState: Codable {
     self.lastSyncTime = lastSyncTime
     self.remoteVariables = remoteVariables
     self.updatedAt = updatedAt
+    self.etags = etags
+    self.lastModified = lastModified
+    self.syncStatus = syncStatus
+    self.lastSyncError = lastSyncError
+    self.lastHttpStatus = lastHttpStatus
+    self.accessToken = accessToken
   }
 }
 
@@ -275,7 +329,13 @@ public struct AnyCodable: Codable {
   }
 
   public var stringValue: String? { value as? String }
-  public var doubleValue: Double? { value as? Double }
+  public var doubleValue: Double? {
+    if let d = value as? Double { return d }
+    if let i = value as? Int { return Double(i) }
+    if let n = value as? NSNumber { return n.doubleValue }
+    if let s = value as? String { return Double(s.trimmingCharacters(in: .whitespaces)) }
+    return nil
+  }
   public var boolValue: Bool? { value as? Bool }
   public var arrayValue: [Any]? { value as? [Any] }
   public var doubleArrayValue: [Double]? {

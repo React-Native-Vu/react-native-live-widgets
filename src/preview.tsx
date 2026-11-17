@@ -23,6 +23,7 @@ import {
 } from './types';
 import { renderToWidget, extractPropsAndStyle } from './jsx';
 import { actionHandlers, globalActionHandlers } from './dispatcher';
+import { flattenDataObject, resolveTemplateString } from './builder';
 
 export type WidgetPreviewSize =
   | 'small'
@@ -50,6 +51,8 @@ export interface WidgetPreviewProps {
   size?: WidgetPreviewSize;
   /** Cây LayoutNode hoặc đối tượng chứa { small, medium, large, extraLarge, standBy } */
   layout?: LayoutNode | WidgetSinglePageConfig;
+  /** Dữ liệu JSON mẫu dùng để nội suy các biểu thức Data Binding (`{{user.name}}`, `data.*`) khi xem trước */
+  data?: Record<string, any>;
   /** Cấu hình Control Widget dùng để xem trước Control Center / Quick Settings Tile */
   controlConfig?: ControlWidgetConfig;
   /** Cú pháp JSX trực tiếp truyền vào bên trong thẻ `<WidgetPreview>` */
@@ -134,6 +137,7 @@ type PreviewSyncVars = {
 export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
   size: initialSizeProp,
   layout,
+  data,
   controlConfig,
   children,
   onAction,
@@ -283,6 +287,11 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
     switchSizes.push('control');
   }
 
+  const effectiveSyncVars: Record<string, string> = {
+    ...syncVars,
+    ...(data ? flattenDataObject(data) : {}),
+  };
+
   return (
     <View style={[styles.container, style]}>
       {interactiveSizeSwitch && (
@@ -332,7 +341,7 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
             onAction={handlePreviewAction}
           />
         ) : rootNode ? (
-          renderPreviewNode(rootNode, handlePreviewAction, true, 'column', syncVars)
+          renderPreviewNode(rootNode, handlePreviewAction, true, 'column', effectiveSyncVars)
         ) : (
           <View style={styles.emptyContainer}>
             <RNText style={styles.emptyText}>Chưa có cấu hình layout cho kích thước {activeSize}</RNText>
@@ -584,12 +593,31 @@ const PreviewTimerText: React.FC<{
   );
 };
 
+function resolvePreviewText(raw: any, syncVars?: Record<string, string>): string {
+  const str = String(raw ?? '');
+  return syncVars ? resolveTemplateString(str, syncVars) : str;
+}
+
+function resolvePreviewNumber(
+  raw: any,
+  fallback: number,
+  syncVars?: Record<string, string>
+): number {
+  if (typeof raw === 'number' && !Number.isNaN(raw)) return raw;
+  if (typeof raw === 'string') {
+    const resolved = syncVars ? resolveTemplateString(raw, syncVars) : raw;
+    const num = parseFloat(resolved);
+    return Number.isNaN(num) ? fallback : num;
+  }
+  return fallback;
+}
+
 function renderPreviewNode(
   node: any,
   onAction?: (actionId: string) => void,
   isRoot: boolean = false,
   parentDirection: 'row' | 'column' = 'column',
-  syncVars?: PreviewSyncVars
+  syncVars?: Record<string, string>
 ): React.ReactNode {
   if (!node) return null;
 
@@ -785,13 +813,7 @@ function renderPreviewNode(
       const isRtl = p.direction === 'rtl' || p.isRTL;
       const shadowColor = parseDynamicColor(p.shadowColor);
 
-      const rawText = String(p.text ?? '');
-      const resolvedText = syncVars
-        ? rawText
-            .replace(/\{\{_lastSyncTime\}\}/g, syncVars._lastSyncTime)
-            .replace(/\{\{id\}\}/g, syncVars.id)
-            .replace(/\{\{title\}\}/g, syncVars.title)
-        : rawText;
+      const resolvedText = resolvePreviewText(p.text, syncVars);
       const isRedacted = Boolean(p.redacted);
 
       const textStyle: RNTextStyle = {
@@ -861,10 +883,12 @@ function renderPreviewNode(
         fontFamily: p.fontDesign === 'monospaced' ? 'monospace' : undefined,
       };
 
+      const btnTitle = resolvePreviewText(p.title, syncVars);
+
       return (
         <TouchableOpacity
           accessible={p.accessible !== false}
-          accessibilityLabel={p.accessibilityLabel || p.title}
+          accessibilityLabel={p.accessibilityLabel || btnTitle}
           accessibilityHint={p.accessibilityHint}
           accessibilityRole="button"
           activeOpacity={0.7}
@@ -872,7 +896,7 @@ function renderPreviewNode(
           style={btnStyle}
         >
           <RNText numberOfLines={1} style={textStyle}>
-            {p.title}
+            {btnTitle}
           </RNText>
         </TouchableOpacity>
       );
@@ -900,7 +924,7 @@ function renderPreviewNode(
               fontWeight: '600',
             }}
           >
-            {p.text}
+            {resolvePreviewText(p.text, syncVars)}
           </RNText>
         </View>
       );
@@ -909,7 +933,7 @@ function renderPreviewNode(
     case 'Progress': {
       const pnode = node as ProgressNode;
       const p = pnode.props || {};
-      const val = Math.max(0, Math.min(1, p.value ?? 0.5));
+      const val = Math.max(0, Math.min(1, resolvePreviewNumber(p.value, 0.5, syncVars)));
       const height = p.height ?? 6;
       const tint = parseDynamicColor(p.tintColor) || '#2563EB';
       const track = parseDynamicColor(p.trackColor) || '#334155';
@@ -1054,11 +1078,13 @@ function renderPreviewNode(
     case 'Gauge': {
       const gnode = node as any;
       const p = gnode.props || {};
-      const val = Math.round((p.value ?? 0.75) * 100);
+      const val = Math.round(resolvePreviewNumber(p.value, 0.75, syncVars) * 100);
       const tint = parseDynamicColor(p.tintColor) || '#10B981';
       return (
         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-          <RNText style={{ color: tint, fontSize: 13, fontWeight: 'bold' }}>{val}%</RNText>
+          <RNText style={{ color: tint, fontSize: 13, fontWeight: 'bold' }}>
+            {p.valueText ? resolvePreviewText(p.valueText, syncVars) : `${val}%`}
+          </RNText>
         </View>
       );
     }

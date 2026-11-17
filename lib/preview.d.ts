@@ -17,6 +17,8 @@ export interface WidgetPreviewProps {
     size?: WidgetPreviewSize;
     /** Cây LayoutNode hoặc đối tượng chứa { small, medium, large, extraLarge, standBy } */
     layout?: LayoutNode | WidgetSinglePageConfig;
+    /** Dữ liệu JSON mẫu dùng để nội suy các biểu thức Data Binding (`{{user.name}}`, `data.*`) khi xem trước */
+    data?: Record<string, any>;
     /** Cấu hình Control Widget dùng để xem trước Control Center / Quick Settings Tile */
     controlConfig?: ControlWidgetConfig;
     /** Cú pháp JSX trực tiếp truyền vào bên trong thẻ `<WidgetPreview>` */

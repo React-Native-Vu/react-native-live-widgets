@@ -1221,6 +1221,57 @@ Beyond `small`, `medium`, `large`, and Lock Screen (`accessoryRectangular`, `acc
 
 ---
 
+### 12.9. 🔄 Background Data Engine 2.0 & Structured Data Binding
+
+`Widget.setRemoteConfig` and `Widget.createDataBinding<T>()` provide a complete native background data engine on both iOS WidgetKit Extension and Android even after the main app is force-killed:
+
+| Category | Native Capabilities (iOS SwiftUI + Android) |
+| :--- | :--- |
+| **REST & Auth** | `url`, `method` (`GET`/`POST`/`PUT`), JSON `body`, custom `headers`, and **`authRefresh`** (automatically refreshes tokens on HTTP `401` and retries) |
+| **Network & Cache** | **`cacheTtlSeconds`** to avoid redundant fetches across timeline reloads, **`enableETag`** (`If-None-Match`/`If-Modified-Since` + HTTP `304 Not Modified`), **`timeoutMs`**, and **`maxRetries` + `retryDelayMs`** (Exponential Backoff) |
+| **Multi-Source & Transform** | **`sources`** to fetch & namespace multiple APIs (`<sourceKey>.<nested.path>`), recursive JSON Flattener (`user.name`, `items.0.title`), declarative **`mapping`**, and **`schema`** validation (`requiredKeys`, `types`, `defaults`) |
+| **Error State** | System tokens `{{_syncStatus}}` (`ok` / `partial` / `error`), `{{_syncError}}`, `{{_httpStatus}}`, plus **`errorFallback`** `LayoutNode` while preserving valid cached data on failures |
+| **Structured Data Binding** | `Widget.createDataBinding<T>()` & `UI.bind(path, pipes)` supporting nested paths & Native Pipes (`default`, `divide`, `multiply`, `add`, `round`, `upper`, `lower`, `currency`, `percent`, `if`) |
+
+```tsx
+const data = Widget.createDataBinding<{
+  user: { name: string };
+  attendance: { progress: number };
+}>({
+  defaults: { user: { name: 'Employee' }, attendance: { progress: 0 } },
+});
+
+await Widget.setLayout('main', {
+  medium: (
+    <VStack padding={14} spacing={6}>
+      <Text>{data.user.name}</Text>
+      <Text>{data.attendance.progress}%</Text>
+      <Progress value={data.attendance.progress.divide(100)} />
+    </VStack>
+  ),
+});
+
+await Widget.setRemoteConfig('main', {
+  cacheTtlSeconds: 300,
+  timeoutMs: 6000,
+  enableETag: true,
+  maxRetries: 2,
+  retryDelayMs: 500,
+  sources: {
+    user: { url: 'https://api.yourapp.com/me' },
+    attendance: { url: 'https://api.yourapp.com/attendance/today' },
+  },
+  schema: { requiredKeys: ['user.name', 'attendance.progress'], types: { 'attendance.progress': 'number' } },
+  authRefresh: { url: 'https://api.yourapp.com/auth/refresh', method: 'POST', tokenPath: 'accessToken' },
+  errorFallback: <Text color="#F87171">Sync error ({{_httpStatus}}): {{_syncError}}</Text>,
+  refreshIntervalMinutes: 15,
+});
+```
+
+> ⚠️ **Important OS Reload Budget Disclaimer:** Exact 15-minute background intervals are **not guaranteed** when the app is terminated. **Apple WidgetKit** enforces a dynamic daily reload budget (typically ~**40–70 reloads/day** depending on user engagement; `refreshIntervalMinutes` maps to `TimelineReloadPolicy.after(...)` as an earliest hint, not an exact cron guarantee). **Android** likewise enforces Doze Mode and App Standby Buckets. For real-time second-by-second updates, pair widgets with server pushes (APNs / FCM).
+
+---
+
 ### 🌐 Online Interactive Web Documentation
 
 - **Web Documentation & Live Simulator**: [https://react-native-vu.github.io/react-native-live-widgets/](https://react-native-vu.github.io/react-native-live-widgets/)

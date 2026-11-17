@@ -16,7 +16,7 @@ import {
   WidgetIR,
 } from './types';
 import { compileToIR, inspectIR } from './ir';
-import { UI } from './builder';
+import { UI, createDataBinding } from './builder';
 
 declare const __DEV__: boolean | undefined;
 
@@ -703,13 +703,17 @@ export const Widget = {
   },
 
   /**
-   * Cấu hình Endpoint API để bản thân Widget Extension tự chạy ngầm lấy dữ liệu mới
-   * theo chu kỳ (`getTimeline`) hoặc khi bấm nút `actionId: 'refresh'` trên mặt Widget,
-   * kể cả khi người dùng đã vuốt tắt (Kill) hoàn toàn ứng dụng chính!
+   * Cấu hình Background Data Engine 2.0 để Widget Extension tự gọi API ngầm (REST, Custom Headers,
+   * Cache TTL, ETag/304, Retry/Backoff, Timeout, Multiple Sources, Data Transform, Schema Validation,
+   * Auth Token Refresh & Error State) kể cả khi App chính đã bị đóng hoàn toàn.
+   *
+   * Lưu ý hệ điều hành: Apple WidgetKit quản lý ngân sách reload động (~40–70 lần/ngày tùy mức sử dụng,
+   * `refreshIntervalMinutes` chỉ là mốc sớm nhất đề xuất chứ không cam kết chạy đúng mỗi 15 phút khi app đóng);
+   * Android cũng áp dụng Doze Mode / App Standby cho background task.
    *
    * Hỗ trợ gọi linh hoạt:
-   * - `Widget.setRemoteConfig('main', { url, refreshIntervalMinutes }, appGroup?)`
-   * - `Widget.setRemoteConfig({ url, intervalMinutes }, appGroup?)` (tự động gán widgetKey = 'main')
+   * - `Widget.setRemoteConfig('main', config, appGroup?)`
+   * - `Widget.setRemoteConfig(config, appGroup?)` (tự động gán widgetKey = 'main')
    */
   setRemoteConfig: async (
     widgetKeyOrConfig: string | WidgetRemoteConfig,
@@ -730,15 +734,25 @@ export const Widget = {
         appGroup = typeof remoteConfigOrAppGroup === 'string' ? remoteConfigOrAppGroup : undefined;
       }
 
-      if (remoteConfig.intervalMinutes !== undefined && remoteConfig.refreshIntervalMinutes === undefined) {
-        remoteConfig.refreshIntervalMinutes = remoteConfig.intervalMinutes;
-      } else if (remoteConfig.refreshIntervalMinutes !== undefined && remoteConfig.intervalMinutes === undefined) {
-        remoteConfig.intervalMinutes = remoteConfig.refreshIntervalMinutes;
+      const finalConfig: WidgetRemoteConfig = { ...remoteConfig };
+      if (
+        finalConfig.intervalMinutes !== undefined &&
+        finalConfig.refreshIntervalMinutes === undefined
+      ) {
+        finalConfig.refreshIntervalMinutes = finalConfig.intervalMinutes;
+      } else if (
+        finalConfig.refreshIntervalMinutes !== undefined &&
+        finalConfig.intervalMinutes === undefined
+      ) {
+        finalConfig.intervalMinutes = finalConfig.refreshIntervalMinutes;
+      }
+      if (finalConfig.errorFallback) {
+        finalConfig.errorFallback = convertIfJsx(finalConfig.errorFallback);
       }
 
       const saved = await SharedStorage.set(
         `widget_remote_config_${widgetKey}`,
-        remoteConfig,
+        finalConfig,
         appGroup
       );
       if (!saved) return false;
@@ -748,6 +762,16 @@ export const Widget = {
       return false;
     }
   },
+
+  /**
+   * Tạo Proxy Data Binding có cấu trúc & gợi ý kiểu TypeScript cho JSX/DSL Widget (`data.user.name`, `data.attendance.progress.divide(100)`).
+   */
+  createDataBinding,
+
+  /**
+   * Tạo chuỗi token binding (`{{path|pipe}}`) cho hệ thống Background Data Engine 2.0.
+   */
+  bind: UI.bind,
 
   /** Đăng ký lắng nghe tương tác nút bấm từ Widget theo `actionId` */
   registerAction: registerAction,

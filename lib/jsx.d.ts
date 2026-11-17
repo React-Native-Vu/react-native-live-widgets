@@ -1,4 +1,5 @@
-import { LayoutNode, ButtonNode, BadgeNode, ProgressNode, TimerNode, ImageNode, DividerNode, GaugeNode, ChartNode, ToggleNode, ContainerProps, TextStyle, ZStackProps, GridProps, LinkProps, EqualizerProps, StyleProp } from './types';
+import { LayoutNode, ButtonNode, BadgeNode, ProgressNode, TimerNode, ImageNode, DividerNode, GaugeNode, ChartNode, ToggleNode, ContainerProps, TextStyle, ZStackProps, GridProps, LinkProps, EqualizerProps, StyleProp, DataBindingField } from './types';
+type WidgetTextChild = React.ReactNode | DataBindingField<any> | Array<React.ReactNode | DataBindingField<any>>;
 export declare function extractPropsAndStyle<T extends object>(props: any): any;
 export interface VStackProps extends ContainerProps {
     children?: React.ReactNode;
@@ -21,18 +22,20 @@ export interface GridJSXProps extends GridProps {
 }
 export declare const Grid: React.FC<GridJSXProps>;
 export interface TextJSXProps extends TextStyle {
-    children?: React.ReactNode;
-    text?: string;
+    children?: WidgetTextChild;
+    text?: string | DataBindingField<any>;
     style?: StyleProp<TextStyle>;
 }
 export declare const Text: React.FC<TextJSXProps>;
-export type ButtonJSXProps = ButtonNode['props'] & {
-    children?: React.ReactNode;
+export type ButtonJSXProps = Omit<ButtonNode['props'], 'title'> & {
+    title?: string | DataBindingField<any>;
+    children?: WidgetTextChild;
     style?: StyleProp<ButtonNode['props']>;
 };
 export declare const Button: React.FC<ButtonJSXProps>;
-export type BadgeJSXProps = BadgeNode['props'] & {
-    children?: React.ReactNode;
+export type BadgeJSXProps = Omit<BadgeNode['props'], 'text'> & {
+    text?: string | DataBindingField<any>;
+    children?: WidgetTextChild;
     style?: StyleProp<BadgeNode['props']>;
 };
 export declare const Badge: React.FC<BadgeJSXProps>;
@@ -84,4 +87,5 @@ export declare const Checkbox: React.FC<ToggleJSXProps>;
  * ```
  */
 export declare function renderToWidget(element: any): LayoutNode | null;
+export {};
 //# sourceMappingURL=jsx.d.ts.map

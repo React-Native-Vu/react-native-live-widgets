@@ -5,6 +5,8 @@ import {
   ContainerProps,
   ControlWidgetConfig,
   CustomNode,
+  DataBindingField,
+  DataBindingProxy,
   DividerNode,
   EqualizerNode,
   EqualizerProps,
@@ -25,12 +27,269 @@ import {
   TimerNode,
   ToggleNode,
   VStackNode,
+  WidgetDataPipeOptions,
   ZStackNode,
   ZStackProps,
 } from './types';
 import { registerAction } from './dispatcher';
 
 let autoActionCounter = 0;
+
+export function isDataBinding(value: any): value is DataBindingField<any> {
+  return Boolean(
+    value &&
+      (typeof value === 'object' || typeof value === 'function') &&
+      (value as any).__isDataBinding === true
+  );
+}
+
+export function resolveBindingValue(value: any): any {
+  if (isDataBinding(value)) {
+    return value.toToken();
+  }
+  return value;
+}
+
+function buildPipeToken(path: string, pipes: string[]): string {
+  return pipes.length > 0 ? `{{${path}|${pipes.join('|')}}}` : `{{${path}}}`;
+}
+
+function convertPipeOptions(pipes?: WidgetDataPipeOptions): string[] {
+  if (!pipes) return [];
+  const out: string[] = [];
+  if (pipes.default !== undefined) out.push(`default:${pipes.default}`);
+  if (pipes.divide !== undefined) out.push(`divide:${pipes.divide}`);
+  if (pipes.multiply !== undefined) out.push(`multiply:${pipes.multiply}`);
+  if (pipes.add !== undefined) out.push(`add:${pipes.add}`);
+  if (pipes.round !== undefined) out.push(`round:${pipes.round}`);
+  if (pipes.upper) out.push('upper');
+  if (pipes.lower) out.push('lower');
+  if (pipes.currency !== undefined) out.push(`currency:${pipes.currency}`);
+  if (pipes.percent !== undefined) out.push(`percent:${pipes.percent}`);
+  if (pipes.ifTruthy) {
+    const [thenVal, elseVal = ''] = pipes.ifTruthy;
+    out.push(`if:${thenVal}:${elseVal}`);
+  }
+  return out;
+}
+
+function createBindingField(
+  path: string,
+  pipes: string[] = [],
+  defaultsMap?: Record<string, string>
+): DataBindingField<any> {
+  const effectivePipes = [...pipes];
+  if (
+    defaultsMap &&
+    defaultsMap[path] !== undefined &&
+    !effectivePipes.some((p) => p.startsWith('default:'))
+  ) {
+    effectivePipes.unshift(`default:${defaultsMap[path]}`);
+  }
+
+  const token = buildPipeToken(path, effectivePipes);
+  const target: Record<string | symbol, any> = {
+    __isDataBinding: true,
+    __bindingPath: path,
+    __bindingPipes: effectivePipes,
+    toToken: () => token,
+    toString: () => token,
+    valueOf: () => token,
+    toJSON: () => token,
+    [Symbol.toPrimitive]: () => token,
+    default: (fallback: string | number | boolean) =>
+      createBindingField(path, [...pipes, `default:${fallback}`], defaultsMap),
+    divide: (divisor: number) =>
+      createBindingField(path, [...pipes, `divide:${divisor}`], defaultsMap),
+    multiply: (factor: number) =>
+      createBindingField(path, [...pipes, `multiply:${factor}`], defaultsMap),
+    add: (offset: number) =>
+      createBindingField(path, [...pipes, `add:${offset}`], defaultsMap),
+    round: (decimals = 0) =>
+      createBindingField(path, [...pipes, `round:${decimals}`], defaultsMap),
+    upper: () => createBindingField(path, [...pipes, 'upper'], defaultsMap),
+    lower: () => createBindingField(path, [...pipes, 'lower'], defaultsMap),
+    currency: (symbol = '₫') =>
+      createBindingField(path, [...pipes, `currency:${symbol}`], defaultsMap),
+    percent: (decimals = 0) =>
+      createBindingField(path, [...pipes, `percent:${decimals}`], defaultsMap),
+    ifTruthy: (thenValue: string | number, elseValue: string | number = '') =>
+      createBindingField(path, [...pipes, `if:${thenValue}:${elseValue}`], defaultsMap),
+  };
+
+  return new Proxy(target, {
+    get(obj, prop) {
+      if (prop in obj || typeof prop === 'symbol') {
+        return obj[prop];
+      }
+      // Tránh đánh lừa Promise (.then) hoặc React element checks ($$typeof)
+      if (prop === 'then' || prop === 'catch' || prop === 'finally' || prop === '$$typeof') {
+        return undefined;
+      }
+      const nextPath = path ? `${path}.${String(prop)}` : String(prop);
+      return createBindingField(nextPath, [], defaultsMap);
+    },
+  }) as DataBindingField<any>;
+}
+
+/**
+ * Tạo đối tượng Data Binding có cấu trúc & gợi ý kiểu TypeScript để nhúng trực tiếp vào JSX/DSL Widget.
+ */
+export function createDataBinding<T extends Record<string, any> = Record<string, any>>(options?: {
+  defaults?: Record<string, any>;
+  prefix?: string;
+}): DataBindingProxy<T> {
+  const defaultsMap = options?.defaults ? flattenDataObject(options.defaults) : undefined;
+  return createBindingField(options?.prefix || '', [], defaultsMap) as DataBindingProxy<T>;
+}
+
+/**
+ * Làm phẳng đệ quy JSON lồng nhau thành các đường dẫn dot-notation (`user.name`, `items.0.title`).
+ */
+export function flattenDataObject(
+  obj: any,
+  prefix = '',
+  out: Record<string, string> = {}
+): Record<string, string> {
+  if (obj === null || obj === undefined) return out;
+  if (Array.isArray(obj)) {
+    obj.forEach((item, idx) => {
+      const nextKey = prefix ? `${prefix}.${idx}` : String(idx);
+      if (item !== null && typeof item === 'object') {
+        flattenDataObject(item, nextKey, out);
+      } else if (item !== undefined && item !== null) {
+        out[nextKey] = String(item);
+      }
+    });
+    return out;
+  }
+  if (typeof obj === 'object') {
+    for (const [k, v] of Object.entries(obj)) {
+      const nextKey = prefix ? `${prefix}.${k}` : k;
+      if (v !== null && typeof v === 'object') {
+        flattenDataObject(v, nextKey, out);
+      } else if (v !== undefined && v !== null) {
+        out[nextKey] = String(v);
+      }
+    }
+  } else if (prefix) {
+    out[prefix] = String(obj);
+  }
+  return out;
+}
+
+/**
+ * Thực thi các phép biến đổi Pipe trên chuỗi giá trị thô (đồng bộ 1:1 với Swift & Kotlin).
+ */
+export function evaluateTemplatePipe(rawValue: string | undefined, pipes: string[]): string {
+  let current = rawValue !== undefined && rawValue !== null ? String(rawValue) : '';
+
+  for (const rawPipe of pipes) {
+    const colonIdx = rawPipe.indexOf(':');
+    const op = colonIdx >= 0 ? rawPipe.slice(0, colonIdx).trim() : rawPipe.trim();
+    const arg = colonIdx >= 0 ? rawPipe.slice(colonIdx + 1) : '';
+
+    switch (op) {
+      case 'default': {
+        if (current === '') {
+          current = arg;
+        }
+        break;
+      }
+      case 'divide': {
+        const num = parseFloat(current);
+        const div = parseFloat(arg);
+        if (!Number.isNaN(num) && !Number.isNaN(div) && div !== 0) {
+          current = String(num / div);
+        }
+        break;
+      }
+      case 'multiply': {
+        const num = parseFloat(current);
+        const mul = parseFloat(arg);
+        if (!Number.isNaN(num) && !Number.isNaN(mul)) {
+          current = String(num * mul);
+        }
+        break;
+      }
+      case 'add': {
+        const num = parseFloat(current);
+        const offset = parseFloat(arg);
+        if (!Number.isNaN(num) && !Number.isNaN(offset)) {
+          current = String(num + offset);
+        }
+        break;
+      }
+      case 'round': {
+        const num = parseFloat(current);
+        const decimals = Math.max(0, parseInt(arg || '0', 10) || 0);
+        if (!Number.isNaN(num)) {
+          current = decimals === 0 ? String(Math.round(num)) : num.toFixed(decimals);
+        }
+        break;
+      }
+      case 'upper': {
+        current = current.toUpperCase();
+        break;
+      }
+      case 'lower': {
+        current = current.toLowerCase();
+        break;
+      }
+      case 'currency': {
+        const num = parseFloat(current);
+        const symbol = arg || '₫';
+        if (!Number.isNaN(num)) {
+          current = `${Math.round(num).toLocaleString('en-US')}${symbol}`;
+        }
+        break;
+      }
+      case 'percent': {
+        const num = parseFloat(current);
+        const decimals = Math.max(0, parseInt(arg || '0', 10) || 0);
+        if (!Number.isNaN(num)) {
+          current = `${decimals === 0 ? Math.round(num) : num.toFixed(decimals)}%`;
+        }
+        break;
+      }
+      case 'if': {
+        const splitIdx = arg.indexOf(':');
+        const thenVal = splitIdx >= 0 ? arg.slice(0, splitIdx) : arg;
+        const elseVal = splitIdx >= 0 ? arg.slice(splitIdx + 1) : '';
+        const lower = current.trim().toLowerCase();
+        const isTruthy =
+          current.trim() !== '' && lower !== 'false' && lower !== '0' && lower !== 'null';
+        current = isTruthy ? thenVal : elseVal;
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return current;
+}
+
+/**
+ * Thay thế toàn bộ token `{{path|pipe1|pipe2}}` trong chuỗi theo bản đồ biến (hỗ trợ cả JSON lồng nhau).
+ */
+export function resolveTemplateString(template: string, vars: Record<string, any>): string {
+  if (!template || !template.includes('{{')) return template;
+  const flatVars = flattenDataObject(vars);
+  return template.replace(/\{\{([^}]+)\}\}/g, (match, expr) => {
+    const parts = String(expr).split('|');
+    const pathKey = parts[0].trim();
+    const pipes = parts.slice(1);
+    const hasKey = Object.prototype.hasOwnProperty.call(flatVars, pathKey);
+    if (!hasKey && pipes.length === 0) {
+      return match;
+    }
+    const rawVal = hasKey ? flatVars[pathKey] : undefined;
+    if (!hasKey && !pipes.some((p) => p.trim().startsWith('default:') || p.trim().startsWith('if:'))) {
+      return match;
+    }
+    return evaluateTemplatePipe(rawVal, pipes);
+  });
+}
 
 export function flattenStyle<T extends object>(...styles: StyleProp<T>[]): T | undefined {
   let merged: any = undefined;
@@ -83,6 +342,12 @@ const TYPOGRAPHY_DEFAULTS: Record<string, { fontSize: number; fontWeight: any }>
 function normalizeProps<P extends object>(props?: P): P | undefined {
   if (!props) return undefined;
   const p = { ...props } as any;
+
+  for (const key of Object.keys(p)) {
+    if (isDataBinding(p[key])) {
+      p[key] = p[key].toToken();
+    }
+  }
 
   // Bo góc alias
   if (p.cornerRadius !== undefined && p.borderRadius === undefined) {
@@ -180,14 +445,14 @@ export const UI = {
   },
 
   Text: (
-    text: string,
+    text: string | DataBindingField<any>,
     ...styles: StyleProp<TextStyle>[]
   ): TextNode => {
     const merged = flattenStyle(...styles);
     return {
       type: 'Text',
       props: normalizeProps<TextNodeProps>({
-        text,
+        text: String(resolveBindingValue(text) ?? ''),
         ...(merged || {}),
       })!,
     };
@@ -213,14 +478,18 @@ export const UI = {
   }),
 
   Progress: (
-    valueOrOptions: number | ProgressNode['props'],
+    valueOrOptions: number | string | DataBindingField<any> | ProgressNode['props'],
     options?: Omit<ProgressNode['props'], 'value'>
   ): ProgressNode => {
-    if (typeof valueOrOptions === 'number') {
+    if (
+      typeof valueOrOptions === 'number' ||
+      typeof valueOrOptions === 'string' ||
+      isDataBinding(valueOrOptions)
+    ) {
       return {
         type: 'Progress',
         props: normalizeProps({
-          value: valueOrOptions,
+          value: resolveBindingValue(valueOrOptions),
           ...options,
         })!,
       };
@@ -232,20 +501,24 @@ export const UI = {
   },
 
   Image: (
-    urlOrOptions: string | ImageNode['props'],
+    urlOrOptions: string | DataBindingField<any> | ImageNode['props'],
     options?: Omit<ImageNode['props'], 'url'>
   ): ImageNode => {
-    if (typeof urlOrOptions === 'string') {
-      const isHttp = urlOrOptions.startsWith('http://') || urlOrOptions.startsWith('https://');
-      const isBase64 = urlOrOptions.startsWith('data:image/');
+    if (typeof urlOrOptions === 'string' || isDataBinding(urlOrOptions)) {
+      const resolved = String(resolveBindingValue(urlOrOptions));
+      const isHttp =
+        resolved.startsWith('http://') ||
+        resolved.startsWith('https://') ||
+        resolved.includes('{{');
+      const isBase64 = resolved.startsWith('data:image/');
       return {
         type: 'Image',
         props: normalizeProps({
           ...(isHttp
-            ? { url: urlOrOptions }
+            ? { url: resolved }
             : isBase64
-            ? { base64: urlOrOptions }
-            : { systemName: urlOrOptions }),
+            ? { base64: resolved }
+            : { systemName: resolved }),
           ...options,
         })!,
       };
@@ -262,10 +535,10 @@ export const UI = {
   }),
 
   Button: (
-    titleOrProps: string | ButtonNode['props'],
+    titleOrProps: string | DataBindingField<any> | ButtonNode['props'],
     options?: Omit<ButtonNode['props'], 'title'>
   ): ButtonNode => {
-    if (typeof titleOrProps === 'object' && titleOrProps !== null) {
+    if (typeof titleOrProps === 'object' && titleOrProps !== null && !isDataBinding(titleOrProps)) {
       const normalized = normalizeProps(titleOrProps)!;
       if (normalized.onPress && !normalized.actionId) {
         autoActionCounter += 1;
@@ -292,7 +565,7 @@ export const UI = {
     return {
       type: 'Button',
       props: normalizeProps({
-        title: titleOrProps,
+        title: String(resolveBindingValue(titleOrProps)),
         ...options,
         actionId: finalActionId,
       })!,
@@ -352,21 +625,25 @@ export const UI = {
   }),
 
   Gauge: (
-    valueOrOptions: number | GaugeNode['props'],
+    valueOrOptions: number | string | DataBindingField<any> | GaugeNode['props'],
     options?: Omit<GaugeNode['props'], 'value'>
   ): GaugeNode => {
-    if (typeof valueOrOptions === 'number') {
+    if (
+      typeof valueOrOptions === 'number' ||
+      typeof valueOrOptions === 'string' ||
+      isDataBinding(valueOrOptions)
+    ) {
       return {
         type: 'Gauge',
-        props: {
-          value: valueOrOptions,
+        props: normalizeProps({
+          value: resolveBindingValue(valueOrOptions),
           ...options,
-        },
+        })!,
       };
     }
     return {
       type: 'Gauge',
-      props: valueOrOptions,
+      props: normalizeProps(valueOrOptions)!,
     };
   },
 
@@ -410,14 +687,14 @@ export const UI = {
   },
 
   Badge: (
-    textOrOptions: string | BadgeNode['props'],
+    textOrOptions: string | DataBindingField<any> | BadgeNode['props'],
     options?: Omit<BadgeNode['props'], 'text'>
   ): BadgeNode => {
-    if (typeof textOrOptions === 'string') {
+    if (typeof textOrOptions === 'string' || isDataBinding(textOrOptions)) {
       return {
         type: 'Badge',
         props: normalizeProps({
-          text: textOrOptions,
+          text: String(resolveBindingValue(textOrOptions)),
           ...options,
         })!,
       };
@@ -492,6 +769,17 @@ export const UI = {
       onPress?: (payload?: any) => Promise<any> | any;
     }
   ): ControlWidgetConfig => buildControlConfig('toggle', options),
+
+  /**
+   * Tạo biểu thức Data Binding chuỗi token (`{{path|pipe1|pipe2}}`) dùng với Background Data Engine 2.0.
+   */
+  bind: (path: string, pipes?: WidgetDataPipeOptions): string =>
+    buildPipeToken(path, convertPipeOptions(pipes)),
+
+  /**
+   * Tạo Proxy Data Binding có cấu trúc & gợi ý kiểu TypeScript (`data.user.name`, `data.attendance.progress.divide(100)`).
+   */
+  createDataBinding,
 };
 
 function buildControlConfig(

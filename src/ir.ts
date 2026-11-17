@@ -130,7 +130,8 @@ function buildSemanticNodes(node: any, path: string, result: SemanticNode[]): vo
       role = 'progressbar';
       if (!label) label = 'Tiến độ';
       if (value === undefined && props.value !== undefined) {
-        value = `${Math.round(props.value * 100)}%`;
+        const num = Number(props.value);
+        value = Number.isNaN(num) ? String(props.value) : `${Math.round(num * 100)}%`;
       }
       break;
     }
@@ -139,7 +140,12 @@ function buildSemanticNodes(node: any, path: string, result: SemanticNode[]): vo
       role = 'progressbar';
       label = props.label || label || 'Chỉ số';
       if (value === undefined) {
-        value = props.valueText || (props.value !== undefined ? `${Math.round(props.value * 100)}%` : undefined);
+        if (props.valueText) {
+          value = props.valueText;
+        } else if (props.value !== undefined) {
+          const num = Number(props.value);
+          value = Number.isNaN(num) ? String(props.value) : `${Math.round(num * 100)}%`;
+        }
       }
       break;
     }

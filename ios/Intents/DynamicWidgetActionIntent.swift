@@ -22,7 +22,7 @@ public struct DynamicWidgetActionIntent: AppIntent {
   public func perform() async throws -> some IntentResult {
     if actionId == "refresh" || actionId.hasPrefix("refresh:") {
       let key = actionId.hasPrefix("refresh:") ? String(actionId.dropFirst(8)) : "main"
-      await DynamicWidgetStateStore.performRemoteSync(widgetKey: key)
+      await DynamicWidgetStateStore.performRemoteSync(widgetKey: key, forceRefresh: true)
     } else {
       DynamicWidgetStateStore.handleAction(actionId)
     }

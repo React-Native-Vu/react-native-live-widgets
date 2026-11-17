@@ -1248,6 +1248,57 @@ Thư viện chuẩn hóa đầy đủ 8 khả năng quản lý vòng đời cho 
 
 ---
 
+### 12.9. 🔄 Background Data Engine 2.0 & Structured Data Binding
+
+`Widget.setRemoteConfig` và `Widget.createDataBinding<T>()` cung cấp động cơ đồng bộ dữ liệu nền hoàn chỉnh ngay cả khi người dùng đã vuốt đóng (Force-Kill) ứng dụng chính:
+
+| Nhóm tính năng | Khả năng hỗ trợ Native (iOS SwiftUI + Android) |
+| :--- | :--- |
+| **REST & Auth** | `url`, `method` (`GET`/`POST`/`PUT`), `body` JSON, `headers` tùy biến, **`authRefresh`** tự động lấy Access Token mới khi gặp HTTP `401` |
+| **Mạng & Cache** | **`cacheTtlSeconds`** chống gọi lặp khi OS reload timeline, **`enableETag`** (`If-None-Match`/`If-Modified-Since` + HTTP `304 Not Modified`), **`timeoutMs`**, **`maxRetries` + `retryDelayMs`** (Exponential Backoff) |
+| **Đa nguồn & Chuẩn hóa** | **`sources`** gom nhiều API theo tiền tố `<sourceKey>.<nested.path>`, JSON Flattener lồng nhau (`user.name`, `items.0.title`), **`mapping`** & **`schema`** validation (`requiredKeys`, `types`, `defaults`) |
+| **Error State** | Biến hệ thống `{{_syncStatus}}` (`ok` / `partial` / `error`), `{{_syncError}}`, `{{_httpStatus}}` và **`errorFallback`** LayoutNode dự phòng (giữ nguyên dữ liệu cache hợp lệ khi mạng lỗi) |
+| **Structured Data Binding** | `Widget.createDataBinding<T>()` & `UI.bind(path, pipes)` hỗ trợ nested path & Pipe Transform (`default`, `divide`, `multiply`, `add`, `round`, `upper`, `lower`, `currency`, `percent`, `if`) |
+
+```tsx
+const data = Widget.createDataBinding<{
+  user: { name: string };
+  attendance: { progress: number };
+}>({
+  defaults: { user: { name: 'Nhân viên' }, attendance: { progress: 0 } },
+});
+
+await Widget.setLayout('main', {
+  medium: (
+    <VStack padding={14} spacing={6}>
+      <Text>{data.user.name}</Text>
+      <Text>{data.attendance.progress}%</Text>
+      <Progress value={data.attendance.progress.divide(100)} />
+    </VStack>
+  ),
+});
+
+await Widget.setRemoteConfig('main', {
+  cacheTtlSeconds: 300,
+  timeoutMs: 6000,
+  enableETag: true,
+  maxRetries: 2,
+  retryDelayMs: 500,
+  sources: {
+    user: { url: 'https://api.yourapp.com/me' },
+    attendance: { url: 'https://api.yourapp.com/attendance/today' },
+  },
+  schema: { requiredKeys: ['user.name', 'attendance.progress'], types: { 'attendance.progress': 'number' } },
+  authRefresh: { url: 'https://api.yourapp.com/auth/refresh', method: 'POST', tokenPath: 'accessToken' },
+  errorFallback: <Text color="#F87171">Lỗi đồng bộ ({{_httpStatus}}): {{_syncError}}</Text>,
+  refreshIntervalMinutes: 15,
+});
+```
+
+> ⚠️ **Lưu ý quan trọng về Ngân sách Reload của Hệ điều hành:** Không cam kết đồng bộ chính xác từng 15 phút khi ứng dụng bị đóng. **Apple WidgetKit** cấp phát ngân sách reload động cho mỗi Widget (thường khoảng **40–70 lần/ngày** tùy mức độ người dùng xem/tương tác; `refreshIntervalMinutes` map sang `TimelineReloadPolicy.after(...)` như mốc thời gian *sớm nhất được đề xuất*, không phải cron timer tuyệt đối). Trên **Android**, Doze Mode và App Standby Buckets có thể gom hoặc trì hoãn tác vụ nền. Với dữ liệu cần tức thì từng giây (giao hàng, tỷ số), hãy kết hợp Push APNs / FCM.
+
+---
+
 ### 🌐 Trang Web Tài Liệu Trực Tuyến & Live Simulator
 
 - **Interactive Web Documentation**: [https://react-native-vu.github.io/react-native-live-widgets/](https://react-native-vu.github.io/react-native-live-widgets/)

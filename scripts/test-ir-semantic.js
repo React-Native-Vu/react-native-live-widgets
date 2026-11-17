@@ -16,7 +16,12 @@ const path = require('path');
 
 // Run tests against the compiled lib/
 const { compileToIR, inspectIR } = require('../lib/ir');
-const { UI } = require('../lib/builder');
+const {
+  UI,
+  createDataBinding,
+  flattenDataObject,
+  resolveTemplateString,
+} = require('../lib/builder');
 const { actionHandlers } = require('../lib/dispatcher');
 
 console.log('🧪 [Test Suite] Running UI IR & Semantic Tree Test Suite...');
@@ -149,4 +154,57 @@ assert(indexDts.includes('export declare const ControlWidget'), 'lib/index.d.ts 
 assert(previewDts.includes("'control'") && previewDts.includes('controlConfig?: ControlWidgetConfig'), 'lib/preview.d.ts must include control preview size and prop');
 assert(typesDts.includes('extraLarge?: LayoutNode') && typesDts.includes('standBy?: LayoutNode'), 'lib/types.d.ts must include extraLarge and standBy');
 
-console.log('\n🎉 [Test Suite] All 8 test suites passed with 100% assertions satisfied!\n');
+// ── Test 9: Background Data Engine 2.0 & Structured Data Binding ──────────────
+console.log('   ✓ Test 9: Verifying createDataBinding, flattenDataObject & pipe transforms...');
+const data = createDataBinding({
+  defaults: { user: { name: 'Khách' }, attendance: { progress: 0 } },
+});
+
+const boundLayout = UI.VStack(
+  { padding: 14 },
+  UI.Text(data.user.name),
+  UI.Text(`${data.attendance.progress}%`),
+  UI.Progress(data.attendance.progress.divide(100)),
+  UI.Gauge(data.attendance.progress.divide(100), { label: 'KPI' }),
+  UI.Text(UI.bind('salary', { currency: '₫' }))
+);
+
+assert.strictEqual(boundLayout.children[0].props.text, '{{user.name|default:Khách}}');
+assert.strictEqual(boundLayout.children[1].props.text, '{{attendance.progress|default:0}}%');
+assert.strictEqual(boundLayout.children[2].props.value, '{{attendance.progress|default:0|divide:100}}');
+assert.strictEqual(boundLayout.children[3].props.value, '{{attendance.progress|default:0|divide:100}}');
+assert.strictEqual(boundLayout.children[4].props.text, '{{salary|currency:₫}}');
+
+const plainData = createDataBinding();
+assert.strictEqual(
+  plainData.attendance.progress.divide(100).toToken(),
+  '{{attendance.progress|divide:100}}'
+);
+
+const flatVars = flattenDataObject({
+  user: { name: 'Vũ Trần' },
+  attendance: { progress: 85, onTime: true },
+  salary: 15000000,
+  items: [{ title: 'OKR Q4' }],
+});
+assert.strictEqual(flatVars['user.name'], 'Vũ Trần');
+assert.strictEqual(flatVars['attendance.progress'], '85');
+assert.strictEqual(flatVars['attendance.onTime'], 'true');
+assert.strictEqual(flatVars['items.0.title'], 'OKR Q4');
+
+assert.strictEqual(resolveTemplateString('{{user.name|upper}}', flatVars), 'VŨ TRẦN');
+assert.strictEqual(resolveTemplateString('{{user.role|default:Nhân viên}}', flatVars), 'Nhân viên');
+assert.strictEqual(resolveTemplateString('{{attendance.progress|divide:100}}', flatVars), '0.85');
+assert.strictEqual(resolveTemplateString('{{attendance.progress|divide:100|multiply:100|round:0}}', flatVars), '85');
+assert.strictEqual(resolveTemplateString('{{attendance.progress|percent:0}}', flatVars), '85%');
+assert.strictEqual(resolveTemplateString('{{attendance.onTime|if:Đúng giờ:Đi trễ}}', flatVars), 'Đúng giờ');
+assert.strictEqual(resolveTemplateString('{{salary|currency:₫}}', flatVars), '15,000,000₫');
+
+assert(
+  typesDts.includes('cacheTtlSeconds?: number') &&
+    typesDts.includes('enableETag?: boolean') &&
+    typesDts.includes('authRefresh?: WidgetAuthRefreshConfig'),
+  'lib/types.d.ts must include Background Data Engine 2.0 fields'
+);
+
+console.log('\n🎉 [Test Suite] All 9 test suites passed with 100% assertions satisfied!\n');

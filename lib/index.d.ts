@@ -1,4 +1,5 @@
 import { ActiveActivityInfo, ControlWidgetConfig, EndActivityOptions, LiveActivityPushTokens, LiveActivityStateEvent, StartActivityOptions, UpdateActivityOptions, WidgetCapabilities, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig, WidgetIR } from './types';
+import { createDataBinding } from './builder';
 import { ActionHandler, GlobalActionHandler, registerAction, registerActionHandler, unregisterAction } from './dispatcher';
 export type { ActionHandler, GlobalActionHandler };
 export { registerAction, registerActionHandler, unregisterAction };
@@ -158,15 +159,27 @@ export declare const Widget: {
      */
     setSelectedConfiguration: (widgetKey: string, selectedId: string, appGroup?: string) => Promise<boolean>;
     /**
-     * Cấu hình Endpoint API để bản thân Widget Extension tự chạy ngầm lấy dữ liệu mới
-     * theo chu kỳ (`getTimeline`) hoặc khi bấm nút `actionId: 'refresh'` trên mặt Widget,
-     * kể cả khi người dùng đã vuốt tắt (Kill) hoàn toàn ứng dụng chính!
+     * Cấu hình Background Data Engine 2.0 để Widget Extension tự gọi API ngầm (REST, Custom Headers,
+     * Cache TTL, ETag/304, Retry/Backoff, Timeout, Multiple Sources, Data Transform, Schema Validation,
+     * Auth Token Refresh & Error State) kể cả khi App chính đã bị đóng hoàn toàn.
+     *
+     * Lưu ý hệ điều hành: Apple WidgetKit quản lý ngân sách reload động (~40–70 lần/ngày tùy mức sử dụng,
+     * `refreshIntervalMinutes` chỉ là mốc sớm nhất đề xuất chứ không cam kết chạy đúng mỗi 15 phút khi app đóng);
+     * Android cũng áp dụng Doze Mode / App Standby cho background task.
      *
      * Hỗ trợ gọi linh hoạt:
-     * - `Widget.setRemoteConfig('main', { url, refreshIntervalMinutes }, appGroup?)`
-     * - `Widget.setRemoteConfig({ url, intervalMinutes }, appGroup?)` (tự động gán widgetKey = 'main')
+     * - `Widget.setRemoteConfig('main', config, appGroup?)`
+     * - `Widget.setRemoteConfig(config, appGroup?)` (tự động gán widgetKey = 'main')
      */
     setRemoteConfig: (widgetKeyOrConfig: string | WidgetRemoteConfig, remoteConfigOrAppGroup?: WidgetRemoteConfig | string, maybeAppGroup?: string) => Promise<boolean>;
+    /**
+     * Tạo Proxy Data Binding có cấu trúc & gợi ý kiểu TypeScript cho JSX/DSL Widget (`data.user.name`, `data.attendance.progress.divide(100)`).
+     */
+    createDataBinding: typeof createDataBinding;
+    /**
+     * Tạo chuỗi token binding (`{{path|pipe}}`) cho hệ thống Background Data Engine 2.0.
+     */
+    bind: (path: string, pipes?: import("./types").WidgetDataPipeOptions) => string;
     /** Đăng ký lắng nghe tương tác nút bấm từ Widget theo `actionId` */
     registerAction: typeof registerAction;
     /** Đăng ký lắng nghe toàn cục tất cả tương tác nút bấm từ Widget (alias) */

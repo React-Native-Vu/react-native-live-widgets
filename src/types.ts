@@ -250,8 +250,8 @@ export interface ProgressNode extends BaseNode {
     startTimestamp?: number;
     /** Mốc kết thúc (epoch giây) */
     targetTimestamp?: number;
-    /** Giá trị cố định từ 0.0 đến 1.0 (nếu không dùng timer) */
-    value?: number;
+    /** Giá trị cố định từ 0.0 đến 1.0 hoặc biểu thức binding (vd '{{attendance.progress|divide:100}}') */
+    value?: number | string | DataBindingField<any>;
 
     // ── 2. Kiểu dáng hiển thị (Style & Shape) ───────────────────
     /** 'bar': thanh liền mạch | 'segmented': thanh nhiều chặng | 'circular': vòng tròn % */
@@ -438,8 +438,8 @@ export interface DividerNode extends BaseNode {
 export interface GaugeNode extends BaseNode {
   type: 'Gauge';
   props: AccessibilityProps & {
-    /** Giá trị tiến độ từ 0.0 đến 1.0 */
-    value: number;
+    /** Giá trị tiến độ từ 0.0 đến 1.0 hoặc biểu thức binding */
+    value: number | string | DataBindingField<any>;
     /** Chuỗi hiển thị chính giữa đồng hồ (vd "85%", "120 km/h", "420") */
     valueText?: string;
     /** Nhãn phụ bên dưới đồng hồ (vd "KPI", "Kcal", "AQI") */
@@ -775,18 +775,120 @@ export interface WidgetConfigOption {
   icon?: string;
 }
 
-export interface WidgetRemoteConfig {
-  /** URL API mà Widget Extension sẽ tự gọi ngầm (kể cả khi người dùng đã kill App chính) */
+export interface WidgetDataSchema {
+  /** Danh sách các key bắt buộc phải có trong dữ liệu sau khi flatten (vd ['user.name', 'attendance.progress']) */
+  requiredKeys?: string[];
+  /** Kiểm tra kiểu giá trị cơ bản của các key */
+  types?: Record<string, 'string' | 'number' | 'boolean'>;
+  /** Giá trị mặc định bù vào nếu key bị thiếu hoặc null */
+  defaults?: Record<string, string | number | boolean>;
+}
+
+export interface WidgetAuthRefreshConfig {
+  /** Endpoint cấp lại Access Token khi request chính gặp HTTP 401 */
   url: string;
+  method?: 'POST' | 'GET';
+  headers?: Record<string, string>;
+  body?: string | Record<string, any>;
+  /** Đường dẫn JSON lấy token mới từ phản hồi (mặc định 'accessToken' hoặc 'token') */
+  tokenPath?: string;
+  /** Tên header gắn token mới (mặc định 'Authorization') */
+  headerName?: string;
+  /** Tiền tố giá trị header (mặc định 'Bearer ') */
+  headerPrefix?: string;
+}
+
+export interface WidgetRemoteSourceConfig {
+  url: string;
+  method?: 'GET' | 'POST' | 'PUT';
+  headers?: Record<string, string>;
+  body?: string | Record<string, any>;
+  timeoutMs?: number;
+  enableETag?: boolean;
+}
+
+export interface WidgetRemoteConfig {
+  /** URL API chính mà Widget Extension sẽ tự gọi ngầm (kể cả khi App chính đã bị kill) */
+  url?: string;
   /** HTTP Method (mặc định 'GET') */
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PUT';
+  /** Payload gửi kèm cho POST / PUT */
+  body?: string | Record<string, any>;
   /** Headers xác thực (ví dụ { Authorization: 'Bearer ...' }) */
   headers?: Record<string, string>;
-  /** Chu kỳ tự động gọi lại API tính bằng phút (mặc định 15 phút) */
+  /** Thời gian chờ phản hồi mạng tính bằng mili-giây (mặc định 8000ms) */
+  timeoutMs?: number;
+  /** Thời gian sống của cache (giây) để tránh gọi API liên tục khi OS reload timeline */
+  cacheTtlSeconds?: number;
+  /** Bật Conditional Request qua header If-None-Match / If-Modified-Since & HTTP 304 */
+  enableETag?: boolean;
+  /** Số lần thử lại tối đa khi lỗi mạng hoặc HTTP 5xx (mặc định 0, exponential backoff) */
+  maxRetries?: number;
+  /** Độ trễ gốc (ms) cho lần retry đầu tiên (mặc định 500ms) */
+  retryDelayMs?: number;
+  /** Gọi đồng thời nhiều nguồn API, biến được gộp theo tiền tố `<sourceKey>.<path>` */
+  sources?: Record<string, WidgetRemoteSourceConfig>;
+  /** Ánh xạ tên biến đích: { targetKey: 'source.path|pipe' } */
+  mapping?: Record<string, string>;
+  /** Kiểm định dữ liệu trước khi cập nhật biến hiển thị trên Widget */
+  schema?: WidgetDataSchema;
+  /** Cấu hình tự động làm mới token nếu API trả HTTP 401 */
+  authRefresh?: WidgetAuthRefreshConfig;
+  /** Layout hiển thị dự phòng khi đồng bộ lỗi (hoặc dùng biến `{{_syncStatus}}`, `{{_syncError}}`, `{{_httpStatus}}`) */
+  errorFallback?: LayoutNode;
+  /**
+   * Mốc thời gian đề xuất sớm nhất (phút) cho OS tải lại timeline.
+   * Lưu ý: iOS WidgetKit dùng ngân sách động (~40–70 lần/ngày) và Android có Doze Mode,
+   * nên đây không phải cam kết đồng bộ chính xác từng phút khi app đóng.
+   */
   refreshIntervalMinutes?: number;
   /** Alias ngắn gọn cho refreshIntervalMinutes */
   intervalMinutes?: number;
 }
+
+// ─── 13B. STRUCTURED DATA BINDING ────────────────────────────────────────────
+
+export interface WidgetDataPipeOptions {
+  default?: string | number | boolean;
+  divide?: number;
+  multiply?: number;
+  add?: number;
+  round?: number;
+  upper?: boolean;
+  lower?: boolean;
+  currency?: string;
+  percent?: number;
+  ifTruthy?: [string | number, (string | number)?];
+}
+
+export interface DataBindingMethods<V = any> {
+  readonly __isDataBinding: true;
+  readonly __bindingPath: string;
+  readonly __bindingPipes: string[];
+  toToken(): string;
+  toString(): string;
+  valueOf(): string;
+  toJSON(): string;
+  default(fallback: string | number | boolean): DataBindingField<V>;
+  divide(divisor: number): DataBindingField<number>;
+  multiply(factor: number): DataBindingField<number>;
+  add(offset: number): DataBindingField<number>;
+  round(decimals?: number): DataBindingField<number>;
+  upper(): DataBindingField<string>;
+  lower(): DataBindingField<string>;
+  currency(symbol?: string): DataBindingField<string>;
+  percent(decimals?: number): DataBindingField<string>;
+  ifTruthy(thenValue: string | number, elseValue?: string | number): DataBindingField<string>;
+}
+
+export type DataBindingField<T = any> = DataBindingMethods<T> &
+  (T extends Array<infer U>
+    ? { readonly [index: number]: DataBindingField<U> }
+    : T extends object
+    ? { readonly [K in keyof T]-?: DataBindingField<T[K]> }
+    : unknown);
+
+export type DataBindingProxy<T = Record<string, any>> = DataBindingField<T>;
 
 export interface LiveActivityPushTokens {
   /** Token APNs của thiết bị (Device Token 64-hex chars) dùng cho Push Notification / Silent Push */

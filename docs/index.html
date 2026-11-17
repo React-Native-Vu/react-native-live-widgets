@@ -1413,23 +1413,60 @@ const saved = await SharedStorage.get('pending_checkin', 'group.com.yourapp');</
           </div>
         </div>
 
-        <!-- Remote API Sync -->
-        <div id="api-remote-sync" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-4">
+        <!-- Remote API Sync & Background Data Engine 2.0 -->
+        <div id="api-remote-sync" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-5">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <h3 class="text-lg font-bold text-white">4. Đồng bộ API Ngầm kể cả khi Kill App (<code>Widget.setRemoteConfig</code>)</h3>
+            <h3 class="text-lg font-bold text-white">4. Background Data Engine 2.0 &amp; Structured Data Binding</h3>
             <span class="text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2.5 py-1 rounded-full">URLSession &amp; AlarmManager</span>
           </div>
           <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Khi App bị vuốt tắt hoàn toàn, Native Extension sẽ tự gọi API định kỳ theo <code>refreshIntervalMinutes</code> (alias <code>intervalMinutes</code>) hoặc ngay khi người dùng bấm nút <code>actionId: 'refresh'</code>, điền JSON trả về vào các biến <code>{{ten_bien}}</code> và tự động cập nhật biến hệ thống <code>{{_lastSyncTime}}</code> (<code>HH:mm:ss</code>).
-            <em>Lưu ý: iOS cấp hạn mức ~40–70 lần reload/ngày (WidgetKit Budget) và Android Doze Mode gom tác vụ nền; nếu cần cập nhật từng giây, hãy kết hợp Server Push APNs/FCM.</em>
+            Hỗ trợ đầy đủ REST (<code>GET</code>/<code>POST</code>/<code>PUT</code> + <code>body</code>), <code>headers</code>, <code>timeoutMs</code>, <code>cacheTtlSeconds</code>, <code>enableETag</code> (gửi <code>If-None-Match</code> &amp; xử lý HTTP <code>304 Not Modified</code>), <code>maxRetries</code> / <code>retryDelayMs</code> (Exponential Backoff), đa nguồn <code>sources</code>, chuẩn hóa <code>mapping</code> &amp; Pipe Transform, kiểm định <code>schema</code>, tự làm mới token <code>authRefresh</code> khi gặp HTTP <code>401</code>, biến lỗi <code>{{_syncStatus}}</code> / <code>{{_syncError}}</code> / <code>{{_httpStatus}}</code> + <code>errorFallback</code> và Proxy gợi ý kiểu <code>Widget.createDataBinding&lt;T&gt;()</code>.
           </p>
+          <div class="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3.5 text-xs text-amber-200 leading-relaxed">
+            <strong>⚠️ Lưu ý bắt buộc về Ngân sách Reload của OS:</strong> Không cam kết đồng bộ chính xác mỗi 15 phút khi app bị đóng. Apple WidgetKit sử dụng ngân sách reload động (thường khoảng <strong>40–70 lần/ngày</strong> tùy hành vi người dùng; <code>refreshIntervalMinutes</code> chỉ là mốc thời gian sớm nhất được đề xuất). Android cũng áp dụng giới hạn <em>Doze Mode</em> &amp; <em>App Standby Buckets</em> cho tác vụ nền.
+          </div>
           <div class="relative">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
-            <pre><code class="language-typescript">await Widget.setRemoteConfig('main', {
-  url: 'https://api.yourcompany.com/v1/widget-summary',
-  method: 'GET',
-  headers: { Authorization: `Bearer ${accessToken}` },
-  refreshIntervalMinutes: 15, // Chu kỳ gợi ý cho OS
+            <pre><code class="language-tsx">// 1. Structured Data Binding + Pipe Transform trực tiếp trong TSX
+const data = Widget.createDataBinding&lt;{
+  user: { name: string };
+  attendance: { progress: number };
+}&gt;({
+  defaults: { user: { name: 'Nhân viên' }, attendance: { progress: 0 } },
+});
+
+await Widget.setLayout('main', {
+  medium: (
+    &lt;VStack padding={14} spacing={6}&gt;
+      &lt;Text&gt;{data.user.name}&lt;/Text&gt;
+      &lt;Text&gt;{data.attendance.progress}%&lt;/Text&gt;
+      &lt;Progress value={data.attendance.progress.divide(100)} /&gt;
+    &lt;/VStack&gt;
+  ),
+});
+
+// 2. Cấu hình Background Data Engine 2.0 (TTL, ETag, Retry, Multi-source, Schema, Auth Refresh)
+await Widget.setRemoteConfig('main', {
+  cacheTtlSeconds: 300,
+  timeoutMs: 6000,
+  enableETag: true,
+  maxRetries: 2,
+  retryDelayMs: 500,
+  sources: {
+    user: { url: 'https://api.yourcompany.com/v1/me' },
+    attendance: { url: 'https://api.yourcompany.com/v1/attendance/today' },
+  },
+  schema: {
+    requiredKeys: ['user.name', 'attendance.progress'],
+    types: { 'attendance.progress': 'number' },
+  },
+  authRefresh: {
+    url: 'https://api.yourcompany.com/v1/auth/refresh',
+    method: 'POST',
+    tokenPath: 'accessToken',
+  },
+  errorFallback: &lt;Text color="#F87171"&gt;Lỗi {{_httpStatus}}: {{_syncError}}&lt;/Text&gt;,
+  refreshIntervalMinutes: 15, // Mốc gợi ý sớm nhất theo OS WidgetKit Budget
 }, 'group.com.yourcompany.app');</code></pre>
           </div>
         </div>
