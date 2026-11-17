@@ -852,6 +852,30 @@ export interface WidgetIR {
  */
 export type WidgetFamily = 'systemSmall' | 'systemMedium' | 'systemLarge' | 'systemExtraLarge' | 'accessoryCircular' | 'accessoryRectangular' | 'accessoryInline';
 /**
+ * Cấu hình hệ thống đa ngôn ngữ (i18n) cho Widgets.
+ * Tự động đồng bộ các bản dịch JSON (i18next) sang Apple String Catalog (Localizable.xcstrings / Localizable.strings).
+ */
+export interface WidgetsI18nConfig {
+    /**
+     * Đường dẫn tới thư mục chứa các file ngôn ngữ (ví dụ: './src/locales' hoặc './locales').
+     * Hệ thống sẽ tự động quét các file .json như vi.json, en.json, ja.json...
+     */
+    localesDir?: string;
+    /**
+     * Ngôn ngữ nguồn / mặc định (mặc định: 'vi')
+     */
+    defaultLocale?: string;
+    /**
+     * Khai báo bản đồ dịch trực tiếp (inline translations) thay cho hoặc bổ trợ cho file JSON.
+     * Ví dụ: { vi: { 'widgets.title': 'Tiêu đề' }, en: { 'widgets.title': 'Title' } }
+     */
+    translations?: Record<string, Record<string, any>>;
+}
+/**
+ * Kiểu chuỗi bản địa hóa đa ngôn ngữ: có thể là 1 string đơn, 1 i18n key hoặc 1 object đa ngôn ngữ.
+ */
+export type LocalizedString = string | Record<string, string>;
+/**
  * Cấu hình một Widget trên Màn hình chính (Home Screen Widget)
  */
 export interface WidgetDefinition {
@@ -866,13 +890,18 @@ export interface WidgetDefinition {
      */
     key?: string;
     /**
-     * Tên hiển thị của Widget trong thư viện Widget trên iOS / Android
+     * Tên hiển thị của Widget trong thư viện Widget trên iOS / Android.
+     * Có thể truyền:
+     * - Một i18n key (ví dụ: 'widgets.counter.title')
+     * - Hoặc chuỗi hiển thị trực tiếp
+     * - Hoặc Object đa ngôn ngữ: { vi: '...', en: '...', ja: '...' }
      */
-    displayName: string;
+    displayName: LocalizedString;
     /**
-     * Mô tả tính năng của Widget hiển thị cho người dùng khi chọn thêm vào Màn hình chính
+     * Mô tả tính năng của Widget hiển thị cho người dùng khi chọn thêm vào Màn hình chính.
+     * Có thể truyền key i18n, chuỗi trực tiếp hoặc Object đa ngôn ngữ.
      */
-    description?: string;
+    description?: LocalizedString;
     /**
      * Các kích thước Widget được phép thêm (mặc định hỗ trợ tất cả các cỡ system + accessory)
      */
@@ -890,6 +919,10 @@ export interface WidgetsProjectConfig {
      * Tên bundle Swift (mặc định: 'LiveWidgetsBundle')
      */
     bundleName?: string;
+    /**
+     * Cấu hình đa ngôn ngữ i18n (tự động đồng bộ với i18next JSON hoặc Object đa ngôn ngữ)
+     */
+    i18n?: WidgetsI18nConfig;
     /**
      * Bật tiện ích Live Activity & Dynamic Island (iOS 16.1+)
      * Mặc định: true

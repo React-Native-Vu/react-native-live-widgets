@@ -247,4 +247,45 @@ assert(swiftCode.includes('DynamicWidgetProvider(widgetKey: "counter")'));
 assert(swiftCode.includes('.supportedFamilies([.systemSmall, .systemMedium])'));
 assert(swiftCode.includes('.applyStandByMargins()'));
 
-console.log('\n🎉 [Test Suite] All 10 test suites passed with 100% assertions satisfied!\n');
+// ── Test 11: i18n Catalog & String Catalog Generator ─────────────────────────
+console.log('   ✓ Test 11: Verifying i18n Catalog & LocalizedStringKey...');
+const { buildI18nCatalog, flattenObject } = require('../cli/codegen');
+const flatTest = flattenObject({
+  widgets: {
+    counter: { title: 'Bộ đếm', desc: 'Bấm nút để đếm' },
+  },
+});
+assert.strictEqual(flatTest['widgets.counter.title'], 'Bộ đếm');
+assert.strictEqual(flatTest['widgets.counter.desc'], 'Bấm nút để đếm');
+
+const i18nTestConfig = {
+  i18n: {
+    defaultLocale: 'vi',
+    translations: {
+      vi: { 'widgets.counter.title': 'Bộ đếm (VI)' },
+      en: { 'widgets.counter.title': 'Counter (EN)' },
+    },
+  },
+  widgets: [
+    {
+      key: 'counter',
+      displayName: 'widgets.counter.title',
+      description: {
+        vi: 'Mô tả tiếng Việt',
+        en: 'English description',
+      },
+    },
+  ],
+};
+
+const { catalog, defaultLocale } = buildI18nCatalog(process.cwd(), i18nTestConfig);
+assert.strictEqual(catalog.vi['widgets.counter.title'], 'Bộ đếm (VI)');
+assert.strictEqual(catalog.en['widgets.counter.title'], 'Counter (EN)');
+assert.strictEqual(catalog.vi['widget.counter.desc'], 'Mô tả tiếng Việt');
+assert.strictEqual(catalog.en['widget.counter.desc'], 'English description');
+
+const i18nSwiftCode = generateSwiftSource(i18nTestConfig, catalog, defaultLocale);
+assert(i18nSwiftCode.includes('.configurationDisplayName(LocalizedStringKey("widgets.counter.title"))'));
+assert(i18nSwiftCode.includes('.description(LocalizedStringKey("widget.counter.desc"))'));
+
+console.log('\n🎉 [Test Suite] All 11 test suites passed with 100% assertions satisfied!\n');

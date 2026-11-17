@@ -4,8 +4,10 @@
  * TypeScript-Driven WidgetKit Codegen for react-native-live-widgets
  * 
  * Tự động đọc file cấu hình widgets.config.ts (hoặc .js / .json)
- * và sinh ra file mã nguồn Swift hoàn chỉnh (LiveWidgetsBundle.swift)
- * mà không cần phải viết Swift thủ công.
+ * và sinh ra:
+ * 1. File mã nguồn Swift hoàn chỉnh (LiveWidgetsBundle.swift)
+ * 2. Tự động liên kết thư mục đa ngôn ngữ i18n (locales/*.json)
+ *    và sinh ra các file Localizable.strings / Localizable.xcstrings cho iOS Extension.
  * 
  * Usage:
  *   npx react-native-live-widgets codegen
@@ -25,6 +27,24 @@ function toPascalCase(text) {
 function escapeSwiftString(str) {
   if (!str) return '';
   return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+/**
+ * Làm phẳng object lồng nhau (flatten JSON):
+ * { widgets: { counter: { title: "A" } } } -> { "widgets.counter.title": "A" }
+ */
+function flattenObject(obj, prefix = '') {
+  const result = {};
+  if (!obj || typeof obj !== 'object') return result;
+  for (const [key, val] of Object.entries(obj)) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      Object.assign(result, flattenObject(val, fullKey));
+    } else if (val !== undefined && val !== null) {
+      result[fullKey] = String(val);
+    }
+  }
+  return result;
 }
 
 /**
@@ -132,13 +152,159 @@ function loadWidgetsConfig(projectRoot, customConfigPath = null) {
 }
 
 /**
+ * Xây dựng Catalog bản dịch i18n từ thư mục locales JSON và inline translations
+ */
+function buildI18nCatalog(projectRoot, config) {
+  const i18nConfig = config.i18n || {};
+  const defaultLocale = i18nConfig.defaultLocale || 'vi';
+  const catalog = {};
+
+  const ensureLocale = (loc) => {
+    if (!catalog[loc]) catalog[loc] = {};
+  };
+
+  ensureLocale(defaultLocale);
+
+  // 1. Đọc từ thư mục localesDir
+  if (i18nConfig.localesDir) {
+    const localesFullPath = path.isAbsolute(i18nConfig.localesDir)
+      ? i18nConfig.localesDir
+      : path.join(projectRoot, i18nConfig.localesDir);
+
+    if (fs.existsSync(localesFullPath)) {
+      const files = fs.readdirSync(localesFullPath);
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          const locale = path.basename(file, '.json');
+          ensureLocale(locale);
+          try {
+            const raw = fs.readFileSync(path.join(localesFullPath, file), 'utf8');
+            const parsed = JSON.parse(raw);
+            const flat = flattenObject(parsed);
+            Object.assign(catalog[locale], flat);
+          } catch (e) {
+            console.warn(`⚠️ [i18n] Không thể đọc file dịch ${file}:`, e.message);
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Đọc từ translations inline
+  if (i18nConfig.translations) {
+    for (const [loc, dict] of Object.entries(i18nConfig.translations)) {
+      ensureLocale(loc);
+      const flat = flattenObject(dict);
+      Object.assign(catalog[loc], flat);
+    }
+  }
+
+  // 3. Đọc từ từng widget nếu khai báo object inline: { vi: '...', en: '...' }
+  const widgets = Array.isArray(config.widgets) ? config.widgets : [];
+  for (const w of widgets) {
+    const key = w.key || 'main';
+
+    if (w.displayName && typeof w.displayName === 'object') {
+      const transKey = `widget.${key}.title`;
+      for (const [loc, val] of Object.entries(w.displayName)) {
+        ensureLocale(loc);
+        catalog[loc][transKey] = String(val);
+      }
+      w._resolvedDisplayNameKey = transKey;
+    }
+
+    if (w.description && typeof w.description === 'object') {
+      const descKey = `widget.${key}.desc`;
+      for (const [loc, val] of Object.entries(w.description)) {
+        ensureLocale(loc);
+        catalog[loc][descKey] = String(val);
+      }
+      w._resolvedDescriptionKey = descKey;
+    }
+  }
+
+  return { catalog, defaultLocale };
+}
+
+/**
+ * Xuất các file Localizable.strings và Localizable.xcstrings cho iOS Extension target
+ */
+function writeI18nFiles(targetDir, catalog, defaultLocale) {
+  const locales = Object.keys(catalog);
+  if (locales.length === 0) return;
+
+  // 1. Tạo các thư mục {lang}.lproj/Localizable.strings
+  for (const loc of locales) {
+    const lprojDir = path.join(targetDir, `${loc}.lproj`);
+    if (!fs.existsSync(lprojDir)) {
+      fs.mkdirSync(lprojDir, { recursive: true });
+    }
+    const stringsPath = path.join(lprojDir, 'Localizable.strings');
+    const lines = [
+      '/*',
+      ' * Localizable.strings',
+      ' * Generated automatically by react-native-live-widgets. DO NOT EDIT DIRECTLY.',
+      ` * Language: ${loc}`,
+      ' */',
+      '',
+    ];
+
+    const entries = Object.entries(catalog[loc]);
+    for (const [key, value] of entries) {
+      const escapedKey = escapeSwiftString(key);
+      const escapedVal = escapeSwiftString(value);
+      lines.push(`"${escapedKey}" = "${escapedVal}";`);
+    }
+    lines.push('');
+    fs.writeFileSync(stringsPath, lines.join('\n'), 'utf8');
+  }
+
+  // 2. Tạo file String Catalog: Localizable.xcstrings (Chuẩn Apple hiện đại iOS 16+)
+  const allKeys = new Set();
+  for (const loc of locales) {
+    Object.keys(catalog[loc]).forEach((k) => allKeys.add(k));
+  }
+
+  const xcstringsData = {
+    sourceLanguage: defaultLocale,
+    strings: {},
+    version: '1.0',
+  };
+
+  for (const key of allKeys) {
+    const localizations = {};
+    for (const loc of locales) {
+      if (catalog[loc] && catalog[loc][key] !== undefined) {
+        localizations[loc] = {
+          stringUnit: {
+            state: 'translated',
+            value: catalog[loc][key],
+          },
+        };
+      }
+    }
+    xcstringsData.strings[key] = {
+      localizations,
+    };
+  }
+
+  const xcstringsPath = path.join(targetDir, 'Localizable.xcstrings');
+  fs.writeFileSync(xcstringsPath, JSON.stringify(xcstringsData, null, 2), 'utf8');
+
+  console.log(`🌐 Đã tự động tạo các bản dịch iOS (${locales.join(', ')})`);
+  console.log(`   - String Catalog: ${path.basename(targetDir)}/Localizable.xcstrings`);
+}
+
+/**
  * Sinh mã nguồn Swift từ cấu hình
  */
-function generateSwiftSource(config) {
+function generateSwiftSource(config, catalog = {}, defaultLocale = 'vi') {
   const bundleName = config.bundleName || 'LiveWidgetsBundle';
   const enableLiveActivity = config.liveActivity !== false;
   const enableControlWidgets = config.controlWidgets !== false;
   const widgets = Array.isArray(config.widgets) ? config.widgets : [];
+
+  const defaultDict = catalog[defaultLocale] || {};
 
   const processedWidgets = widgets.map((w, index) => {
     const key = w.key || (index === 0 ? 'main' : `widget_${index}`);
@@ -147,8 +313,19 @@ function generateSwiftSource(config) {
       const base = toPascalCase(key);
       kind = base.endsWith('HomeScreenWidget') ? base : `${base}HomeScreenWidget`;
     }
-    const displayName = escapeSwiftString(w.displayName || `Tiện ích ${key}`);
-    const description = escapeSwiftString(w.description || '');
+
+    // Xử lý displayName (key i18n hoặc plain string)
+    let displayNameKey = w._resolvedDisplayNameKey || w.displayName || `Tiện ích ${key}`;
+    if (typeof displayNameKey === 'object') {
+      displayNameKey = displayNameKey[defaultLocale] || Object.values(displayNameKey)[0] || `Tiện ích ${key}`;
+    }
+
+    // Xử lý description (key i18n hoặc plain string)
+    let descriptionKey = w._resolvedDescriptionKey || w.description || '';
+    if (typeof descriptionKey === 'object') {
+      descriptionKey = descriptionKey[defaultLocale] || Object.values(descriptionKey)[0] || '';
+    }
+
     const standbyMargins = Boolean(w.standbyMargins);
 
     let supportedFamiliesCode = 'commonFamilies';
@@ -159,11 +336,15 @@ function generateSwiftSource(config) {
       supportedFamiliesCode = `[${familiesList}]`;
     }
 
+    // Lấy tiêu đề hiển thị cho comment code Swift
+    const commentTitle = defaultDict[displayNameKey] || displayNameKey;
+
     return {
       key,
       kind,
-      displayName,
-      description,
+      displayNameKey: escapeSwiftString(displayNameKey),
+      descriptionKey: escapeSwiftString(descriptionKey),
+      commentTitle: escapeSwiftString(commentTitle),
       supportedFamiliesCode,
       standbyMargins,
     };
@@ -223,7 +404,7 @@ function generateSwiftSource(config) {
 
   // 2. Định nghĩa từng Widget struct
   processedWidgets.forEach((w, idx) => {
-    lines.push(`// ── ${idx + 1}. TIỆN ÍCH: ${w.displayName.toUpperCase()} (KEY: "${w.key}") ──`);
+    lines.push(`// ── ${idx + 1}. TIỆN ÍCH: ${w.commentTitle.toUpperCase()} (KEY: "${w.key}") ──`);
     lines.push(`struct ${w.kind}: Widget {`);
     lines.push(`  let kind: String = "${w.kind}"`);
     lines.push('');
@@ -231,9 +412,9 @@ function generateSwiftSource(config) {
     lines.push(`    StaticConfiguration(kind: kind, provider: DynamicWidgetProvider(widgetKey: "${w.key}")) { entry in`);
     lines.push('      DynamicHomeScreenWidgetView(entry: entry)');
     lines.push('    }');
-    lines.push(`    .configurationDisplayName("${w.displayName}")`);
-    if (w.description) {
-      lines.push(`    .description("${w.description}")`);
+    lines.push(`    .configurationDisplayName(LocalizedStringKey("${w.displayNameKey}"))`);
+    if (w.descriptionKey) {
+      lines.push(`    .description(LocalizedStringKey("${w.descriptionKey}"))`);
     }
     lines.push(`    .supportedFamilies(${w.supportedFamiliesCode})`);
     if (w.standbyMargins) {
@@ -292,7 +473,7 @@ function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
   console.log('\n⚙️ [react-native-live-widgets] Khởi chạy WidgetKit Swift Codegen...');
 
   const { config, configPath } = loadWidgetsConfig(projectRoot, customConfigPath);
-  const swiftCode = generateSwiftSource(config);
+  const { catalog, defaultLocale } = buildI18nCatalog(projectRoot, config);
 
   const bundleSwiftPath = findBundleSwiftPath(projectRoot);
   if (!bundleSwiftPath) {
@@ -304,14 +485,25 @@ function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
     fs.mkdirSync(targetDir, { recursive: true });
   }
 
+  // 1. Sinh file i18n Localizable nếu có catalog
+  if (Object.keys(catalog).length > 0) {
+    writeI18nFiles(targetDir, catalog, defaultLocale);
+  }
+
+  // 2. Sinh mã nguồn Swift
+  const swiftCode = generateSwiftSource(config, catalog, defaultLocale);
   fs.writeFileSync(bundleSwiftPath, swiftCode, 'utf8');
 
   console.log(`✅ Đã tự động sinh file Swift thành công!`);
   console.log(`📍 Đích: ${path.relative(projectRoot, bundleSwiftPath)}`);
   console.log(`📊 Số lượng Widget đã đăng ký: ${(config.widgets || []).length}`);
   if (config.widgets && config.widgets.length > 0) {
+    const defaultDict = catalog[defaultLocale] || {};
     config.widgets.forEach((w, i) => {
-      console.log(`   ${i + 1}. [${w.key || 'main'}] ${w.displayName}`);
+      const rawName = w.displayName;
+      const keyName = typeof rawName === 'object' ? rawName[defaultLocale] : rawName;
+      const resolved = defaultDict[keyName] || keyName;
+      console.log(`   ${i + 1}. [${w.key || 'main'}] ${resolved} (${keyName})`);
     });
   }
   console.log('🎉 Sẵn sàng! Không cần phải sửa file Swift thủ công nữa.\n');
@@ -339,4 +531,6 @@ module.exports = {
   runCodegen,
   generateSwiftSource,
   loadWidgetsConfig,
+  buildI18nCatalog,
+  flattenObject,
 };
