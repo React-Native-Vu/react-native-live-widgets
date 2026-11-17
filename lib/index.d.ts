@@ -305,4 +305,8 @@ export * from './hooks';
  * để tự động tạo file LiveWidgetsBundle.swift cho iOS WidgetKit.
  */
 export declare function defineWidgetsConfig<T extends import('./types').WidgetsProjectConfig>(config: T): T;
+/**
+ * Alias cho `defineWidgetsConfig` (hỗ trợ cả dạng số ít và số nhiều)
+ */
+export declare const defineWidgetConfig: typeof defineWidgetsConfig;
 //# sourceMappingURL=index.d.ts.map

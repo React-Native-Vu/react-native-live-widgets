@@ -1134,3 +1134,8 @@ export * from './hooks';
 export function defineWidgetsConfig<T extends import('./types').WidgetsProjectConfig>(config: T): T {
   return config;
 }
+
+/**
+ * Alias cho `defineWidgetsConfig` (hỗ trợ cả dạng số ít và số nhiều)
+ */
+export const defineWidgetConfig = defineWidgetsConfig;
