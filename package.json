@@ -33,12 +33,14 @@
     "LICENSE"
   ],
   "bin": {
-    "react-native-live-widgets": "cli/setup.js"
+    "react-native-live-widgets": "cli/setup.js",
+    "live-widgets-codegen": "cli/codegen.js"
   },
   "scripts": {
     "build": "node scripts/build.js",
     "test": "node scripts/test-ir-semantic.js",
     "typecheck": "tsc --noEmit",
+    "codegen": "node cli/codegen.js",
     "prepack": "node scripts/build.js",
     "docs:serve": "npx serve docs",
     "version:patch": "node scripts/release.js patch",

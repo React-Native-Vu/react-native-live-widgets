@@ -1125,3 +1125,12 @@ export * from './builder';
 export * from './ir';
 export { StyleSheet } from './builder';
 export * from './hooks';
+
+/**
+ * Định nghĩa cấu hình các Widget cho ứng dụng với đầy đủ Type Safety và gợi ý thuộc tính IDE.
+ * Cấu hình này được công cụ Codegen (`npx react-native-live-widgets codegen`) đọc
+ * để tự động tạo file LiveWidgetsBundle.swift cho iOS WidgetKit.
+ */
+export function defineWidgetsConfig<T extends import('./types').WidgetsProjectConfig>(config: T): T {
+  return config;
+}

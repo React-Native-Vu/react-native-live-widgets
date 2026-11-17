@@ -212,4 +212,39 @@ assert(
   'lib/types.d.ts must include Background Data Engine 2.0 fields'
 );
 
-console.log('\n🎉 [Test Suite] All 9 test suites passed with 100% assertions satisfied!\n');
+// ── Test 10: Widget Codegen Swift Generator ──────────────────────────────────
+console.log('   ✓ Test 10: Verifying TypeScript-driven Swift Codegen (generateSwiftSource)...');
+const { generateSwiftSource } = require('../cli/codegen');
+const testConfig = {
+  bundleName: 'TestLiveWidgetsBundle',
+  liveActivity: true,
+  controlWidgets: true,
+  widgets: [
+    {
+      key: 'main',
+      kind: 'DynamicHomeScreenWidget',
+      displayName: 'Tiện ích chính',
+      description: 'Mô tả tiện ích chính',
+    },
+    {
+      key: 'counter',
+      displayName: 'Bộ đếm',
+      supportedFamilies: ['systemSmall', 'systemMedium'],
+      standbyMargins: true,
+    },
+  ],
+};
+
+const swiftCode = generateSwiftSource(testConfig);
+assert(swiftCode.includes('struct TestLiveWidgetsBundle: WidgetBundle'));
+assert(swiftCode.includes('DynamicLiveActivityWidget()'));
+assert(swiftCode.includes('DynamicHomeScreenWidget()'));
+assert(swiftCode.includes('CounterHomeScreenWidget()'));
+assert(swiftCode.includes('DynamicControlWidget()'));
+assert(swiftCode.includes('struct DynamicHomeScreenWidget: Widget'));
+assert(swiftCode.includes('struct CounterHomeScreenWidget: Widget'));
+assert(swiftCode.includes('DynamicWidgetProvider(widgetKey: "counter")'));
+assert(swiftCode.includes('.supportedFamilies([.systemSmall, .systemMedium])'));
+assert(swiftCode.includes('.applyStandByMargins()'));
+
+console.log('\n🎉 [Test Suite] All 10 test suites passed with 100% assertions satisfied!\n');

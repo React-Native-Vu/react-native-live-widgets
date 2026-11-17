@@ -1022,3 +1022,79 @@ export interface WidgetIR {
   };
   stateBindings: StateBinding[];
 }
+
+/**
+ * Danh sách kích thước Widget Family được WidgetKit hỗ trợ trên iOS:
+ */
+export type WidgetFamily =
+  | 'systemSmall'
+  | 'systemMedium'
+  | 'systemLarge'
+  | 'systemExtraLarge'
+  | 'accessoryCircular'
+  | 'accessoryRectangular'
+  | 'accessoryInline';
+
+/**
+ * Cấu hình một Widget trên Màn hình chính (Home Screen Widget)
+ */
+export interface WidgetDefinition {
+  /**
+   * Tên định danh Struct trong Swift (ví dụ: 'DynamicHomeScreenWidget', 'ShiftAttendanceHomeScreenWidget')
+   * Nếu không chỉ định, sẽ tự động sinh từ key (ví dụ: 'shift' -> 'ShiftHomeScreenWidget')
+   */
+  kind?: string;
+
+  /**
+   * Khóa định danh phân vùng dữ liệu / state của Widget (ví dụ: 'main', 'counter', 'shift', 'pro', 'workspace')
+   * Mặc định là 'main'
+   */
+  key?: string;
+
+  /**
+   * Tên hiển thị của Widget trong thư viện Widget trên iOS / Android
+   */
+  displayName: string;
+
+  /**
+   * Mô tả tính năng của Widget hiển thị cho người dùng khi chọn thêm vào Màn hình chính
+   */
+  description?: string;
+
+  /**
+   * Các kích thước Widget được phép thêm (mặc định hỗ trợ tất cả các cỡ system + accessory)
+   */
+  supportedFamilies?: WidgetFamily[];
+
+  /**
+   * Có hỗ trợ căn lề StandBy Mode (iOS 17+) không (tự che viền khi ở chế độ cắm sạc ban đêm)
+   */
+  standbyMargins?: boolean;
+}
+
+/**
+ * Cấu hình toàn bộ hệ thống Widgets cho ứng dụng (dùng trong widgets.config.ts)
+ */
+export interface WidgetsProjectConfig {
+  /**
+   * Tên bundle Swift (mặc định: 'LiveWidgetsBundle')
+   */
+  bundleName?: string;
+
+  /**
+   * Bật tiện ích Live Activity & Dynamic Island (iOS 16.1+)
+   * Mặc định: true
+   */
+  liveActivity?: boolean;
+
+  /**
+   * Bật tiện ích Điều khiển Trung tâm Control Center (iOS 18.0+)
+   * Mặc định: true
+   */
+  controlWidgets?: boolean;
+
+  /**
+   * Danh sách các Widget trên Màn hình chính (Home Screen Widgets)
+   */
+  widgets: WidgetDefinition[];
+}

@@ -21,6 +21,26 @@ const packageJsonPath = path.join(projectRoot, 'package.json');
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
+
+// Hỗ trợ subcommand: codegen / generate
+if (args[0] === 'codegen' || args[0] === 'generate') {
+  const { runCodegen } = require('./codegen');
+  let configArg = null;
+  for (let i = 1; i < args.length; i++) {
+    if (args[i] === '--config' && args[i + 1]) {
+      configArg = args[i + 1];
+      break;
+    }
+  }
+  try {
+    runCodegen(projectRoot, configArg);
+    process.exit(0);
+  } catch (error) {
+    console.error(`\n❌ [Codegen Error]: ${error.message}\n`);
+    process.exit(1);
+  }
+}
+
 let customAppGroup = null;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--group' && args[i + 1]) {
