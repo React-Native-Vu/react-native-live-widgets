@@ -219,6 +219,12 @@ import type { KnownSFSymbol } from './sf-symbols.generated';
  * Hỗ trợ Auto-Complete hơn 9,500+ biểu tượng chuẩn và cho phép nhập chuỗi tùy ý nhờ `(string & {})`.
  */
 export type SFSymbolName = KnownSFSymbol | (string & {});
+/**
+ * Danh sách gợi ý các biểu tượng Google Material Symbols & Icons chính thức trên Android.
+ * Tự động kích hoạt gợi ý Auto-Complete / IntelliSense trong IDE (VS Code, Cursor, WebStorm)
+ * và vẫn cho phép nhập bất kỳ tên Material Symbol nào khác nhờ `(string & {})`.
+ */
+export type MaterialIconName = 'trending_up' | 'trending_down' | 'bolt' | 'check' | 'check_circle' | 'check_box' | 'close' | 'cancel' | 'notifications' | 'notifications_active' | 'schedule' | 'timer' | 'alarm' | 'calendar_today' | 'event' | 'person' | 'person_outline' | 'group' | 'account_circle' | 'star' | 'star_border' | 'favorite' | 'favorite_border' | 'lock' | 'lock_open' | 'security' | 'verified' | 'shield' | 'speed' | 'play_arrow' | 'pause' | 'stop' | 'skip_next' | 'skip_previous' | 'volume_up' | 'volume_off' | 'settings' | 'tune' | 'sync' | 'refresh' | 'add' | 'add_circle' | 'remove' | 'remove_circle' | 'delete' | 'edit' | 'share' | 'search' | 'home' | 'dashboard' | 'work' | 'business' | 'shopping_cart' | 'shopping_bag' | 'payments' | 'credit_card' | 'attach_money' | 'bar_chart' | 'pie_chart' | 'show_chart' | 'mail' | 'email' | 'phone' | 'chat' | 'comment' | 'camera_alt' | 'image' | 'location_on' | 'map' | 'wifi' | 'battery_full' | 'battery_charging_full' | 'flash_on' | 'visibility' | 'visibility_off' | (string & {});
 export interface ImageNode extends BaseNode {
     type: 'Image';
     props: AccessibilityProps & {
@@ -228,8 +234,22 @@ export interface ImageNode extends BaseNode {
         base64?: string;
         /** Tên ảnh trong Xcode Assets.xcassets hoặc Android drawable */
         assetName?: string;
+        /** Tên ảnh riêng cho iOS trong Assets.xcassets */
+        iosAssetName?: string;
+        /** Tên ảnh riêng cho Android trong res/drawable */
+        androidAssetName?: string;
         /** Tên icon hệ thống SF Symbols trên iOS (ví dụ 'person.crop.circle.fill', 'flame.fill', 'cart.fill') */
         systemName?: SFSymbolName;
+        /** Tên icon SF Symbol riêng biệt cho iOS (ưu tiên cao hơn systemName trên iOS) */
+        iosSystemName?: SFSymbolName;
+        /** Alias cho iosSystemName */
+        systemNameIos?: SFSymbolName;
+        /** Tên icon Google Material Symbols riêng biệt cho Android (ưu tiên cao hơn systemName trên Android) */
+        androidSystemName?: MaterialIconName;
+        /** Alias cho androidSystemName */
+        systemNameAndroid?: MaterialIconName;
+        /** Tên icon Google Material Symbols (tương đương androidSystemName) */
+        materialName?: MaterialIconName;
         /** Đường dẫn file cục bộ trong máy */
         filePath?: string;
         /** Icon SF Symbol dự phòng khi ảnh mạng chưa tải xong hoặc lỗi */
@@ -404,6 +424,11 @@ export interface BadgeNode extends BaseNode {
     props: {
         text: string;
         systemName?: SFSymbolName;
+        iosSystemName?: SFSymbolName;
+        androidSystemName?: MaterialIconName;
+        systemNameIos?: SFSymbolName;
+        systemNameAndroid?: MaterialIconName;
+        materialName?: MaterialIconName;
         backgroundColor?: string;
         textColor?: string;
         borderColor?: string;

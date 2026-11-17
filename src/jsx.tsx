@@ -276,7 +276,16 @@ export function renderToWidget(element: any): LayoutNode | null {
     }
     if (isComp(Image, 'Image')) {
       return UI.Image(
-        restProps.url || restProps.base64 || restProps.systemName || restProps.source || '',
+        restProps.url ||
+          restProps.base64 ||
+          restProps.iosSystemName ||
+          restProps.systemNameIos ||
+          restProps.androidSystemName ||
+          restProps.systemNameAndroid ||
+          restProps.materialName ||
+          restProps.systemName ||
+          restProps.source ||
+          '',
         restProps
       );
     }
