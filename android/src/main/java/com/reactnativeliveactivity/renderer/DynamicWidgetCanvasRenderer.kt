@@ -794,14 +794,33 @@ object DynamicWidgetCanvasRenderer {
                     paint.color = parseHexColor(tintHex, Color.BLUE)
                     paint.textSize = min(w, h) * 0.48f
                     paint.textAlign = Paint.Align.CENTER
-                    val symbol = props?.optString("systemName", "") ?: ""
+                    val symbol = (props?.optString("systemName", "") ?: "").lowercase()
                     val glyph = when {
-                        symbol.contains("person") -> "👤"
-                        symbol.contains("sparkle") -> "✨"
+                        symbol.contains("bolt") -> "⚡"
+                        symbol.contains("chart") -> "📈"
+                        symbol.contains("clock") || symbol.contains("timer") || symbol.contains("stopwatch") -> "⏱️"
+                        symbol.contains("calendar") -> "📅"
                         symbol.contains("check") -> "✓"
+                        symbol.contains("xmark") -> "✕"
+                        symbol.contains("person") -> "👤"
                         symbol.contains("bell") -> "🔔"
-                        symbol.contains("heart") -> "💜"
+                        symbol.contains("flame") -> "🔥"
                         symbol.contains("star") -> "★"
+                        symbol.contains("heart") -> "💜"
+                        symbol.contains("sparkle") -> "✨"
+                        symbol.contains("trophy") || symbol.contains("medal") -> "🏆"
+                        symbol.contains("target") -> "🎯"
+                        symbol.contains("shield") || symbol.contains("lock") -> "🔒"
+                        symbol.contains("plus") -> "➕"
+                        symbol.contains("minus") -> "➖"
+                        symbol.contains("play") -> "▶️"
+                        symbol.contains("pause") -> "⏸️"
+                        symbol.contains("wifi") -> "📶"
+                        symbol.contains("battery") -> "🔋"
+                        symbol.contains("cart") || symbol.contains("bag") || symbol.contains("dollar") -> "💳"
+                        symbol.contains("map") || symbol.contains("location") -> "📍"
+                        symbol.contains("phone") -> "📞"
+                        symbol.contains("message") || symbol.contains("envelope") || symbol.contains("mail") -> "✉️"
                         else -> "🖼️"
                     }
                     val fm = paint.fontMetrics
