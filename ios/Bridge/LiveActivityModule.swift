@@ -1135,11 +1135,15 @@ public class LiveActivityModule: RCTEventEmitter {
       var result: [[String: Any]] = []
       for activity in Activity<DynamicActivityAttributes>.activities {
         let actId = activity.attributes.activityId
+        var isStale = false
+        if #available(iOS 16.2, *) {
+          isStale = (activity.activityState == .stale)
+        }
         var item: [String: Any] = [
           "activityId": actId,
           "systemActivityId": activity.id,
           "activityState": String(describing: activity.activityState),
-          "isStale": activity.activityState == .stale,
+          "isStale": isStale,
         ]
         if #available(iOS 16.2, *) {
           item["relevanceScore"] = activity.content.relevanceScore
