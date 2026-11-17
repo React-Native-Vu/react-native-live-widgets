@@ -604,7 +604,15 @@ export default defineWidgetConfig({
   console.log('✅ Created default configuration: widgets.config.ts');
 }
 
-console.log('\n🎉 SETUP 100% COMPLETE!');
+// 6. Automatically run Codegen to generate icons, localizations, and LiveWidgetsBundle.swift
+try {
+  const { runCodegen } = require('./codegen');
+  runCodegen(projectRoot);
+} catch (codegenErr) {
+  console.warn('⚠️ Codegen warning:', codegenErr.message);
+}
+
+console.log('🎉 SETUP 100% COMPLETE!');
 console.log('👉 You can now run your application:');
 if (isExpo) {
   console.log('   - iOS: npx expo run:ios');

@@ -71,6 +71,15 @@ function generateMaterialIconsFile(outputPath) {
 
   fs.writeFileSync(outputPath, lines.join('\n'), 'utf8');
   console.log(`🤖 Auto-generated Material Icons (${iconNames.length} icons) at: ${path.basename(outputPath)}`);
+
+  // Also update lib/ if it exists so types are available immediately
+  try {
+    const libTarget = outputPath.replace(/[\\/]src[\\/]/, '/lib/').replace(/\.ts$/, '.d.ts');
+    if (fs.existsSync(path.dirname(libTarget))) {
+      fs.writeFileSync(libTarget, lines.join('\n'), 'utf8');
+    }
+  } catch (_) {}
+
   return iconNames.length;
 }
 

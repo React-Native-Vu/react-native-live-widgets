@@ -717,40 +717,45 @@ function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
   const { catalog, defaultLocale } = buildI18nCatalog(projectRoot, config);
 
   const bundleSwiftPath = findBundleSwiftPath(projectRoot);
-  if (!bundleSwiftPath) {
-    throw new Error("iOS directory 'ios/' not found in project.");
+  if (bundleSwiftPath) {
+    const targetDir = path.dirname(bundleSwiftPath);
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    // Ensure extension Info.plist exists (auto-generate if missing)
+    ensureExtensionInfoPlist(targetDir);
+
+    // 1. Generate i18n Localizable if catalog exists
+    if (Object.keys(catalog).length > 0) {
+      writeI18nFiles(targetDir, catalog, defaultLocale);
+    }
+
+    // 2. Generate Swift source code
+    const swiftCode = generateSwiftSource(config, catalog, defaultLocale);
+    fs.writeFileSync(bundleSwiftPath, swiftCode, 'utf8');
+
+    console.log(`✅ Successfully generated Swift source bundle!`);
+    console.log(`📍 Destination: ${path.relative(projectRoot, bundleSwiftPath)}`);
+    console.log(`📊 Registered Widgets: ${(config.widgets || []).length}`);
+    if (config.widgets && config.widgets.length > 0) {
+      const defaultDict = catalog[defaultLocale] || {};
+      config.widgets.forEach((w, i) => {
+        const rawName = w.displayName;
+        const keyName = typeof rawName === 'object' ? rawName[defaultLocale] : rawName;
+        const resolved = defaultDict[keyName] || keyName;
+        console.log(`   ${i + 1}. [${w.key || 'main'}] ${resolved} (${keyName})`);
+      });
+    }
+  } else {
+    console.log("ℹ️ Native iOS directory 'ios/' not found yet (will be generated upon 'npx expo prebuild').");
   }
 
-  const targetDir = path.dirname(bundleSwiftPath);
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true });
-  }
-
-  // Ensure extension Info.plist exists (auto-generate if missing)
-  ensureExtensionInfoPlist(targetDir);
-
-  // 1. Generate i18n Localizable if catalog exists
+  // Generate Android i18n if android/ exists
   if (Object.keys(catalog).length > 0) {
-    writeI18nFiles(targetDir, catalog, defaultLocale);
     writeAndroidI18nFiles(projectRoot, catalog, defaultLocale);
   }
 
-  // 2. Generate Swift source code
-  const swiftCode = generateSwiftSource(config, catalog, defaultLocale);
-  fs.writeFileSync(bundleSwiftPath, swiftCode, 'utf8');
-
-  console.log(`✅ Successfully generated Swift source bundle!`);
-  console.log(`📍 Destination: ${path.relative(projectRoot, bundleSwiftPath)}`);
-  console.log(`📊 Registered Widgets: ${(config.widgets || []).length}`);
-  if (config.widgets && config.widgets.length > 0) {
-    const defaultDict = catalog[defaultLocale] || {};
-    config.widgets.forEach((w, i) => {
-      const rawName = w.displayName;
-      const keyName = typeof rawName === 'object' ? rawName[defaultLocale] : rawName;
-      const resolved = defaultDict[keyName] || keyName;
-      console.log(`   ${i + 1}. [${w.key || 'main'}] ${resolved} (${keyName})`);
-    });
-  }
   console.log('🎉 All set! No manual Swift editing required.\n');
   return bundleSwiftPath;
 }
