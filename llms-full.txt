@@ -156,3 +156,13 @@ export interface WidgetRemoteConfig {
 - Encapsulated `Font` resolution in `renderText()` within self-invoking closures `{ ... }()`.
 - Refactored `DynamicNodeAccessibilityModifier` procedural assignments into a dedicated `buildAccessibilityView(content:) -> AnyView` helper method.
 - Added fallback `else { EmptyView() }` branches to `backgroundView` and `borderOverlay` in `ContainerStyleModifier`.
+
+---
+
+## 6. Official Documentation & Web Links
+
+- **Official Interactive Web Docs & Simulator**: [https://react-native-vu.github.io/react-native-live-widgets/](https://react-native-vu.github.io/react-native-live-widgets/)
+- **LLM Quick Summary (`llms.txt`)**: [https://react-native-vu.github.io/react-native-live-widgets/llms.txt](https://react-native-vu.github.io/react-native-live-widgets/llms.txt)
+- **LLM Full Reference (`llms-full.txt`)**: [https://react-native-vu.github.io/react-native-live-widgets/llms-full.txt](https://react-native-vu.github.io/react-native-live-widgets/llms-full.txt)
+- **Vietnamese Full Guide (`GUIDE-VI.md`)**: [https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/docs/GUIDE-VI.md](https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/docs/GUIDE-VI.md)
+- **English Full Guide (`GUIDE-EN.md`)**: [https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/docs/GUIDE-EN.md](https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/docs/GUIDE-EN.md)

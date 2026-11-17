@@ -1,6 +1,6 @@
 # HƯỚNG DẪN SỬ DỤNG VÀ THIẾT LẬP THƯ VIỆN REACT-NATIVE-LIVE-WIDGETS 🚀
 
-> 🌐 **Language:** **Tiếng Việt** | [English (GUIDE-EN.md)](./GUIDE-EN.md) • [⚡ Hướng dẫn riêng cho Expo (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md)
+> 🌐 **Language:** **Tiếng Việt** | [English (GUIDE-EN.md)](./GUIDE-EN.md) • [⚡ Hướng dẫn riêng cho Expo (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md) • [🌐 Web Docs & Live Simulator](https://react-native-vu.github.io/react-native-live-widgets/)
 
 Tài liệu hướng dẫn toàn diện từ cài đặt, thiết lập native (iOS/Android), xây dựng giao diện động bằng JavaScript/TypeScript cho cả **Live Activities (Dynamic Island / Lock Screen / Android Live Update)** và **Home Screen Widgets (Tiện ích màn hình chính tương tác đa trang)**.
 
@@ -37,8 +37,9 @@ Tài liệu hướng dẫn toàn diện từ cài đặt, thiết lập native (
 8. [Đồng bộ API Ngầm cho Widget kể cả khi Kill App (`Widget.setRemoteConfig`)](#8-đồng-bộ-api-ngầm-cho-widget-kể-cả-khi-kill-app-widgetsetremoteconfig)
 9. [Quản lý 3 loại Push Token (APNs & FCM) cho Live Activity](#9-quản-lý-3-loại-push-token-apns--fcm-cho-live-activity)
 10. [State Machine & Tự động cập nhật theo pha (Phases)](#10-state-machine--tự-động-cập-nhật-theo-pha-phases)
-11. [Cấu trúc Payload Server Push (APNs & FCM)](#11-cấu-trúc-payload-server-push-apns--fcm)
-12. [Xử lý sự cố thường gặp (Troubleshooting)](#12-xử-lý-sự-cố-thường-gặp-troubleshooting)
+11. [Cấu trúc Payload Server Push (APNs & FCM)](#10-cấu-trúc-payload-server-push-apns--fcm)
+12. [Xử lý sự cố thường gặp (Troubleshooting)](#11-xử-lý-sự-cố-thường-gặp-troubleshooting)
+13. [Hệ thống Styling Modifiers, UI IR, Exact Hit Layer & Năng lực Nền tảng (v1.2.1)](#12-hệ-thống-styling-modifiers--bảng-năng-lực-nền-tảng-capability--fallback-matrix)
 
 ---
 
@@ -1206,6 +1207,14 @@ Phiên bản **v1.2.1** giải quyết dứt điểm các bài toán thực tế
   - Đóng gói toàn bộ logic tính `Font` trong `renderText()` vào closure độc lập `{ ... }()`, ngăn compiler Swift 6 hiểu nhầm các câu lệnh điều kiện `if/switch` là View `Void`.
   - Tách logic phân giải `DynamicNodeAccessibilityModifier` sang hàm helper thuần `buildAccessibilityView(content:) -> AnyView`, tránh xung đột với `@ViewBuilder` ngầm định của protocol `ViewModifier`.
   - Đóng gói `strokeStyle` và bổ sung nhánh fallback `else { EmptyView() }` cho `backgroundView` và `borderOverlay` trong `ContainerStyleModifier`.
+
+---
+
+### 🌐 Trang Web Tài Liệu Trực Tuyến & Live Simulator
+
+- **Interactive Web Documentation**: [https://react-native-vu.github.io/react-native-live-widgets/](https://react-native-vu.github.io/react-native-live-widgets/)
+- **AI Agent Quick Reference (`llms.txt`)**: [https://react-native-vu.github.io/react-native-live-widgets/llms.txt](https://react-native-vu.github.io/react-native-live-widgets/llms.txt)
+- **AI Agent Full Manual (`llms-full.txt`)**: [https://react-native-vu.github.io/react-native-live-widgets/llms-full.txt](https://react-native-vu.github.io/react-native-live-widgets/llms-full.txt)
 
 ---
 

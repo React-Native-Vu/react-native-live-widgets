@@ -198,6 +198,14 @@ if (caps.supportsGradients) {
 }
 ```
 
+### 8. 🎯 v1.2.1 Architecture: Exact Dynamic Hit Layer, Native Chronometer & UI IR
+
+Version **1.2.1** introduces an industry-grade architecture built on three core pillars:
+- **Native Semantic Coverage**: Guaranteed accessibility metadata (`BaseSemanticProps`: `accessible`, `accessibilityRole`, `accessibilityLabel`, `accessibilityHint`, `accessibilityValue`) on all interactive controls plus aggregated `contentDescription` descriptions for graphical Canvas components (`Gauge`, `Chart`, `Equalizer`).
+- **Native-first, Canvas-when-needed**: Native OS components handle interactions (`FrameLayout` Exact Hit Layer via `computeCanvasMapping` compensating for `fitCenter` letterboxing) and hardware timers (`android.widget.Chronometer` with `setChronometerCountDown(true)` for smooth 1s ticks without bitmap redraws); Canvas 2D draws rich visual elements only.
+- **Renderer-Independent Semantic Tree (UI IR)**: Clean separation of Visual Nodes, Semantic Nodes, and State Bindings (`Widget.inspectIR(layout)`, `Widget.compileIR(layout)`).
+- **Dynamic Variables & Swift 6 Ready**: Built-in template variable interpolation (`{{id}}`, `{{title}}`, counter values), `defaultChecked` initial switch state persistence, and full Swift 6 language mode compliance on Xcode.
+
 ---
 
 ## ⚡ Quick Start
@@ -454,7 +462,9 @@ Nếu thư viện này giúp ích cho dự án hoặc công ty của bạn, bạ
 
 ## 📚 Documentation & Guides
 
-- 📱 **[LiveWidgetsExample Demo Project](https://github.com/React-Native-Vu/LiveWidgetsExample)**: Complete working sample app demonstrating all 5 presets with bidirectional sync on iOS & Android.
+- 🌐 **[Official Interactive Web Documentation & Live Simulator](https://react-native-vu.github.io/react-native-live-widgets/)**: `https://react-native-vu.github.io/react-native-live-widgets/` — Full API reference, JSX/DSL examples, and interactive Dynamic Island simulator.
+- 🤖 **[LLM & AI Agent Reference (`llms.txt` & `llms-full.txt`)](https://react-native-vu.github.io/react-native-live-widgets/llms.txt)**: `https://react-native-vu.github.io/react-native-live-widgets/llms-full.txt`
+- 📱 **[LiveWidgetsExample Demo Project](https://github.com/React-Native-Vu/LiveWidgetsExample)**: Complete working sample app demonstrating all presets with bidirectional sync on iOS & Android.
 - 🇬🇧 **[Full English Developer Guide](docs/GUIDE-EN.md)**: Architecture, DSL specs, push notification server configuration, and best practices.
 - 🇻🇳 **[Hướng dẫn Chi tiết bằng Tiếng Việt](docs/GUIDE-VI.md)**: Hướng dẫn tích hợp từng bước, thiết lập App Group, giải quyết lỗi thường gặp.
 
