@@ -34,7 +34,9 @@ public struct DynamicWidgetProvider: TimelineProvider {
     let group = appGroup
 
     // 1. Kiểm tra xem có cấu hình Timeline nhiều mốc thời gian không (widget_timeline_<key>)
-    if let timelineRaw = Self.readSharedString(forKey: "widget_timeline_\(wKey)", appGroup: group),
+    let timelineRaw = Self.readSharedString(forKey: "widget_timeline_\(wKey)", appGroup: group)
+      ?? (wKey != "main" ? Self.readSharedString(forKey: "widget_timeline_main", appGroup: group) : nil)
+    if let timelineRaw = timelineRaw,
        let data = timelineRaw.data(using: .utf8),
        let timelineDTO = try? JSONDecoder().decode(WidgetTimelineConfigDTO.self, from: data),
        !timelineDTO.entries.isEmpty {

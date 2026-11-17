@@ -16,7 +16,7 @@ import {
   WidgetIR,
 } from './types';
 import { compileToIR, inspectIR } from './ir';
-import { UI, createDataBinding, flattenDataObject } from './builder';
+import { UI, createDataBinding, flattenDataObject, resolveTemplateString } from './builder';
 
 declare const __DEV__: boolean | undefined;
 
@@ -145,6 +145,45 @@ function normalizeSinglePageConfig(cfg: any): any {
     accessoryCircular: convertIfJsx(cfg.accessoryCircular),
     accessoryInline: convertIfJsx(cfg.accessoryInline),
   };
+}
+
+function normalizeWidgetLayoutConfig(layoutConfig: any): any {
+  let finalLayout: any = layoutConfig;
+  if (
+    React.isValidElement(finalLayout) ||
+    (finalLayout as any)?.$$typeof ||
+    typeof (finalLayout as any)?.type === 'function'
+  ) {
+    finalLayout = { medium: renderToWidget(finalLayout) };
+  } else if (finalLayout && typeof finalLayout === 'object') {
+    const c = normalizeSinglePageConfig(finalLayout);
+    if (c.pages && typeof c.pages === 'object') {
+      const convertedPages: Record<string, any> = {};
+      for (const [pageKey, pageCfg] of Object.entries(c.pages)) {
+        convertedPages[pageKey] = normalizeSinglePageConfig(pageCfg);
+      }
+      c.pages = convertedPages;
+    }
+    finalLayout = c;
+  }
+  return finalLayout;
+}
+
+function resolveLayoutObjectTemplates(value: any, flatVars: Record<string, string>): any {
+  if (typeof value === 'string') {
+    return resolveTemplateString(value, flatVars);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => resolveLayoutObjectTemplates(item, flatVars));
+  }
+  if (value && typeof value === 'object') {
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = resolveLayoutObjectTemplates(v, flatVars);
+    }
+    return out;
+  }
+  return value;
 }
 
 // ─── 1. LIVE ACTIVITY & LIVE UPDATE ──────────────────────────────────────────
@@ -584,21 +623,7 @@ export const Widget = {
         appGroup = typeof layoutConfigOrAppGroup === 'string' ? layoutConfigOrAppGroup : undefined;
       }
 
-      let finalLayout: any = layoutConfig;
-
-      if (React.isValidElement(finalLayout) || (finalLayout as any)?.$$typeof || typeof (finalLayout as any)?.type === 'function') {
-        finalLayout = { medium: renderToWidget(finalLayout) };
-      } else if (finalLayout && typeof finalLayout === 'object') {
-        const c = normalizeSinglePageConfig(finalLayout);
-        if (c.pages && typeof c.pages === 'object') {
-          const convertedPages: Record<string, any> = {};
-          for (const [pageKey, pageCfg] of Object.entries(c.pages)) {
-            convertedPages[pageKey] = normalizeSinglePageConfig(pageCfg);
-          }
-          c.pages = convertedPages;
-        }
-        finalLayout = c;
-      }
+      const finalLayout = normalizeWidgetLayoutConfig(layoutConfig);
 
       const saved = await SharedStorage.set(`widget_layout_${widgetKey}`, finalLayout, appGroup);
       if (!saved) return false;
@@ -631,15 +656,22 @@ export const Widget = {
     appGroup?: string
   ): Promise<boolean> => {
     try {
-      const formattedEntries = timelineConfig.entries.map((entry) => ({
-        date:
-          typeof entry.date === 'string'
-            ? new Date(entry.date).getTime() / 1000.0
-            : entry.date > 10000000000
-            ? entry.date / 1000.0
-            : entry.date,
-        layout: entry.layout,
-      }));
+      const formattedEntries = timelineConfig.entries.map((entry) => {
+        let entryLayout = normalizeWidgetLayoutConfig(entry.layout);
+        if (entry.data && typeof entry.data === 'object') {
+          const flatVars = flattenDataObject(entry.data);
+          entryLayout = resolveLayoutObjectTemplates(entryLayout, flatVars);
+        }
+        return {
+          date:
+            typeof entry.date === 'string'
+              ? new Date(entry.date).getTime() / 1000.0
+              : entry.date > 10000000000
+              ? entry.date / 1000.0
+              : entry.date,
+          layout: entryLayout,
+        };
+      });
       const formattedConfig = {
         entries: formattedEntries,
         policy: timelineConfig.policy || 'atEnd',

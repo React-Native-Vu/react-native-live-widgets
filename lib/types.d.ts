@@ -600,6 +600,8 @@ export interface WidgetTimelineEntry {
     date: number | string;
     /** Cấu hình layout tại mốc thời gian tương ứng */
     layout: WidgetLayoutConfig;
+    /** Dữ liệu Data Binding (tùy chọn) để nội suy sẵn vào layout tại mốc thời gian này */
+    data?: Record<string, any>;
 }
 export interface WidgetTimelineConfig {
     /** Danh sách các mốc thời gian và layout tương ứng */
