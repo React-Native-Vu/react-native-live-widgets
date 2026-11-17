@@ -566,6 +566,10 @@ UI.Image({
 />
 ```
 
+> 💡 **Official Icon Catalogs & Galleriy Links:**
+> - 🍏 **Apple SF Symbols (9,500+ Icons)**: Browse and preview symbols at [Apple SF Symbols Official Website](https://developer.apple.com/sf-symbols/). Fully typed via `KnownSFSymbol` auto-complete.
+> - 🤖 **Google Material Icons (3,800+ Icons)**: Browse icon names at [Google Fonts Icons / Material Symbols](https://fonts.google.com/icons). Fully typed via `KnownMaterialIcon`, supporting both `snake_case` (e.g. `battery_charging_full`) and `kebab-case` (`battery-charging-full`).
+
 ### `UI.Button` (Interactive Widget Buttons)
 Lets users interact directly on the Widget surface (via iOS 17+ `AppIntents` and Android `PendingIntent` hit zones) **without opening the app**:
 ```typescript

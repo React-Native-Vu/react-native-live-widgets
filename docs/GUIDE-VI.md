@@ -566,6 +566,10 @@ UI.Image({
 />
 ```
 
+> 💡 **Tra cứu danh mục Icons chính thức từ Apple & Google:**
+> - 🍏 **Apple SF Symbols (9,500+ Icons)**: Tra cứu và xem trước tại [Apple SF Symbols Official Website](https://developer.apple.com/sf-symbols/). Định nghĩa sẵn type `KnownSFSymbol` với IntelliSense auto-complete.
+> - 🤖 **Google Material Icons (3,800+ Icons)**: Tra cứu tên icon tại [Google Fonts Icons / Material Symbols](https://fonts.google.com/icons). Định nghĩa sẵn type `KnownMaterialIcon`, hỗ trợ cả `snake_case` (ví dụ `battery_charging_full`) và `kebab-case` (`battery-charging-full`).
+
 ### `UI.Button` (Nút bấm tương tác trực tiếp trên Widget)
 Cho phép người dùng thao tác ngay trên mặt Widget (iOS 17+ `AppIntents` & Android `PendingIntent` Hit Zones) mà **không cần mở ứng dụng**:
 ```typescript

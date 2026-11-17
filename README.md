@@ -218,6 +218,9 @@ Version **1.2.1** introduces an industry-grade architecture built on three core 
     height={24}
   />
   ```
+- **Official Icon Catalogs**:
+  - 🍏 [Apple SF Symbols Official Gallery (9,500+ Icons)](https://developer.apple.com/sf-symbols/)
+  - 🤖 [Google Fonts Material Icons / Symbols (3,800+ Icons)](https://fonts.google.com/icons)
 
 ### 10. ⚙️ TypeScript-Driven Codegen & Automated i18n (`widgets.config.ts`)
 - Zero manual Swift coding. Define your widgets, bundle name, and multi-language catalogs in `widgets.config.ts`.
