@@ -48,6 +48,7 @@
     "release:minor": "node scripts/release.js minor --tag",
     "release:major": "node scripts/release.js major --tag"
   },
+  "homepage": "https://react-native-vu.github.io/react-native-live-widgets/",
   "repository": {
     "type": "git",
     "url": "https://github.com/React-Native-Vu/react-native-live-widgets.git"

@@ -88,6 +88,8 @@ const unsubscribe = Widget.onWidgetAction((actionId, payload) => {
 5. **Background Sync**: `Widget.setRemoteConfig` allows native widgets to fetch fresh JSON from a REST endpoint without requiring server-side APNs push infrastructure.
 
 ## Documentation Links
+- [Official Interactive Web Docs & Simulator](https://react-native-vu.github.io/react-native-live-widgets/)
+- [Full LLM Reference (llms-full.txt)](https://react-native-vu.github.io/react-native-live-widgets/llms-full.txt)
 - [English Full Guide](https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/docs/GUIDE-EN.md)
 - [Vietnamese Full Guide](https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/docs/GUIDE-VI.md)
 - [Dedicated Expo Guide (EN)](https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/docs/EXPO-GUIDE-EN.md)

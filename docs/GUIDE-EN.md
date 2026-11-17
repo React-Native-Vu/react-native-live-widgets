@@ -1,6 +1,6 @@
 # REACT-NATIVE-LIVE-WIDGETS — COMPLETE SETUP & DEVELOPER GUIDE 🚀
 
-> 🌐 **Language:** [Tiếng Việt (GUIDE-VI.md)](./GUIDE-VI.md) | **English** • [⚡ Dedicated Expo Guide (EXPO-GUIDE-EN.md)](./EXPO-GUIDE-EN.md)
+> 🌐 **Language:** [Tiếng Việt (GUIDE-VI.md)](./GUIDE-VI.md) | **English** • [⚡ Dedicated Expo Guide (EXPO-GUIDE-EN.md)](./EXPO-GUIDE-EN.md) • [🌐 Web Docs & Live Simulator](https://react-native-vu.github.io/react-native-live-widgets/)
 
 Comprehensive guide covering installation, native setup (iOS & Android), and building 100% JavaScript/TypeScript declarative layouts for **Live Activities (Dynamic Island / Lock Screen / Android Live Updates)** and **Interactive Multi-Page Home Screen Widgets**.
 
@@ -37,8 +37,9 @@ Comprehensive guide covering installation, native setup (iOS & Android), and bui
 8. [Background API Auto-Sync When App Is Killed (`Widget.setRemoteConfig`)](#8-background-api-auto-sync-when-app-is-killed-widgetsetremoteconfig)
 9. [Managing All 3 Push Token Types (APNs & FCM)](#9-managing-all-3-push-token-types-apns--fcm)
 10. [State Machine & Timed Phases (`phases`)](#10-state-machine--timed-phases-phases)
-11. [Server Push Payload Structure (APNs & FCM)](#11-server-push-payload-structure-apns--fcm)
-12. [Troubleshooting](#12-troubleshooting)
+11. [Server Push Payload Structure (APNs & FCM)](#10-server-push-payload-structure-apns--fcm)
+12. [Troubleshooting](#11-troubleshooting)
+13. [Advanced Styling Modifiers, UI IR, Exact Hit Layer & Platform Matrix (v1.2.1)](#12-advanced-styling-modifiers--platform-capability-matrix)
 
 ---
 
@@ -1182,6 +1183,14 @@ Version **v1.2.1** addresses critical real-world interaction challenges on physi
   - Encapsulated `Font` resolution in `renderText()` within self-invoking closures `{ ... }()`.
   - Refactored `DynamicNodeAccessibilityModifier` procedural assignments into a dedicated `buildAccessibilityView(content:) -> AnyView` helper method.
   - Added fallback `else { EmptyView() }` branches to `backgroundView` and `borderOverlay` in `ContainerStyleModifier`.
+
+---
+
+### 🌐 Online Interactive Web Documentation
+
+- **Web Documentation & Live Simulator**: [https://react-native-vu.github.io/react-native-live-widgets/](https://react-native-vu.github.io/react-native-live-widgets/)
+- **AI Agent Quick Reference (`llms.txt`)**: [https://react-native-vu.github.io/react-native-live-widgets/llms.txt](https://react-native-vu.github.io/react-native-live-widgets/llms.txt)
+- **AI Agent Full Manual (`llms-full.txt`)**: [https://react-native-vu.github.io/react-native-live-widgets/llms-full.txt](https://react-native-vu.github.io/react-native-live-widgets/llms-full.txt)
 
 ---
 

@@ -1,6 +1,6 @@
 # EXPO INTEGRATION & USAGE GUIDE FOR REACT-NATIVE-LIVE-WIDGETS 🚀
 
-> 🌐 **Language:** **English** • [🇻🇳 Hướng dẫn Tiếng Việt (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md) • [📖 Bare RN Guide (GUIDE-EN.md)](./GUIDE-EN.md) • [⚡ Expo Live Demo Repository](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo)
+> 🌐 **Language:** **English** • [🇻🇳 Hướng dẫn Tiếng Việt (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md) • [📖 Bare RN Guide (GUIDE-EN.md)](./GUIDE-EN.md) • [⚡ Expo Live Demo Repository](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo) • [🌐 Web Docs (Live Simulator)](https://react-native-vu.github.io/react-native-live-widgets/)
 
 This guide provides a comprehensive walkthrough for integrating **`react-native-live-widgets`** into **Expo (SDK 50, 51, 52, 58+)** projects — covering Expo Config Plugins, automatic iOS WidgetKit/ActivityKit configuration, local testing via Expo Dev Client, and production cloud builds with **EAS Build**.
 
