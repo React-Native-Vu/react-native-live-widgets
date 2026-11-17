@@ -21,17 +21,47 @@ public struct DynamicPayloadDTO: Codable {
   public let lockScreen: LayoutNodeDTO?
   public let dynamicIsland: DynamicIslandDTO?
   public let staleTimestamp: Double?
+  public let staleLockScreen: LayoutNodeDTO?
+  public let staleDynamicIsland: DynamicIslandDTO?
+  public let expiredLockScreen: LayoutNodeDTO?
+  public let relevanceScore: Double?
+  public let scheduledEndTimestamp: Double?
+  public let autoEndAfterSeconds: Double?
+  public let expiredDismissalPolicy: String?
+  public let alertTitle: String?
+  public let alertBody: String?
+  public let alertSound: String?
 
   public init(
     activityId: String? = nil,
     lockScreen: LayoutNodeDTO? = nil,
     dynamicIsland: DynamicIslandDTO? = nil,
-    staleTimestamp: Double? = nil
+    staleTimestamp: Double? = nil,
+    staleLockScreen: LayoutNodeDTO? = nil,
+    staleDynamicIsland: DynamicIslandDTO? = nil,
+    expiredLockScreen: LayoutNodeDTO? = nil,
+    relevanceScore: Double? = nil,
+    scheduledEndTimestamp: Double? = nil,
+    autoEndAfterSeconds: Double? = nil,
+    expiredDismissalPolicy: String? = nil,
+    alertTitle: String? = nil,
+    alertBody: String? = nil,
+    alertSound: String? = nil
   ) {
     self.activityId = activityId
     self.lockScreen = lockScreen
     self.dynamicIsland = dynamicIsland
     self.staleTimestamp = staleTimestamp
+    self.staleLockScreen = staleLockScreen
+    self.staleDynamicIsland = staleDynamicIsland
+    self.expiredLockScreen = expiredLockScreen
+    self.relevanceScore = relevanceScore
+    self.scheduledEndTimestamp = scheduledEndTimestamp
+    self.autoEndAfterSeconds = autoEndAfterSeconds
+    self.expiredDismissalPolicy = expiredDismissalPolicy
+    self.alertTitle = alertTitle
+    self.alertBody = alertBody
+    self.alertSound = alertSound
   }
 }
 
@@ -79,6 +109,8 @@ public struct WidgetSinglePageDTO: Codable {
   public let small: LayoutNodeDTO?
   public let medium: LayoutNodeDTO?
   public let large: LayoutNodeDTO?
+  public let extraLarge: LayoutNodeDTO?
+  public let standBy: LayoutNodeDTO?
   public let accessoryRectangular: LayoutNodeDTO?
   public let accessoryCircular: LayoutNodeDTO?
   public let accessoryInline: LayoutNodeDTO?
@@ -91,6 +123,8 @@ public struct WidgetMultiPagePayloadDTO: Codable {
   public let small: LayoutNodeDTO?
   public let medium: LayoutNodeDTO?
   public let large: LayoutNodeDTO?
+  public let extraLarge: LayoutNodeDTO?
+  public let standBy: LayoutNodeDTO?
   public let accessoryRectangular: LayoutNodeDTO?
   public let accessoryCircular: LayoutNodeDTO?
   public let accessoryInline: LayoutNodeDTO?
@@ -99,6 +133,19 @@ public struct WidgetMultiPagePayloadDTO: Codable {
   public let initialPage: String?
   public let rootDeepLink: String?
   public let containerBackground: WidgetContainerBackgroundDTO?
+}
+
+public struct ControlWidgetConfigDTO: Codable {
+  public let type: String?
+  public let title: String
+  public let subtitle: String?
+  public let checkedTitle: String?
+  public let checkedSubtitle: String?
+  public let systemName: String?
+  public let tintColor: String?
+  public let checked: Bool?
+  public let actionId: String
+  public let deepLink: String?
 }
 
 public struct WidgetContainerBackgroundDTO: Codable {

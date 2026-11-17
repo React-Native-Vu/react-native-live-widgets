@@ -23,7 +23,14 @@ import {
 import { renderToWidget, extractPropsAndStyle } from './jsx';
 import { actionHandlers, globalActionHandlers } from './dispatcher';
 
-export type WidgetPreviewSize = 'small' | 'medium' | 'large' | 'lockScreen' | 'dynamicIsland';
+export type WidgetPreviewSize =
+  | 'small'
+  | 'medium'
+  | 'large'
+  | 'extraLarge'
+  | 'standBy'
+  | 'lockScreen'
+  | 'dynamicIsland';
 
 export interface WidgetPreviewProps {
   /**
@@ -31,12 +38,14 @@ export interface WidgetPreviewProps {
    * - 'small' (158 × 158 dp)
    * - 'medium' (338 × 158 dp)
    * - 'large' (338 × 354 dp)
+   * - 'extraLarge' (338 × 420 dp)
+   * - 'standBy' (310 × 158 dp)
    * - 'lockScreen' (350 × 80 dp)
    * - 'dynamicIsland' (350 × 160 dp)
    * Mặc định là 'medium'.
    */
   size?: WidgetPreviewSize;
-  /** Cây LayoutNode hoặc đối tượng chứa { small, medium, large } */
+  /** Cây LayoutNode hoặc đối tượng chứa { small, medium, large, extraLarge, standBy } */
   layout?: LayoutNode | WidgetSinglePageConfig;
   /** Cú pháp JSX trực tiếp truyền vào bên trong thẻ `<WidgetPreview>` */
   children?: React.ReactNode;
@@ -54,6 +63,8 @@ const SIZE_DIMENSIONS: Record<WidgetPreviewSize, { width: number; height: number
   small: { width: 158, height: 158, label: 'Small • 158×158' },
   medium: { width: 338, height: 158, label: 'Medium • 338×158' },
   large: { width: 338, height: 354, label: 'Large • 338×354' },
+  extraLarge: { width: 338, height: 420, label: 'Extra Large • 338×420' },
+  standBy: { width: 310, height: 158, label: 'StandBy • 310×158' },
   lockScreen: { width: 350, height: 80, label: 'Lock Screen • 350×80' },
   dynamicIsland: { width: 350, height: 160, label: 'Dynamic Island' },
 };
@@ -168,24 +179,26 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
       rawTarget = layout;
     } else if ((layout as any).type && typeof (layout as any).type === 'string' && (layout as any).props !== undefined) {
       rawTarget = layout;
-    } else if (pageConfigObj && currentPageKey) {
-      const pageConfig = pageConfigObj.pages[currentPageKey] || {};
-      rawTarget =
-        pageConfig[activeSize] ||
-        pageConfig.medium ||
-        pageConfig.large ||
-        pageConfig.small ||
-        pageConfig.accessoryRectangular ||
-        null;
     } else {
-      const pageConfig = layout as WidgetSinglePageConfig;
-      rawTarget =
-        (pageConfig as any)[activeSize] ||
-        pageConfig.medium ||
-        pageConfig.large ||
-        pageConfig.small ||
-        pageConfig.accessoryRectangular ||
-        null;
+      const pageConfig =
+        pageConfigObj && currentPageKey
+          ? pageConfigObj.pages[currentPageKey] || {}
+          : (layout as any);
+      const primary = pageConfig?.[activeSize];
+      if (primary) {
+        rawTarget = primary;
+      } else if (activeSize === 'extraLarge') {
+        rawTarget = pageConfig?.large || pageConfig?.medium || pageConfig?.small || null;
+      } else if (activeSize === 'standBy') {
+        rawTarget = pageConfig?.small || pageConfig?.medium || pageConfig?.large || null;
+      } else {
+        rawTarget =
+          pageConfig?.medium ||
+          pageConfig?.large ||
+          pageConfig?.small ||
+          pageConfig?.accessoryRectangular ||
+          null;
+      }
     }
   }
 
@@ -235,18 +248,35 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
   const dim =
     SIZE_DIMENSIONS[(activeSize as WidgetPreviewSize) || 'medium'] || SIZE_DIMENSIONS.medium;
 
+  const switchSizes: WidgetPreviewSize[] = ['small', 'medium', 'large'];
+  const anyLayout = layout as any;
+  if (
+    initialSize === 'extraLarge' ||
+    anyLayout?.extraLarge ||
+    (currentPageKey && pageConfigObj?.pages?.[currentPageKey]?.extraLarge)
+  ) {
+    switchSizes.push('extraLarge');
+  }
+  if (
+    initialSize === 'standBy' ||
+    anyLayout?.standBy ||
+    (currentPageKey && pageConfigObj?.pages?.[currentPageKey]?.standBy)
+  ) {
+    switchSizes.push('standBy');
+  }
+
   return (
     <View style={[styles.container, style]}>
       {interactiveSizeSwitch && (
         <View style={styles.tabBar}>
-          {(['small', 'medium', 'large'] as WidgetPreviewSize[]).map((s) => (
+          {switchSizes.map((s) => (
             <TouchableOpacity
               key={s}
               onPress={() => setActiveSize(s)}
               style={[styles.tabItem, activeSize === s && styles.tabItemActive]}
             >
               <RNText style={[styles.tabText, activeSize === s && styles.tabTextActive]}>
-                {s.toUpperCase()}
+                {s === 'extraLarge' ? 'XLARGE' : s.toUpperCase()}
               </RNText>
             </TouchableOpacity>
           ))}

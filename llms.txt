@@ -79,6 +79,8 @@ const unsubscribe = Widget.onWidgetAction((actionId, payload) => {
 - **Android Native Live Chronometer**: Realtime 1s countdowns driven by native `android.widget.Chronometer` without Canvas bitmap redraws.
 - **Dynamic Template Variable Interpolation**: Resolves `{{id}}`, `{{title}}`, and counter values dynamically, with initial `defaultChecked` persistence in `DynamicWidgetStateStore`.
 - **Swift 6 Compatibility**: Full compliance with Swift 6 language mode and `@ViewBuilder` closure encapsulation on iOS Xcode.
+- **Extended Widget Families**: Supports `extraLarge` (iPadOS/Tablet), `standBy` (iOS 17+ StandBy Mode with `.applyStandByMargins()` & `widgetAccentable`), and iOS 18+ Control Widgets (`Widget.setControl`, `DynamicControlWidget`, `DynamicControlToggleWidget`).
+- **Complete Live Activity Lifecycle**: Supports simultaneous multi-activity inspection (`LiveActivity.get`, `LiveActivity.isActive`), `staleLockScreen`/`staleDynamicIsland`, `relevanceScore`, `alertConfig`, `scheduledEndTimestamp`/`autoEndAfterSeconds` with `expiredLockScreen`, `LiveActivity.cleanupExpired()`, and `LiveActivity.onStateChange` (`active`, `started_by_push`, `stale`, `expired`, `ended`, `dismissed`).
 
 ### Golden Rules for AI Agents
 1. **Never write Swift or Kotlin files manually** when a declarative `UI.*` node exists.

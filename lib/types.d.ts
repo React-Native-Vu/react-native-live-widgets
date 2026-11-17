@@ -131,6 +131,8 @@ export interface TextStyle extends ShadowProps, AccessibilityProps {
     redacted?: boolean;
     /** Hiệu ứng cuộn lật số mượt mà kiểu Odometer (iOS 16+ numericText animation) khi số liệu thay đổi */
     numericAnimation?: boolean;
+    /** Cho phép text tự đổi màu theo chế độ StandBy / Tinted iOS 17+ / iOS 18 */
+    widgetAccentable?: boolean;
 }
 export type StyleProp<T> = T | null | undefined | false | StyleProp<T>[];
 export interface TextNodeProps extends TextStyle {
@@ -207,6 +209,8 @@ export interface ProgressNode extends BaseNode {
         /** Có hiển thị chữ phần trăm ở góc không (ví dụ "75%") */
         showPercentage?: boolean;
         percentageColor?: DynamicColor;
+        /** Cho phép thanh tiến trình đổi màu theo StandBy / Tinted iOS 17+ / iOS 18 */
+        widgetAccentable?: boolean;
     };
 }
 export interface ImageNode extends BaseNode {
@@ -347,6 +351,8 @@ export interface GaugeNode extends BaseNode {
         strokeWidth?: number;
         /** Tự động ẩn hoặc làm mờ đồng hồ khi màn hình khóa */
         privacySensitive?: boolean;
+        /** Cho phép đồng hồ đổi màu theo StandBy / Tinted iOS 17+ / iOS 18 */
+        widgetAccentable?: boolean;
     };
 }
 export interface ChartNode extends BaseNode {
@@ -468,22 +474,60 @@ export interface PhaseConfig {
     alertTitle?: string;
     alertBody?: string;
 }
+export interface AlertConfig {
+    title: string;
+    body: string;
+    sound?: 'default' | string;
+}
+export type LiveActivityLifecycleState = 'active' | 'started_by_push' | 'stale' | 'expired' | 'ended' | 'dismissed';
+export interface LiveActivityStateEvent {
+    activityId: string;
+    systemActivityId?: string;
+    state: LiveActivityLifecycleState;
+    timestamp: number;
+    pushToken?: string;
+}
 export interface StartActivityOptions {
     activityId: string;
     lockScreen: LayoutNode;
     dynamicIsland?: DynamicIslandConfig;
     phases?: PhaseConfig[];
+    /** Epoch timestamp (giây hoặc ms) mà từ thời điểm đó Activity bị coi là cũ (Stale) */
     staleTimestamp?: number;
+    /** Giao diện Lock Screen dự phòng hiển thị khi Activity chuyển sang trạng thái Stale */
+    staleLockScreen?: LayoutNode;
+    /** Giao diện Dynamic Island dự phòng hiển thị khi Activity chuyển sang trạng thái Stale */
+    staleDynamicIsland?: DynamicIslandConfig;
+    /** Điểm ưu tiên hiển thị trên Lock Screen & Dynamic Island khi có nhiều Live Activity (0.0 -> 100.0) */
+    relevanceScore?: number;
+    /** Cấu hình cảnh báo chuông / banner khi khởi chạy hoặc cập nhật */
+    alertConfig?: AlertConfig;
     alertTitle?: string;
     alertBody?: string;
+    /** Epoch timestamp (giây hoặc ms) tự động kết thúc Activity khi đến hạn */
+    scheduledEndTimestamp?: number;
+    /** Hoặc số giây tự động kết thúc tính từ lúc gọi start() */
+    autoEndAfterSeconds?: number;
+    /** Giao diện Lock Screen tổng kết tự động hiển thị khi Activity hết hạn (Scheduled End) */
+    expiredLockScreen?: LayoutNode;
+    /** Chính sách dọn dẹp sau khi hết hạn tự động */
+    expiredDismissalPolicy?: 'immediate' | 'default' | 'afterDate';
 }
 export interface UpdateActivityOptions {
     activityId: string;
     lockScreen?: LayoutNode;
     dynamicIsland?: DynamicIslandConfig;
     staleTimestamp?: number;
+    staleLockScreen?: LayoutNode;
+    staleDynamicIsland?: DynamicIslandConfig;
+    relevanceScore?: number;
+    alertConfig?: AlertConfig;
     alertTitle?: string;
     alertBody?: string;
+    scheduledEndTimestamp?: number;
+    autoEndAfterSeconds?: number;
+    expiredLockScreen?: LayoutNode;
+    expiredDismissalPolicy?: 'immediate' | 'default' | 'afterDate';
 }
 export interface EndActivityOptions {
     /**
@@ -504,12 +548,29 @@ export interface WidgetSinglePageConfig {
     small?: LayoutNode;
     medium?: LayoutNode;
     large?: LayoutNode;
+    /** Tiện ích cỡ cực đại cho iPadOS / Tablet (systemExtraLarge) & Android 4x4+ */
+    extraLarge?: LayoutNode;
+    /** Chế độ iOS 17+ StandBy Mode (hiển thị chữ/số lớn khi đặt ngang sạc pin đầu giường) */
+    standBy?: LayoutNode;
     /** Màn hình khóa iOS 16+: Tiện ích hình chữ nhật bo góc dưới đồng hồ */
     accessoryRectangular?: LayoutNode;
     /** Màn hình khóa iOS 16+: Tiện ích ô tròn nhỏ dưới đồng hồ (Gauge / Circular Progress / Icon) */
     accessoryCircular?: LayoutNode;
     /** Màn hình khóa iOS 16+: Tiện ích 1 dòng chữ nhỏ trên đồng hồ */
     accessoryInline?: LayoutNode;
+}
+/** Cấu hình Control Widget (iOS 18+ Control Center / Action Button & Android Quick Settings Tile) */
+export interface ControlWidgetConfig {
+    type?: 'button' | 'toggle';
+    title: string;
+    subtitle?: string;
+    checkedTitle?: string;
+    checkedSubtitle?: string;
+    systemName?: string;
+    tintColor?: string;
+    checked?: boolean;
+    actionId: string;
+    deepLink?: string;
 }
 export interface WidgetLayoutConfig extends WidgetSinglePageConfig {
     /**
@@ -583,6 +644,12 @@ export interface LiveActivityPushTokens {
 }
 export interface ActiveActivityInfo {
     activityId: string;
+    systemActivityId?: string;
+    activityState?: 'active' | 'stale' | 'ended' | 'dismissed' | 'expired' | string;
+    isStale?: boolean;
+    relevanceScore?: number;
+    staleTimestamp?: number;
+    scheduledEndTimestamp?: number;
     pushToken?: string;
 }
 /**

@@ -458,6 +458,7 @@
           <li><a href="#ir-semantic" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">3 Trụ cột Kiến trúc &amp; UI IR</a></li>
           <li><a href="#a11y-layer" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">Accessibility (VoiceOver &amp; TalkBack)</a></li>
           <li><a href="#capability-matrix" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">Bảng Năng lực &amp; Lộ trình 6 Phases</a></li>
+          <li><a href="#extended-families-lifecycle" class="sidebar-link text-emerald-400 hover:text-white block py-1 transition font-medium">StandBy, ControlWidget &amp; Lifecycle</a></li>
           <li><a href="#troubleshooting" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">Xử lý sự cố thường gặp</a></li>
         </ul>
       </div>
@@ -701,8 +702,8 @@ await Widget.setLayout('shift', {
               <tbody class="divide-y divide-cardBorder text-slate-300">
                 <tr>
                   <td class="py-2 pr-4 font-mono text-sky-400">size</td>
-                  <td class="py-2 pr-4 font-mono text-xs text-slate-400">'small' | 'medium' | 'large' | 'lockScreen' | 'dynamicIsland'</td>
-                  <td class="py-2">Kích thước khung xem trước (mặc định <code>'medium'</code> 338×158dp).</td>
+                  <td class="py-2 pr-4 font-mono text-xs text-slate-400">'small' | 'medium' | 'large' | 'extraLarge' | 'standBy' | 'lockScreen' | 'dynamicIsland'</td>
+                  <td class="py-2">Kích thước khung xem trước (mặc định <code>'medium'</code> 338×158dp). Hỗ trợ cả StandBy &amp; iPadOS ExtraLarge.</td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4 font-mono text-sky-400">layout / children</td>
@@ -1256,9 +1257,14 @@ DynamicNodeRegistry.register(
                   <td class="py-2.5">Đóng toàn bộ các Live Activities đang hoạt động.</td>
                 </tr>
                 <tr>
-                  <td class="py-2.5 pr-3 font-mono text-sky-400 font-medium">LiveActivity.getActiveActivities()</td>
-                  <td class="py-2.5 pr-3 text-xs text-slate-400 font-mono">Promise&lt;ActiveActivityInfo[]&gt;</td>
-                  <td class="py-2.5">Liệt kê danh sách các Live Activity đang chạy kèm ID và trạng thái.</td>
+                  <td class="py-2.5 pr-3 font-mono text-sky-400 font-medium">LiveActivity.getActiveActivities() / get(id) / isActive(id)</td>
+                  <td class="py-2.5 pr-3 text-xs text-slate-400 font-mono">id?: string</td>
+                  <td class="py-2.5">Quản lý nhiều phiên đồng thời: trả về <code>activityId</code>, <code>systemActivityId</code>, <code>isStale</code>, <code>relevanceScore</code>, <code>scheduledEndTimestamp</code>, <code>pushToken</code>.</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 pr-3 font-mono text-sky-400 font-medium">LiveActivity.onStateChange(listener) / cleanupExpired()</td>
+                  <td class="py-2.5 pr-3 text-xs text-slate-400 font-mono">LiveActivityStateEvent</td>
+                  <td class="py-2.5">Lắng nghe chuyển đổi vòng đời (<code>active</code>, <code>started_by_push</code>, <code>stale</code>, <code>expired</code>, <code>ended</code>, <code>dismissed</code>) và tự động dọn dẹp phiên hết hạn.</td>
                 </tr>
                 <tr>
                   <td class="py-2.5 pr-3 font-mono text-sky-400 font-medium">LiveActivity.areActivitiesEnabled() / canPostPromoted()</td>
@@ -1276,10 +1282,17 @@ DynamicNodeRegistry.register(
 
           <div class="relative">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
-            <pre><code class="language-typescript">// Cấu hình Dynamic Island (iOS) + tự động chuyển pha theo thời gian (phases)
+            <pre><code class="language-typescript">// Cấu hình Dynamic Island + Stale UI + RelevanceScore + Auto Scheduled End
 await LiveActivity.start({
   activityId: 'shift_01',
-  layout: lockScreenCardNode,
+  lockScreen: lockScreenCardNode,
+  staleLockScreen: staleFallbackNode,
+  staleTimestamp: shiftEndSec - 120,
+  scheduledEndTimestamp: shiftEndSec,
+  expiredLockScreen: completedSummaryNode,
+  expiredDismissalPolicy: 'default',
+  relevanceScore: 95,
+  alertConfig: { title: 'Bắt đầu ca làm', body: 'Ca hành chính đã kích hoạt!', sound: 'default' },
   dynamicIsland: {
     compactLeading: UI.HStack({ spacing: 4 }, avatarImg, UI.Text('08:02', { fontSize: 12, color: '#60A5FA' })),
     compactTrailing: UI.Timer(shiftEndSec, { mode: 'countdown', fontSize: 12, color: '#60A5FA' }),
@@ -1300,8 +1313,8 @@ await LiveActivity.start({
         <!-- Widget API -->
         <div id="api-widget" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-5">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">2. <code>Widget</code> API (Multi-Page, Lock Screen Widgets &amp; Android In-App Pin)</h3>
-            <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full">WidgetKit + AppWidget</span>
+            <h3 class="text-lg font-bold text-white">2. <code>Widget</code> API (Multi-Page, ExtraLarge, StandBy &amp; Control Center)</h3>
+            <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full">WidgetKit + ControlWidget</span>
           </div>
 
           <div class="overflow-x-auto">
@@ -1317,7 +1330,12 @@ await LiveActivity.start({
                 <tr>
                   <td class="py-2.5 pr-3 font-mono text-emerald-400 font-medium">Widget.setLayout(key, config, appGroup?)</td>
                   <td class="py-2.5 pr-3 text-xs text-slate-400 font-mono">WidgetLayoutConfig (alias <code>Widget.update</code>)</td>
-                  <td class="py-2.5">Cập nhật giao diện cho <code>small</code>, <code>medium</code>, <code>large</code>, <code>pages</code> đa trang và 3 kích thước Lock Screen iOS (<code>accessoryRectangular</code>, <code>accessoryCircular</code>, <code>accessoryInline</code>).</td>
+                  <td class="py-2.5">Cập nhật giao diện cho <code>small</code>, <code>medium</code>, <code>large</code>, <code>extraLarge</code>, <code>standBy</code>, <code>pages</code> đa trang và 3 kích thước Lock Screen iOS (<code>accessoryRectangular</code>, <code>accessoryCircular</code>, <code>accessoryInline</code>).</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 pr-3 font-mono text-emerald-400 font-medium">Widget.setControl(id, config) / getControlState(id)</td>
+                  <td class="py-2.5 pr-3 text-xs text-slate-400 font-mono">ControlWidgetConfig (iOS 18+)</td>
+                  <td class="py-2.5">Cấu hình nút/công tắc nhanh trong iOS 18 Control Center, Action Button &amp; góc màn hình khóa (<code>DynamicControlWidget</code> / <code>DynamicControlToggleWidget</code>).</td>
                 </tr>
                 <tr>
                   <td class="py-2.5 pr-3 font-mono text-emerald-400 font-medium">Widget.reload(kind) / Widget.reloadAll()</td>
@@ -1615,6 +1633,47 @@ console.log(ir.renderStrategy, ir.semanticSummary);</code></pre>
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Extended Families & Complete Live Activity Lifecycle -->
+        <div id="extended-families-lifecycle" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-bold text-white text-lg flex items-center space-x-2">
+              <i data-lucide="smartphone" class="w-5 h-5 text-emerald-400"></i>
+              <span>Widget Family Mở rộng (<code>extraLarge</code>, <code>standBy</code>, <code>ControlWidget</code>) &amp; Vòng đời Live Activity</span>
+            </h3>
+            <span class="text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 px-2.5 py-1 rounded-full">OS Surfaces &amp; Lifecycle</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Hỗ trợ đầy đủ giao diện riêng cho <strong>iOS 17+ StandBy Mode</strong> (tự nhận diện <code>showsWidgetContainerBackground == false</code> kèm <code>.applyStandByMargins()</code> &amp; <code>widgetAccentable</code>), <strong>iPadOS / Tablet Extra Large</strong> (<code>extraLarge</code>), <strong>iOS 18+ Control Center / Action Button</strong> (<code>Widget.setControl</code>), và hệ thống vòng đời Live Activity hoàn chỉnh (Stale, Relevance Score, AlertConfiguration, Scheduled End, Auto-Expiration, Push-to-Start &amp; Multi-Activity Inspection).
+          </p>
+          <div class="relative">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
+            <pre><code class="language-typescript">// 1. Thiết lập StandBy + ExtraLarge + Control Center iOS 18+
+await Widget.setLayout('main', {
+  small: compactNode,
+  medium: mediumNode,
+  large: largeNode,
+  extraLarge: tabletDashboardNode,
+  standBy: standByBigClockNode,
+});
+
+await Widget.setControl('toggle', {
+  type: 'toggle',
+  title: 'Ca làm việc',
+  checkedTitle: 'Đang trong ca',
+  systemName: 'clock.badge.checkmark.fill',
+  checked: true,
+  actionId: 'toggle:attendance',
+});
+
+// 2. Theo dõi toàn bộ vòng đời &amp; kiểm tra Live Activity đồng thời
+const unsubLifecycle = LiveActivity.onStateChange((event) =&gt; {
+  console.log(`Activity ${event.activityId} -&gt; ${event.state}`);
+});
+const active = await LiveActivity.get('shift_01');
+const cleanedIds = await LiveActivity.cleanupExpired();</code></pre>
           </div>
         </div>
 

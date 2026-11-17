@@ -1210,6 +1210,35 @@ Phiên bản **v1.2.1** giải quyết dứt điểm các bài toán thực tế
 
 ---
 
+### 12.8. 📱 Widget Family Mở rộng (`extraLarge`, `standBy`, `ControlWidget`) & Quản lý Vòng đời Live Activity Hoàn chỉnh
+
+#### 1. Widget Family Mở rộng
+Ngoài 3 kích thước cơ bản (`small`, `medium`, `large`) và 3 kiểu Lock Screen (`accessoryRectangular`, `accessoryCircular`, `accessoryInline`), thư viện hỗ trợ thêm:
+- **`extraLarge?: LayoutNode`**: Dành cho iPadOS (`systemExtraLarge`) và Tablet/Android 4x4+ (`widgetHeightDp >= 280dp`). Hỗ trợ xem trước trực tiếp trong `<WidgetPreview size="extraLarge">`.
+- **`standBy?: LayoutNode`**: Tự động kích hoạt khi iPhone ở chế độ StandBy iOS 17+ (`family == .systemSmall && !showsWidgetContainerBackground`). Hỗ trợ `widgetAccentable` trên `Text`, `Progress`, `Gauge`, `Image` và `<WidgetPreview size="standBy">`. Widget extension có thể gọi `.applyStandByMargins()` trên `StaticConfiguration` để bật chế độ full-bleed.
+- **`ControlWidget` iOS 18+ (`Widget.setControl`)**: Điều khiển trực tiếp Control Center, Action Button và nút góc Lock Screen thông qua `DynamicControlWidget` (Button) và `DynamicControlToggleWidget` (Toggle dùng `DynamicControlToggleIntent`):
+  ```typescript
+  await Widget.setControl('toggle', {
+    type: 'toggle',
+    title: 'Ca làm việc',
+    checkedTitle: 'Đang trong ca',
+    systemName: 'clock.badge.checkmark.fill',
+    checked: true,
+    actionId: 'toggle:attendance',
+  });
+  ```
+
+#### 2. API Quản lý Vòng đời Live Activity Hoàn chỉnh
+Thư viện chuẩn hóa đầy đủ 8 khả năng quản lý vòng đời cho cả iOS ActivityKit và Android Live Updates:
+- **Quản lý nhiều phiên đồng thời**: `LiveActivity.getActiveActivities()`, `LiveActivity.get(activityId)`, `LiveActivity.isActive(activityId)`, `LiveActivity.endAll()` — trả về `activityId` chính xác kèm `systemActivityId` và `pushToken`.
+- **Stale State (`staleTimestamp`, `staleLockScreen`, `staleDynamicIsland`)**: Tự động chuyển sang giao diện dự phòng khi hết độ tươi (`context.isStale` trên iOS 16.2+ / `now >= staleTimestamp` trên Android).
+- **Relevance Score (`relevanceScore`)**: Ưu tiên thứ tự hiển thị trên Lock Screen / Dynamic Island (iOS `ActivityContent.relevanceScore`) và sắp xếp ưu tiên trên Notification Shade Android (`setSortKey`).
+- **Alert Configuration (`alertConfig`)**: Hỗ trợ `{ title, body, sound }` (bên cạnh `alertTitle`/`alertBody`) qua `AlertConfiguration` khi gọi `LiveActivity.update()` trên iOS 16.2+ và bật chuông/rung trên Android.
+- **Scheduled End & Tự động xử lý hết hạn (`scheduledEndTimestamp`, `autoEndAfterSeconds`, `expiredLockScreen`, `expiredDismissalPolicy`)**: Tự động chuyển sang giao diện hết hạn hoặc đóng Activity đúng giờ hẹn, kèm `LiveActivity.cleanupExpired()` và sự kiện `LiveActivity.onStateChange((ev) => ...)` theo dõi các trạng thái `'active' | 'started_by_push' | 'stale' | 'expired' | 'ended' | 'dismissed'`.
+- **Hook `useLiveActivity` nâng cấp**: Trả về thêm `activities`, `lifecycleState`, `isStale`, `refreshActivities`, và `cleanupExpired`.
+
+---
+
 ### 🌐 Trang Web Tài Liệu Trực Tuyến & Live Simulator
 
 - **Interactive Web Documentation**: [https://react-native-vu.github.io/react-native-live-widgets/](https://react-native-vu.github.io/react-native-live-widgets/)

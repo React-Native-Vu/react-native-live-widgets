@@ -1,4 +1,4 @@
-import { ActiveActivityInfo, EndActivityOptions, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetCapabilities, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig, WidgetIR } from './types';
+import { ActiveActivityInfo, ControlWidgetConfig, EndActivityOptions, LiveActivityPushTokens, LiveActivityStateEvent, StartActivityOptions, UpdateActivityOptions, WidgetCapabilities, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig, WidgetIR } from './types';
 import { ActionHandler, GlobalActionHandler, registerAction, registerActionHandler, unregisterAction } from './dispatcher';
 export type { ActionHandler, GlobalActionHandler };
 export { registerAction, registerActionHandler, unregisterAction };
@@ -74,10 +74,27 @@ export declare const LiveActivity: {
      */
     unregisterAction: (actionId: string) => void;
     /**
-     * Lấy danh sách các phiên Live Activity đang chạy trên thiết bị (ID và Push Token).
+     * Lấy danh sách các phiên Live Activity đang chạy trên thiết bị (kèm trạng thái Stale, RelevanceScore, ScheduledEnd và Push Token).
      * Giúp ứng dụng khôi phục lại trạng thái giao diện khi mở lại App.
      */
     getActiveActivities: () => Promise<ActiveActivityInfo[]>;
+    /**
+     * Lấy thông tin chi tiết của một Live Activity cụ thể theo activityId.
+     */
+    get: (activityId: string) => Promise<ActiveActivityInfo | null>;
+    /**
+     * Kiểm tra nhanh xem một Live Activity cụ thể có đang chạy trên thiết bị hay không.
+     */
+    isActive: (activityId: string) => Promise<boolean>;
+    /**
+     * Lắng nghe sự kiện chuyển đổi vòng đời Live Activity (`active`, `started_by_push`, `stale`, `expired`, `ended`, `dismissed`).
+     */
+    onStateChange: (listener: (event: LiveActivityStateEvent) => void) => (() => void);
+    /**
+     * Kiểm tra và tự động kết thúc các Live Activity đã quá hạn `scheduledEndTimestamp` (dọn dẹp các phiên bị kẹt).
+     * Trả về danh sách các `activityId` đã được dọn dẹp.
+     */
+    cleanupExpired: () => Promise<string[]>;
     /**
      * Kiểm tra xem người dùng có cấp quyền Hoạt động trực tiếp (Live Activities) trong Cài đặt máy hay không.
      */
@@ -170,6 +187,14 @@ export declare const Widget: {
      * Giúp ứng dụng xác định chính xác tính năng nào được hỗ trợ thực tế trên thiết bị đang chạy.
      */
     getCapabilities: () => Promise<WidgetCapabilities>;
+    /**
+     * 🎛️ Cấu hình Control Widget (iOS 18+ Control Center / Lock Screen Controls / Action Button & Android Quick Settings).
+     */
+    setControl: (controlId: string, config: ControlWidgetConfig, appGroup?: string) => Promise<boolean>;
+    /**
+     * Đọc cấu hình và trạng thái hiện tại của Control Widget từ Shared Storage.
+     */
+    getControlState: (controlId: string, appGroup?: string) => Promise<ControlWidgetConfig | null>;
     /**
      * 🌲 Biên dịch cây DSL sang UI Intermediate Representation (IR & Semantic Tree - Phase 2).
      */

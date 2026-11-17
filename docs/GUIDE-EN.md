@@ -1186,6 +1186,34 @@ Version **v1.2.1** addresses critical real-world interaction challenges on physi
 
 ---
 
+### 12.8. 📱 Extended Widget Families (`extraLarge`, `standBy`, `ControlWidget`) & Complete Live Activity Lifecycle
+
+#### 1. Extended Widget Families
+Beyond `small`, `medium`, `large`, and Lock Screen (`accessoryRectangular`, `accessoryCircular`, `accessoryInline`) layouts:
+- **`extraLarge?: LayoutNode`**: Targets iPadOS (`systemExtraLarge`) and Android tablets (`widgetHeightDp >= 280dp`). Supported in `<WidgetPreview size="extraLarge">`.
+- **`standBy?: LayoutNode`**: Automatically activated in iOS 17+ StandBy Mode (`family == .systemSmall && !showsWidgetContainerBackground`), alongside `.applyStandByMargins()` and `widgetAccentable` support on `Text`, `Progress`, `Gauge`, and `Image`. Supported in `<WidgetPreview size="standBy">`.
+- **iOS 18+ Control Widgets (`Widget.setControl`)**: Configure iOS 18 Control Center, Lock Screen controls, and Action Button widgets natively via `DynamicControlWidget` (Button) and `DynamicControlToggleWidget` (Toggle using `DynamicControlToggleIntent`):
+  ```typescript
+  await Widget.setControl('toggle', {
+    type: 'toggle',
+    title: 'Work Shift',
+    checkedTitle: 'On Shift',
+    systemName: 'clock.badge.checkmark.fill',
+    checked: true,
+    actionId: 'toggle:attendance',
+  });
+  ```
+
+#### 2. Complete Live Activity Lifecycle API
+- **Multi-Activity Management**: `LiveActivity.getActiveActivities()`, `LiveActivity.get(activityId)`, `LiveActivity.isActive(activityId)`, and `LiveActivity.endAll()` return user-assigned `activityId`, `systemActivityId`, state flags, and tokens.
+- **Stale State (`staleTimestamp`, `staleLockScreen`, `staleDynamicIsland`)**: Automatically transitions UI to fallback views when stale (`context.isStale` on iOS 16.2+ / timestamp check on Android).
+- **Relevance Score (`relevanceScore`)**: Prioritizes ordering in Dynamic Island / Lock Screen (`ActivityContent.relevanceScore`) and Android Notification Shade (`setSortKey`).
+- **Alert Configuration (`alertConfig`)**: Supports `{ title, body, sound }` via iOS 16.2+ `AlertConfiguration` and Android notification alerts on updates.
+- **Scheduled End & Auto-Expiration (`scheduledEndTimestamp`, `autoEndAfterSeconds`, `expiredLockScreen`, `expiredDismissalPolicy`)**: Automatically updates or dismisses activities on expiration, plus `LiveActivity.cleanupExpired()` and `LiveActivity.onStateChange((ev) => ...)` emitting `'active' | 'started_by_push' | 'stale' | 'expired' | 'ended' | 'dismissed'`.
+- **Upgraded `useLiveActivity()` Hook**: Exposes `activities`, `lifecycleState`, `isStale`, `refreshActivities`, and `cleanupExpired`.
+
+---
+
 ### 🌐 Online Interactive Web Documentation
 
 - **Web Documentation & Live Simulator**: [https://react-native-vu.github.io/react-native-live-widgets/](https://react-native-vu.github.io/react-native-live-widgets/)

@@ -213,10 +213,15 @@ public struct DynamicWidgetProvider: TimelineProvider {
 public struct DynamicHomeScreenWidgetView: View {
   @Environment(\.widgetFamily) var family
   @Environment(\.colorScheme) var colorScheme
+  @Environment(\.showsWidgetContainerBackground) var showsWidgetBackground
   let entry: DynamicWidgetEntry
 
   public init(entry: DynamicWidgetEntry) {
     self.entry = entry
+  }
+
+  private var isStandByMode: Bool {
+    return family == .systemSmall && !showsWidgetBackground
   }
 
   private var parsedPayload: WidgetMultiPagePayloadDTO? {
@@ -264,6 +269,8 @@ public struct DynamicHomeScreenWidgetView: View {
           small: pageConfig.small ?? payload.small,
           medium: pageConfig.medium ?? payload.medium,
           large: pageConfig.large ?? payload.large,
+          extraLarge: pageConfig.extraLarge ?? payload.extraLarge,
+          standBy: pageConfig.standBy ?? payload.standBy,
           accessoryRectangular: pageConfig.accessoryRectangular ?? payload.accessoryRectangular,
           accessoryCircular: pageConfig.accessoryCircular ?? payload.accessoryCircular,
           accessoryInline: pageConfig.accessoryInline ?? payload.accessoryInline
@@ -275,6 +282,8 @@ public struct DynamicHomeScreenWidgetView: View {
       small: payload.small,
       medium: payload.medium,
       large: payload.large,
+      extraLarge: payload.extraLarge,
+      standBy: payload.standBy,
       accessoryRectangular: payload.accessoryRectangular,
       accessoryCircular: payload.accessoryCircular,
       accessoryInline: payload.accessoryInline
@@ -285,6 +294,8 @@ public struct DynamicHomeScreenWidgetView: View {
     small: LayoutNodeDTO?,
     medium: LayoutNodeDTO?,
     large: LayoutNodeDTO?,
+    extraLarge: LayoutNodeDTO? = nil,
+    standBy: LayoutNodeDTO? = nil,
     accessoryRectangular: LayoutNodeDTO? = nil,
     accessoryCircular: LayoutNodeDTO? = nil,
     accessoryInline: LayoutNodeDTO? = nil
@@ -302,13 +313,19 @@ public struct DynamicHomeScreenWidgetView: View {
       }
     }
 
+    if isStandByMode, let standByNode = standBy {
+      return standByNode
+    }
+
     switch family {
     case .systemSmall:
       return small ?? medium ?? large
     case .systemMedium:
       return medium ?? small ?? large
-    case .systemLarge, .systemExtraLarge:
+    case .systemLarge:
       return large ?? medium ?? small
+    case .systemExtraLarge:
+      return extraLarge ?? large ?? medium ?? small
     default:
       return small ?? medium ?? large
     }
@@ -435,5 +452,76 @@ extension View {
         }
       }
     }
+  }
+}
+
+extension WidgetConfiguration {
+  /// Tùy chọn tắt lề mặc định để hỗ trợ chế độ StandBy / Full-Bleed Widget trên iOS 17+
+  public func applyStandByMargins() -> some WidgetConfiguration {
+    if #available(iOS 15.0, *) {
+      return self.contentMarginsDisabled()
+    } else {
+      return self
+    }
+  }
+}
+
+// MARK: - iOS 18+ Interactive Control Widgets (Control Center, Lock Screen & Action Button)
+
+@available(iOS 18.0, *)
+public enum ControlWidgetConfigReader {
+  public static func load(controlId: String = "main") -> ControlWidgetConfigDTO? {
+    guard let json = DynamicWidgetProvider.readSharedString(forKey: "widget_control_\(controlId)", appGroup: ""),
+          let data = json.data(using: .utf8) else {
+      return nil
+    }
+    return try? JSONDecoder().decode(ControlWidgetConfigDTO.self, from: data)
+  }
+}
+
+@available(iOS 18.0, *)
+public struct DynamicControlWidget: ControlWidget {
+  public init() {}
+
+  public var body: some ControlWidgetConfiguration {
+    StaticControlConfiguration(kind: "DynamicControlWidget") {
+      let config = ControlWidgetConfigReader.load(controlId: "main")
+      let title = config?.title ?? "Live Widget"
+      let systemName = config?.systemName ?? "bolt.fill"
+      let actionId = config?.actionId ?? "control_action_main"
+
+      ControlWidgetButton(action: DynamicWidgetActionIntent(actionId: actionId)) {
+        Label(title, systemImage: systemName)
+      }
+    }
+    .displayName("Live Widgets Action")
+    .description("Kích hoạt nhanh hành động hoặc mở rộng Control Widget từ React Native.")
+  }
+}
+
+@available(iOS 18.0, *)
+public struct DynamicControlToggleWidget: ControlWidget {
+  public init() {}
+
+  public var body: some ControlWidgetConfiguration {
+    StaticControlConfiguration(kind: "DynamicControlToggleWidget") {
+      let config = ControlWidgetConfigReader.load(controlId: "toggle")
+        ?? ControlWidgetConfigReader.load(controlId: "main")
+      let rawActionId = config?.actionId ?? "toggle:control_main"
+      let key = rawActionId.hasPrefix("toggle:") ? String(rawActionId.dropFirst(7)) : rawActionId
+      let state = DynamicWidgetStateStore.loadState()
+      let isOn = state.toggledItems[key] ?? (config?.checked ?? false)
+      let title = isOn ? (config?.checkedTitle ?? config?.title ?? "Đang bật") : (config?.title ?? "Tạm tắt")
+      let systemName = config?.systemName ?? "checkmark.circle.fill"
+
+      ControlWidgetToggle(
+        isOn: isOn,
+        action: DynamicControlToggleIntent(actionId: rawActionId, value: !isOn)
+      ) {
+        Label(title, systemImage: systemName)
+      }
+    }
+    .displayName("Live Widgets Toggle")
+    .description("Bật/tắt trạng thái đồng bộ trực tiếp với React Native SharedStorage.")
   }
 }

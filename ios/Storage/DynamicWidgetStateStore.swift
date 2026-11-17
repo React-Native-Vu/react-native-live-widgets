@@ -94,6 +94,14 @@ public enum DynamicWidgetStateStore {
     return loadState().toggledItems[key] ?? false
   }
 
+  public static func setToggle(_ key: String, value: Bool) {
+    var state = loadState()
+    state.lastActionId = "toggle:\(key)"
+    state.updatedAt = Date().timeIntervalSince1970
+    state.toggledItems[key] = value
+    saveState(state)
+  }
+
   /// Chạy ngầm độc lập bên trong Widget Extension (kể cả khi Main App đã bị kill hoàn toàn)
   public static func performRemoteSync(widgetKey: String = "main") async {
     let configKey = "widget_remote_config_\(widgetKey)"

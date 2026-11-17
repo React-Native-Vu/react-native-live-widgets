@@ -144,13 +144,17 @@ public struct DynamicNodeView: View {
     let shadowX = (shadowOffsetDict?["x"] as? Double).map { CGFloat($0) } ?? 0
     let shadowY = (shadowOffsetDict?["y"] as? Double).map { CGFloat($0) } ?? 1
 
+    let isAccentable = node.props?["widgetAccentable"]?.boolValue == true
+
     if #available(iOS 16.0, *), numericAnimation {
       textNode
         .contentTransition(.numericText())
         .shadow(color: shadowColor ?? .clear, radius: shadowRad, x: shadowX, y: shadowY)
+        .applyWidgetAccentable(isAccentable)
     } else {
       textNode
         .shadow(color: shadowColor ?? .clear, radius: shadowRad, x: shadowX, y: shadowY)
+        .applyWidgetAccentable(isAccentable)
     }
   }
 
@@ -194,14 +198,18 @@ public struct DynamicNodeView: View {
   @ViewBuilder
   private func renderProgress() -> some View {
     let style = node.props?["style"]?.stringValue ?? "bar"
+    let isAccentable = node.props?["widgetAccentable"]?.boolValue == true
 
-    if style == "segmented" {
-      renderSegmentedProgress()
-    } else if style == "circular" {
-      renderCircularProgress()
-    } else {
-      renderBarProgress()
+    Group {
+      if style == "segmented" {
+        renderSegmentedProgress()
+      } else if style == "circular" {
+        renderCircularProgress()
+      } else {
+        renderBarProgress()
+      }
     }
+    .applyWidgetAccentable(isAccentable)
   }
 
   @ViewBuilder
@@ -628,6 +636,7 @@ public struct DynamicNodeView: View {
       .offset(y: size * 0.04)
     }
     .frame(width: size, height: size)
+    .applyWidgetAccentable(node.props?["widgetAccentable"]?.boolValue == true)
   }
 
   @ViewBuilder

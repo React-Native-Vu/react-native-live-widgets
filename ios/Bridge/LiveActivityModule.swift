@@ -14,6 +14,9 @@ public class LiveActivityModule: RCTEventEmitter {
   private static var currentPushToStartToken: String?
   private static var _activityUpdateTokens: [String: String] = [:]
   private static var observedActivityIds: Set<String> = []
+  private static var startedActivityIds: Set<String> = []
+  private static var scheduledEndTimestamps: [String: Double] = [:]
+  private static var scheduledEndTasks: [String: Task<Void, Never>] = [:]
   private static var isObservingTokens = false
   private static var isObservingActivities = false
   private var hasListeners = false
@@ -36,6 +39,51 @@ public class LiveActivityModule: RCTEventEmitter {
     return _activityUpdateTokens
   }
 
+  private static func markStarted(activityId: String) {
+    tokenLock.lock()
+    defer { tokenLock.unlock() }
+    startedActivityIds.insert(activityId)
+  }
+
+  private static func consumeIsRemotePushStart(activityId: String) -> Bool {
+    tokenLock.lock()
+    defer { tokenLock.unlock() }
+    if startedActivityIds.contains(activityId) {
+      return false
+    }
+    return true
+  }
+
+  private static func setScheduledEnd(_ ts: Double?, for activityId: String, task: Task<Void, Never>?) {
+    tokenLock.lock()
+    scheduledEndTasks[activityId]?.cancel()
+    if let ts = ts {
+      scheduledEndTimestamps[activityId] = ts
+    } else {
+      scheduledEndTimestamps.removeValue(forKey: activityId)
+    }
+    if let task = task {
+      scheduledEndTasks[activityId] = task
+    } else {
+      scheduledEndTasks.removeValue(forKey: activityId)
+    }
+    tokenLock.unlock()
+  }
+
+  private static func getScheduledEnd(for activityId: String) -> Double? {
+    tokenLock.lock()
+    defer { tokenLock.unlock() }
+    return scheduledEndTimestamps[activityId]
+  }
+
+  private static func cancelScheduledEnd(for activityId: String) {
+    tokenLock.lock()
+    scheduledEndTasks[activityId]?.cancel()
+    scheduledEndTasks.removeValue(forKey: activityId)
+    scheduledEndTimestamps.removeValue(forKey: activityId)
+    tokenLock.unlock()
+  }
+
   private static func shouldObserve(activityId: String) -> Bool {
     tokenLock.lock()
     defer { tokenLock.unlock() }
@@ -48,9 +96,24 @@ public class LiveActivityModule: RCTEventEmitter {
 
   private static func removeObserved(activityId: String) {
     tokenLock.lock()
-    defer { tokenLock.unlock() }
     observedActivityIds.remove(activityId)
+    startedActivityIds.remove(activityId)
     _activityUpdateTokens.removeValue(forKey: activityId)
+    scheduledEndTasks[activityId]?.cancel()
+    scheduledEndTasks.removeValue(forKey: activityId)
+    scheduledEndTimestamps.removeValue(forKey: activityId)
+    tokenLock.unlock()
+  }
+
+  private static func removeAllObserved() {
+    tokenLock.lock()
+    for (_, task) in scheduledEndTasks { task.cancel() }
+    scheduledEndTasks.removeAll()
+    scheduledEndTimestamps.removeAll()
+    observedActivityIds.removeAll()
+    startedActivityIds.removeAll()
+    _activityUpdateTokens.removeAll()
+    tokenLock.unlock()
   }
 
   public override init() {
@@ -143,6 +206,7 @@ public class LiveActivityModule: RCTEventEmitter {
       "LiveActivityTokenChanged",
       "LiveActivityUpdateTokenChanged",
       "LiveActivityActionClicked",
+      "LiveActivityStateChanged",
     ]
   }
 
@@ -152,6 +216,26 @@ public class LiveActivityModule: RCTEventEmitter {
 
   public override func stopObserving() {
     hasListeners = false
+  }
+
+  private func emitStateEvent(
+    activityId: String,
+    systemActivityId: String? = nil,
+    state: String,
+    pushToken: String? = nil
+  ) {
+    var body: [String: Any] = [
+      "activityId": activityId,
+      "state": state,
+      "timestamp": Date().timeIntervalSince1970,
+    ]
+    if let sysId = systemActivityId { body["systemActivityId"] = sysId }
+    if let tok = pushToken { body["pushToken"] = tok }
+
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self, self.hasListeners else { return }
+      self.sendEvent(withName: "LiveActivityStateChanged", body: body)
+    }
   }
 
   // MARK: - Live Activity Lifecycle
@@ -176,28 +260,33 @@ public class LiveActivityModule: RCTEventEmitter {
     let attributes = DynamicActivityAttributes(activityId: activityId)
     let initialContentState = DynamicActivityAttributes.ContentState(payloadJson: payloadJson)
     let initialStaleDate = parseStaleDate(from: payloadJson)
+    let relevanceScore = parseRelevanceScore(from: payloadJson)
     Self.lastPayloadJson = payloadJson
+    Self.markStarted(activityId: activityId)
 
     Task {
       await DynamicWidgetImageCache.prefetchUrls(in: payloadJson)
 
       do {
+        let activity: Activity<DynamicActivityAttributes>
         do {
-          let activity = try Activity.request(
+          activity = try Activity.request(
             attributes: attributes,
-            content: .init(state: initialContentState, staleDate: initialStaleDate),
+            content: .init(state: initialContentState, staleDate: initialStaleDate, relevanceScore: relevanceScore),
             pushType: .token
           )
-          self.observePushToken(for: activity)
         } catch {
           // Fallback sang local Live Activity (pushType: nil) khi chạy môi trường chưa cấu hình APNs
-          let activity = try Activity.request(
+          activity = try Activity.request(
             attributes: attributes,
-            content: .init(state: initialContentState, staleDate: initialStaleDate),
+            content: .init(state: initialContentState, staleDate: initialStaleDate, relevanceScore: relevanceScore),
             pushType: nil
           )
-          self.observePushToken(for: activity)
         }
+
+        self.observeActivityLifecycle(for: activity)
+        self.scheduleAutoEndIfNeeded(activityId: activityId, payloadJson: payloadJson)
+        self.emitStateEvent(activityId: activityId, systemActivityId: activity.id, state: "active")
 
         #if targetEnvironment(simulator)
         if Self.getActivityUpdateToken(for: activityId) == nil {
@@ -221,8 +310,9 @@ public class LiveActivityModule: RCTEventEmitter {
   }
 
   @available(iOS 16.2, *)
-  private func observePushToken(for activity: Activity<DynamicActivityAttributes>) {
+  private func observeActivityLifecycle(for activity: Activity<DynamicActivityAttributes>) {
     let actId = activity.attributes.activityId
+    let sysId = activity.id
     guard Self.shouldObserve(activityId: actId) else { return }
 
     Task {
@@ -239,15 +329,45 @@ public class LiveActivityModule: RCTEventEmitter {
         }
       }
     }
+
+    Task { [weak self] in
+      for await newState in activity.activityStateUpdates {
+        let mapped: String
+        switch newState {
+        case .active: mapped = "active"
+        case .stale: mapped = "stale"
+        case .ended: mapped = "ended"
+        case .dismissed: mapped = "dismissed"
+        @unknown default: mapped = String(describing: newState)
+        }
+        self?.emitStateEvent(
+          activityId: actId,
+          systemActivityId: sysId,
+          state: mapped,
+          pushToken: Self.getActivityUpdateToken(for: actId)
+        )
+        if newState == .ended || newState == .dismissed {
+          Self.removeObserved(activityId: actId)
+        }
+      }
+    }
   }
 
   private func startObservingActivityUpdatesIfNeeded() {
     guard #available(iOS 16.2, *), !Self.isObservingActivities else { return }
     Self.isObservingActivities = true
 
-    Task {
+    Task { [weak self] in
       for await activity in Activity<DynamicActivityAttributes>.activityUpdates {
-        self.observePushToken(for: activity)
+        let actId = activity.attributes.activityId
+        if Self.consumeIsRemotePushStart(activityId: actId) {
+          self?.emitStateEvent(
+            activityId: actId,
+            systemActivityId: activity.id,
+            state: "started_by_push"
+          )
+        }
+        self?.observeActivityLifecycle(for: activity)
       }
     }
   }
@@ -266,23 +386,29 @@ public class LiveActivityModule: RCTEventEmitter {
 
     let updatedState = DynamicActivityAttributes.ContentState(payloadJson: payloadJson)
     let updatedStaleDate = parseStaleDate(from: payloadJson)
+    let relevanceScore = parseRelevanceScore(from: payloadJson)
+    let alertConfig = parseAlertConfiguration(from: payloadJson)
     Self.lastPayloadJson = payloadJson
 
     Task {
-      // Cập nhật ngay, không chờ tải ảnh (tránh delay mỗi lần update). Ảnh mới sẽ được tải nền,
-      // xong thì đẩy lại 1 lần để hiển thị.
       for activity in Activity<DynamicActivityAttributes>.activities {
-        if activity.attributes.activityId == activityId {
-          await activity.update(.init(state: updatedState, staleDate: updatedStaleDate))
+        if activity.attributes.activityId == activityId || activity.id == activityId {
+          await activity.update(
+            .init(state: updatedState, staleDate: updatedStaleDate, relevanceScore: relevanceScore),
+            alertConfiguration: alertConfig
+          )
         }
       }
+      self.scheduleAutoEndIfNeeded(activityId: activityId, payloadJson: payloadJson)
       resolve(true)
 
       let fetchedNew = await DynamicWidgetImageCache.prefetchUrls(in: payloadJson)
       if fetchedNew {
         for activity in Activity<DynamicActivityAttributes>.activities {
-          if activity.attributes.activityId == activityId {
-            await activity.update(.init(state: updatedState, staleDate: updatedStaleDate))
+          if activity.attributes.activityId == activityId || activity.id == activityId {
+            await activity.update(
+              .init(state: updatedState, staleDate: updatedStaleDate, relevanceScore: relevanceScore)
+            )
           }
         }
       }
@@ -314,19 +440,11 @@ public class LiveActivityModule: RCTEventEmitter {
     let seconds = options?["dismissalAfterSeconds"] as? Double ?? 900
     let finalPayloadJson = options?["finalPayloadJson"] as? String
 
-    let policy: ActivityUIDismissalPolicy
-    switch policyStr {
-    case "default":
-      policy = .default
-    case "after", "afterDate":
-      policy = .after(Date().addingTimeInterval(seconds))
-    default:
-      policy = .immediate
-    }
+    let policy = parseDismissalPolicy(policyStr, seconds: seconds)
 
     Task {
       for activity in Activity<DynamicActivityAttributes>.activities {
-        if activity.attributes.activityId == activityId {
+        if activity.attributes.activityId == activityId || activity.id == activityId {
           if let json = finalPayloadJson, !json.isEmpty {
             let finalState = DynamicActivityAttributes.ContentState(payloadJson: json)
             await activity.end(ActivityContent(state: finalState, staleDate: nil), dismissalPolicy: policy)
@@ -336,18 +454,114 @@ public class LiveActivityModule: RCTEventEmitter {
         }
       }
       Self.removeObserved(activityId: activityId)
+      self.emitStateEvent(activityId: activityId, state: "ended")
       resolve(true)
     }
+  }
+
+  @available(iOS 16.2, *)
+  private func parseDismissalPolicy(_ policyStr: String, seconds: Double = 900) -> ActivityUIDismissalPolicy {
+    switch policyStr {
+    case "default":
+      return .default
+    case "after", "afterDate":
+      return .after(Date().addingTimeInterval(seconds))
+    default:
+      return .immediate
+    }
+  }
+
+  @available(iOS 16.2, *)
+  private func scheduleAutoEndIfNeeded(activityId: String, payloadJson: String) {
+    guard let data = payloadJson.data(using: .utf8),
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+      return
+    }
+
+    var targetEpochSec: Double?
+    if let ts = obj["scheduledEndTimestamp"] as? Double, ts > 0 {
+      targetEpochSec = ts > 10_000_000_000 ? ts / 1000.0 : ts
+    } else if let autoSec = obj["autoEndAfterSeconds"] as? Double, autoSec > 0 {
+      targetEpochSec = Date().timeIntervalSince1970 + autoSec
+    }
+
+    guard let endEpoch = targetEpochSec else { return }
+
+    let delaySec = max(0.0, endEpoch - Date().timeIntervalSince1970)
+    let policyStr = obj["expiredDismissalPolicy"] as? String ?? (obj["expiredLockScreen"] != nil ? "default" : "immediate")
+    var expiredPayloadStr: String?
+    if let expiredLockScreen = obj["expiredLockScreen"] {
+      var expiredDict: [String: Any] = ["activityId": activityId, "lockScreen": expiredLockScreen]
+      if let di = obj["dynamicIsland"] { expiredDict["dynamicIsland"] = di }
+      if let d = try? JSONSerialization.data(withJSONObject: expiredDict),
+         let s = String(data: d, encoding: .utf8) {
+        expiredPayloadStr = s
+      }
+    }
+
+    let task = Task { [weak self] in
+      if delaySec > 0 {
+        let nanos = UInt64(min(delaySec, 86400 * 7) * 1_000_000_000)
+        try? await Task.sleep(nanoseconds: nanos)
+      }
+      guard !Task.isCancelled else { return }
+
+      let policy = self?.parseDismissalPolicy(policyStr) ?? .immediate
+      for activity in Activity<DynamicActivityAttributes>.activities {
+        if activity.attributes.activityId == activityId {
+          if let json = expiredPayloadStr, !json.isEmpty {
+            let finalState = DynamicActivityAttributes.ContentState(payloadJson: json)
+            await activity.end(ActivityContent(state: finalState, staleDate: nil), dismissalPolicy: policy)
+          } else {
+            await activity.end(nil, dismissalPolicy: policy)
+          }
+        }
+      }
+      self?.emitStateEvent(activityId: activityId, state: "expired")
+      Self.removeObserved(activityId: activityId)
+    }
+
+    Self.setScheduledEnd(endEpoch, for: activityId, task: task)
   }
 
   private func parseStaleDate(from json: String) -> Date? {
     guard let data = json.data(using: .utf8),
           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-          let ts = obj["staleTimestamp"] as? Double else {
+          let ts = obj["staleTimestamp"] as? Double, ts > 0 else {
       return nil
     }
     let seconds = ts > 10_000_000_000 ? ts / 1000.0 : ts
     return Date(timeIntervalSince1970: seconds)
+  }
+
+  private func parseRelevanceScore(from json: String) -> Double {
+    guard let data = json.data(using: .utf8),
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let score = obj["relevanceScore"] as? Double else {
+      return 0.0
+    }
+    return score
+  }
+
+  @available(iOS 16.2, *)
+  private func parseAlertConfiguration(from json: String) -> AlertConfiguration? {
+    guard let data = json.data(using: .utf8),
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+      return nil
+    }
+    let alertObj = obj["alertConfig"] as? [String: Any]
+    let title = (alertObj?["title"] as? String) ?? (obj["alertTitle"] as? String) ?? ""
+    let body = (alertObj?["body"] as? String) ?? (obj["alertBody"] as? String) ?? ""
+    if title.isEmpty && body.isEmpty {
+      return nil
+    }
+    let soundName = (alertObj?["sound"] as? String) ?? (obj["alertSound"] as? String) ?? "default"
+    let sound: AlertConfiguration.AlertSound = (soundName == "default" || soundName.isEmpty) ? .default : .named(soundName)
+    return AlertConfiguration(
+      title: LocalizedStringResource(stringLiteral: title),
+      body: LocalizedStringResource(stringLiteral: body),
+      sound: sound
+    )
   }
 
   @objc(endAll:rejecter:)
@@ -362,8 +576,11 @@ public class LiveActivityModule: RCTEventEmitter {
 
     Task {
       for activity in Activity<DynamicActivityAttributes>.activities {
+        let actId = activity.attributes.activityId
         await activity.end(nil, dismissalPolicy: .immediate)
+        self.emitStateEvent(activityId: actId, state: "ended")
       }
+      Self.removeAllObserved()
       resolve(true)
     }
   }
@@ -598,6 +815,9 @@ public class LiveActivityModule: RCTEventEmitter {
     Task {
       await DynamicWidgetImageCache.prefetchUrls(in: value)
       WidgetCenter.shared.reloadAllTimelines()
+      if #available(iOS 18.0, *), key.hasPrefix("widget_control_") {
+        ControlCenter.shared.reloadAllControls()
+      }
       resolve(true)
     }
   }
@@ -914,11 +1134,23 @@ public class LiveActivityModule: RCTEventEmitter {
     if #available(iOS 16.1, *) {
       var result: [[String: Any]] = []
       for activity in Activity<DynamicActivityAttributes>.activities {
+        let actId = activity.attributes.activityId
         var item: [String: Any] = [
-          "activityId": activity.id,
-          "activityState": String(describing: activity.activityState)
+          "activityId": actId,
+          "systemActivityId": activity.id,
+          "activityState": String(describing: activity.activityState),
+          "isStale": activity.activityState == .stale,
         ]
-        if let token = Self.getActivityUpdateToken(for: activity.id) {
+        if #available(iOS 16.2, *) {
+          item["relevanceScore"] = activity.content.relevanceScore
+          if let staleDate = activity.content.staleDate {
+            item["staleTimestamp"] = staleDate.timeIntervalSince1970
+          }
+        }
+        if let scheduledEnd = Self.getScheduledEnd(for: actId) {
+          item["scheduledEndTimestamp"] = scheduledEnd
+        }
+        if let token = Self.getActivityUpdateToken(for: actId) {
           item["pushToken"] = token
         }
         result.append(item)

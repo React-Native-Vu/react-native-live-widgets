@@ -157,6 +157,10 @@ export interface WidgetRemoteConfig {
 - Refactored `DynamicNodeAccessibilityModifier` procedural assignments into a dedicated `buildAccessibilityView(content:) -> AnyView` helper method.
 - Added fallback `else { EmptyView() }` branches to `backgroundView` and `borderOverlay` in `ContainerStyleModifier`.
 
+### 6. Extended Widget Families & Complete Live Activity Lifecycle
+- **Widget Families**: Added `extraLarge?: LayoutNode`, `standBy?: LayoutNode` (triggered via `showsWidgetContainerBackground == false` on iOS 17+ with `widgetAccentable` on Text/Progress/Gauge/Image), and `Widget.setControl(controlId, config)` (`DynamicControlWidget` & `DynamicControlToggleWidget` using `ControlWidgetButton`/`ControlWidgetToggle` + `DynamicControlToggleIntent`). `<WidgetPreview>` supports `size="extraLarge"` and `size="standBy"`.
+- **Complete Live Activity Lifecycle**: Added `LiveActivity.get(id)`, `LiveActivity.isActive(id)`, `LiveActivity.onStateChange(listener)`, `LiveActivity.cleanupExpired()`, `relevanceScore`, `staleLockScreen`/`staleDynamicIsland` (`context.isStale`), `alertConfig` (`AlertConfiguration`), and `scheduledEndTimestamp`/`autoEndAfterSeconds` (`expiredLockScreen`, `expiredDismissalPolicy`), plus expanded `useLiveActivity()` state (`activities`, `lifecycleState`, `isStale`, `refreshActivities`, `cleanupExpired`).
+
 ---
 
 ## 6. Official Documentation & Web Links

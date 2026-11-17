@@ -8,9 +8,9 @@ public struct DynamicLiveActivityWidget: Widget {
 
   public var body: some WidgetConfiguration {
     ActivityConfiguration(for: DynamicActivityAttributes.self) { context in
-      // Render Lock Screen
+      // Render Lock Screen (tự chuyển sang staleLockScreen nếu context.isStale)
       let payload = parsePayload(json: context.state.payloadJson)
-      if let lockScreen = payload?.lockScreen {
+      if let lockScreen = effectiveLockScreenNode(context: context, payload: payload) {
         DynamicNodeView(node: lockScreen)
           .activityBackgroundTint(.black.opacity(0.8))
           .activitySystemActionForegroundColor(.white)
@@ -19,7 +19,8 @@ public struct DynamicLiveActivityWidget: Widget {
       }
     } dynamicIsland: { context in
       let payload = parsePayload(json: context.state.payloadJson)
-      let island = payload?.dynamicIsland
+      let island = effectiveDynamicIsland(context: context, payload: payload)
+      let lockScreenFallback = effectiveLockScreenNode(context: context, payload: payload)
 
       return DynamicIsland {
         // Expanded Regions với Safe Padding & Smart Fallback tránh tình trạng Dynamic Island bị đen trống rỗng
@@ -38,7 +39,7 @@ public struct DynamicLiveActivityWidget: Widget {
           }
         }
         DynamicIslandExpandedRegion(.bottom) {
-          if let bottom = island?.expanded?.bottom ?? payload?.lockScreen {
+          if let bottom = island?.expanded?.bottom ?? lockScreenFallback {
             DynamicNodeView(node: bottom)
               .padding(.horizontal, 8)
               .padding(.bottom, 6)
@@ -69,6 +70,26 @@ public struct DynamicLiveActivityWidget: Widget {
         }
       }
     }
+  }
+
+  private func effectiveLockScreenNode(
+    context: ActivityViewContext<DynamicActivityAttributes>,
+    payload: DynamicPayloadDTO?
+  ) -> LayoutNodeDTO? {
+    if #available(iOS 16.2, *), context.isStale, let staleNode = payload?.staleLockScreen {
+      return staleNode
+    }
+    return payload?.lockScreen
+  }
+
+  private func effectiveDynamicIsland(
+    context: ActivityViewContext<DynamicActivityAttributes>,
+    payload: DynamicPayloadDTO?
+  ) -> DynamicIslandDTO? {
+    if #available(iOS 16.2, *), context.isStale, let staleIsland = payload?.staleDynamicIsland {
+      return staleIsland
+    }
+    return payload?.dynamicIsland
   }
 
   private func parsePayload(json: String) -> DynamicPayloadDTO? {
