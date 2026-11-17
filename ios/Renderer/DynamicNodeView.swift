@@ -111,27 +111,28 @@ public struct DynamicNodeView: View {
     let fontDesignStr = node.props?["fontDesign"]?.stringValue ?? "default"
     let design: Font.Design = fontDesignStr == "monospaced" ? .monospaced : (fontDesignStr == "rounded" ? .rounded : (fontDesignStr == "serif" ? .serif : .default))
 
-    let font: Font
-    if let typo = node.props?["typography"]?.stringValue {
-      switch typo {
-      case "largeTitle": font = .system(.largeTitle, design: design)
-      case "title1", "title": font = .system(.title, design: design)
-      case "title2": font = .system(.title2, design: design)
-      case "title3": font = .system(.title3, design: design)
-      case "headline": font = .system(.headline, design: design)
-      case "subheadline": font = .system(.subheadline, design: design)
-      case "body": font = .system(.body, design: design)
-      case "callout": font = .system(.callout, design: design)
-      case "footnote": font = .system(.footnote, design: design)
-      case "caption1", "caption": font = .system(.caption, design: design)
-      case "caption2": font = .system(.caption2, design: design)
-      default: font = .system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr), design: design)
+    let font: Font = {
+      if let typo = node.props?["typography"]?.stringValue {
+        switch typo {
+        case "largeTitle": return .system(.largeTitle, design: design)
+        case "title1", "title": return .system(.title, design: design)
+        case "title2": return .system(.title2, design: design)
+        case "title3": return .system(.title3, design: design)
+        case "headline": return .system(.headline, design: design)
+        case "subheadline": return .system(.subheadline, design: design)
+        case "body": return .system(.body, design: design)
+        case "callout": return .system(.callout, design: design)
+        case "footnote": return .system(.footnote, design: design)
+        case "caption1", "caption": return .system(.caption, design: design)
+        case "caption2": return .system(.caption2, design: design)
+        default: return .system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr), design: design)
+        }
+      } else {
+        return .system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr), design: design)
       }
-    } else {
-      font = .system(size: CGFloat(fontSize), weight: parseFontWeight(fontWeightStr), design: design)
-    }
+    }()
 
-    var textNode = Text(text)
+    let textNode = Text(text)
       .font(font)
       .foregroundColor(color)
       .lineLimit(numberOfLines)
@@ -922,7 +923,7 @@ struct DynamicNodeAccessibilityModifier: ViewModifier {
     let role = props?["accessibilityRole"]?.stringValue
 
     if accessible == false {
-      content.accessibilityHidden(true)
+      return AnyView(content.accessibilityHidden(true))
     } else if label != nil || hint != nil || value != nil || role != nil {
       var view = AnyView(content)
       if let label = label {
