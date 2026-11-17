@@ -74,9 +74,37 @@ function loadWidgetsConfig(projectRoot, customConfigPath = null) {
   }
 
   if (!targetPath || !fs.existsSync(targetPath)) {
-    throw new Error(
-      `Widget configuration file not found! Please create 'widgets.config.ts' in project root.`
-    );
+    targetPath = path.join(projectRoot, 'widgets.config.ts');
+    const defaultTemplate = `import { defineWidgetConfig } from 'react-native-live-widgets';
+
+export default defineWidgetConfig({
+  bundleName: 'LiveWidgetsBundle',
+  liveActivity: true,
+  controlWidgets: true,
+  defaultLocale: 'vi',
+  locales: {
+    vi: {
+      'widgets.main.title': 'Tiện ích Live Widgets',
+      'widgets.main.desc': 'Tự động đồng bộ và hiển thị theo mẫu giao diện bạn chọn trong ứng dụng.',
+    },
+    en: {
+      'widgets.main.title': 'Live Widgets Utility',
+      'widgets.main.desc': 'Automatically syncs and displays layouts defined in your React Native app.',
+    },
+  },
+  widgets: [
+    {
+      key: 'main',
+      kind: 'DynamicHomeScreenWidget',
+      displayName: 'widgets.main.title',
+      description: 'widgets.main.desc',
+      supportedFamilies: ['systemSmall', 'systemMedium', 'systemLarge'],
+    },
+  ],
+});
+`;
+    fs.writeFileSync(targetPath, defaultTemplate, 'utf8');
+    console.log(`✨ Created default widget configuration at: widgets.config.ts`);
   }
 
   console.log(`📄 Reading widget configuration from: ${path.relative(projectRoot, targetPath)}`);

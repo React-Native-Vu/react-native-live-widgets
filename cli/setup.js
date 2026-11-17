@@ -506,6 +506,49 @@ if (fs.existsSync(androidDir)) {
   }
 }
 
+// 5. Ensure widgets.config.ts exists
+const configCandidates = [
+  'widgets.config.ts',
+  'widgets.config.js',
+  'widgets.config.mjs',
+  'widgets.config.cjs',
+  'widgets.config.json',
+];
+const hasConfig = configCandidates.some((c) => fs.existsSync(path.join(projectRoot, c)));
+if (!hasConfig) {
+  const targetConfig = path.join(projectRoot, 'widgets.config.ts');
+  const defaultTemplate = `import { defineWidgetConfig } from 'react-native-live-widgets';
+
+export default defineWidgetConfig({
+  bundleName: 'LiveWidgetsBundle',
+  liveActivity: true,
+  controlWidgets: true,
+  defaultLocale: 'vi',
+  locales: {
+    vi: {
+      'widgets.main.title': 'Tiện ích Live Widgets',
+      'widgets.main.desc': 'Tự động đồng bộ và hiển thị theo mẫu giao diện bạn chọn trong ứng dụng.',
+    },
+    en: {
+      'widgets.main.title': 'Live Widgets Utility',
+      'widgets.main.desc': 'Automatically syncs and displays layouts defined in your React Native app.',
+    },
+  },
+  widgets: [
+    {
+      key: 'main',
+      kind: 'DynamicHomeScreenWidget',
+      displayName: 'widgets.main.title',
+      description: 'widgets.main.desc',
+      supportedFamilies: ['systemSmall', 'systemMedium', 'systemLarge'],
+    },
+  ],
+});
+`;
+  fs.writeFileSync(targetConfig, defaultTemplate, 'utf8');
+  console.log('✅ Đã tạo cấu hình mặc định: widgets.config.ts');
+}
+
 console.log('\n🎉 THIẾT LẬP HOÀN TẤT 100%!');
 console.log('👉 Bạn có thể chạy ứng dụng ngay bây giờ:');
 if (isExpo) {
