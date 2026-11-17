@@ -3,6 +3,7 @@ import {
   ButtonNode,
   ChartNode,
   ContainerProps,
+  ControlWidgetConfig,
   CustomNode,
   DividerNode,
   EqualizerNode,
@@ -471,4 +472,54 @@ export const UI = {
       ...options,
     },
   }),
+
+  /**
+   * Cấu hình Control Button cho iOS 18+ Control Center / Action Button & Android Quick Settings Tile.
+   */
+  ControlButton: (
+    options: Omit<ControlWidgetConfig, 'type' | 'actionId'> & {
+      actionId?: string;
+      onPress?: (payload?: any) => Promise<any> | any;
+    }
+  ): ControlWidgetConfig => buildControlConfig('button', options),
+
+  /**
+   * Cấu hình Control Toggle 2 trạng thái cho iOS 18+ Control Center & Android Quick Settings Tile.
+   */
+  ControlToggle: (
+    options: Omit<ControlWidgetConfig, 'type' | 'actionId'> & {
+      actionId?: string;
+      onPress?: (payload?: any) => Promise<any> | any;
+    }
+  ): ControlWidgetConfig => buildControlConfig('toggle', options),
 };
+
+function buildControlConfig(
+  type: 'button' | 'toggle',
+  options: Omit<ControlWidgetConfig, 'type' | 'actionId'> & {
+    actionId?: string;
+    onPress?: (payload?: any) => Promise<any> | any;
+  }
+): ControlWidgetConfig {
+  const { onPress, actionId, ...rest } = options;
+  let resolvedActionId = actionId;
+  if (!resolvedActionId) {
+    autoActionCounter += 1;
+    resolvedActionId =
+      type === 'toggle'
+        ? `toggle:control_${Date.now()}_${autoActionCounter}`
+        : `control_${Date.now()}_${autoActionCounter}`;
+  } else if (type === 'toggle' && !resolvedActionId.startsWith('toggle:')) {
+    resolvedActionId = `toggle:${resolvedActionId}`;
+  }
+
+  if (onPress) {
+    registerAction(resolvedActionId, onPress);
+  }
+
+  return {
+    ...rest,
+    type,
+    actionId: resolvedActionId,
+  };
+}

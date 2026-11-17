@@ -1,6 +1,6 @@
 import { ViewStyle } from 'react-native';
-import { LayoutNode, WidgetSinglePageConfig } from './types';
-export type WidgetPreviewSize = 'small' | 'medium' | 'large' | 'extraLarge' | 'standBy' | 'lockScreen' | 'dynamicIsland';
+import { ControlWidgetConfig, LayoutNode, WidgetSinglePageConfig } from './types';
+export type WidgetPreviewSize = 'small' | 'medium' | 'large' | 'extraLarge' | 'standBy' | 'lockScreen' | 'dynamicIsland' | 'control';
 export interface WidgetPreviewProps {
     /**
      * Kích thước tiện ích cần xem trước:
@@ -11,11 +11,14 @@ export interface WidgetPreviewProps {
      * - 'standBy' (310 × 158 dp)
      * - 'lockScreen' (350 × 80 dp)
      * - 'dynamicIsland' (350 × 160 dp)
-     * Mặc định là 'medium'.
+     * - 'control' (170 × 76 dp — iOS 18 Control Center / Android Quick Settings Tile)
+     * Mặc định là 'medium' (hoặc 'control' nếu truyền controlConfig).
      */
     size?: WidgetPreviewSize;
     /** Cây LayoutNode hoặc đối tượng chứa { small, medium, large, extraLarge, standBy } */
     layout?: LayoutNode | WidgetSinglePageConfig;
+    /** Cấu hình Control Widget dùng để xem trước Control Center / Quick Settings Tile */
+    controlConfig?: ControlWidgetConfig;
     /** Cú pháp JSX trực tiếp truyền vào bên trong thẻ `<WidgetPreview>` */
     children?: React.ReactNode;
     /** Bắt sự kiện khi người dùng bấm vào các nút tương tác trên Widget xem trước */

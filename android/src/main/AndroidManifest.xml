@@ -35,5 +35,17 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/rn_live_widget_info" />
         </receiver>
+
+        <!-- Android Quick Settings Tile (Control Widget tương đương iOS 18 Control Center) -->
+        <service
+            android:name=".DynamicQuickSettingsTileService"
+            android:label="Live Widgets Control"
+            android:icon="@android:drawable/ic_lock_power_off"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

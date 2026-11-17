@@ -16,6 +16,7 @@ import {
   WidgetIR,
 } from './types';
 import { compileToIR, inspectIR } from './ir';
+import { UI } from './builder';
 
 declare const __DEV__: boolean | undefined;
 
@@ -865,6 +866,17 @@ export const Widget = {
   inspectIR: (layout: any): string => {
     return inspectIR(layout);
   },
+};
+
+/**
+ * 🎛️ Namespace cấu hình & quản lý Control Widget đa nền tảng
+ * (iOS 18+ Control Center / Lock Screen Controls / Action Button & Android Quick Settings Tile).
+ */
+export const ControlWidget = {
+  set: Widget.setControl,
+  getState: Widget.getControlState,
+  button: UI.ControlButton,
+  toggle: UI.ControlToggle,
 };
 
 // ─── 3. SHARED STORAGE (App Groups & SharedPreferences) ─────────────────────

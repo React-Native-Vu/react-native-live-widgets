@@ -204,6 +204,22 @@ export declare const Widget: {
      */
     inspectIR: (layout: any) => string;
 };
+/**
+ * 🎛️ Namespace cấu hình & quản lý Control Widget đa nền tảng
+ * (iOS 18+ Control Center / Lock Screen Controls / Action Button & Android Quick Settings Tile).
+ */
+export declare const ControlWidget: {
+    set: (controlId: string, config: ControlWidgetConfig, appGroup?: string) => Promise<boolean>;
+    getState: (controlId: string, appGroup?: string) => Promise<ControlWidgetConfig | null>;
+    button: (options: Omit<ControlWidgetConfig, "type" | "actionId"> & {
+        actionId?: string;
+        onPress?: (payload?: any) => Promise<any> | any;
+    }) => ControlWidgetConfig;
+    toggle: (options: Omit<ControlWidgetConfig, "type" | "actionId"> & {
+        actionId?: string;
+        onPress?: (payload?: any) => Promise<any> | any;
+    }) => ControlWidgetConfig;
+};
 export declare const SharedStorage: {
     /**
      * Lưu dữ liệu vào App Group (iOS) hoặc SharedPreferences (Android) để Widget đọc.

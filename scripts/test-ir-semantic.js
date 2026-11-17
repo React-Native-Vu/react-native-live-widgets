@@ -11,11 +11,13 @@
  */
 
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 
 // Run tests against the compiled lib/
 const { compileToIR, inspectIR } = require('../lib/ir');
 const { UI } = require('../lib/builder');
+const { actionHandlers } = require('../lib/dispatcher');
 
 console.log('🧪 [Test Suite] Running UI IR & Semantic Tree Test Suite...');
 
@@ -84,4 +86,67 @@ assert(inspectOutput.includes('[NATIVE]'), 'inspectIR must output [NATIVE] tags'
 assert(inspectOutput.includes('[CANVAS]'), 'inspectIR must output [CANVAS] tags');
 assert(inspectOutput.includes('🌲 Widget IR v2.0'), 'inspectIR must output header');
 
-console.log('\n🎉 [Test Suite] All 6 test suites passed with 100% assertions satisfied!\n');
+// ── Test 7: Extended Families (extraLarge, standBy) & widgetAccentable ────────
+console.log('   ✓ Test 7: Verifying widgetAccentable & extended family layout nodes...');
+const standByLayout = UI.VStack(
+  { padding: 12, backgroundColor: '#000000' },
+  UI.Text('08:30', { fontSize: 32, widgetAccentable: true }),
+  UI.Progress({ value: 0.72, widgetAccentable: true }),
+  UI.Gauge({ value: 0.9, label: 'Focus', widgetAccentable: true })
+);
+const extraLargeLayout = UI.VStack(
+  { padding: 20, backgroundColor: '#0F172A' },
+  UI.Text('Bảng tổng hợp iPadOS Extra Large', { typography: 'title1' }),
+  standByLayout
+);
+const extendedConfig = {
+  small: UI.VStack(UI.Text('Small')),
+  extraLarge: extraLargeLayout,
+  standBy: standByLayout,
+};
+assert(extendedConfig.extraLarge.type === 'VStack', 'extraLarge layout must be valid');
+assert(extendedConfig.standBy.type === 'VStack', 'standBy layout must be valid');
+assert.strictEqual(standByLayout.children[0].props.widgetAccentable, true, 'Text must preserve widgetAccentable');
+assert.strictEqual(standByLayout.children[1].props.widgetAccentable, true, 'Progress must preserve widgetAccentable');
+assert.strictEqual(standByLayout.children[2].props.widgetAccentable, true, 'Gauge must preserve widgetAccentable');
+
+const standByIR = compileToIR(standByLayout);
+assert(standByIR.semanticSummary.includes('08:30'), 'standBy IR summary must include text');
+
+// ── Test 8: ControlWidget DSL Helpers & Export Declarations ──────────────────
+console.log('   ✓ Test 8: Verifying UI.ControlButton, UI.ControlToggle & exported types...');
+let controlCallbackTriggered = false;
+const ctrlBtn = UI.ControlButton({
+  title: 'Check-in nhanh',
+  systemName: 'bolt.fill',
+  actionId: 'quick_checkin',
+  onPress: () => {
+    controlCallbackTriggered = true;
+  },
+});
+assert.strictEqual(ctrlBtn.type, 'button', 'ControlButton type must be button');
+assert.strictEqual(ctrlBtn.actionId, 'quick_checkin', 'ControlButton must keep explicit actionId');
+assert.strictEqual('onPress' in ctrlBtn, false, 'Serialized ControlWidgetConfig must strip onPress function');
+assert(actionHandlers.has('quick_checkin'), 'ControlButton onPress must register in actionHandlers');
+actionHandlers.get('quick_checkin')({ actionId: 'quick_checkin' });
+assert.strictEqual(controlCallbackTriggered, true, 'Registered ControlButton handler must execute');
+
+const ctrlToggle = UI.ControlToggle({
+  title: 'Tạm nghỉ',
+  checkedTitle: 'Đang làm việc',
+  systemName: 'clock.badge.checkmark.fill',
+  checked: true,
+  actionId: 'shift_active',
+});
+assert.strictEqual(ctrlToggle.type, 'toggle', 'ControlToggle type must be toggle');
+assert.strictEqual(ctrlToggle.actionId, 'toggle:shift_active', 'ControlToggle must ensure toggle: prefix');
+assert.strictEqual(ctrlToggle.checked, true, 'ControlToggle must preserve checked flag');
+
+const indexDts = fs.readFileSync(path.join(__dirname, '../lib/index.d.ts'), 'utf8');
+const previewDts = fs.readFileSync(path.join(__dirname, '../lib/preview.d.ts'), 'utf8');
+const typesDts = fs.readFileSync(path.join(__dirname, '../lib/types.d.ts'), 'utf8');
+assert(indexDts.includes('export declare const ControlWidget'), 'lib/index.d.ts must export ControlWidget');
+assert(previewDts.includes("'control'") && previewDts.includes('controlConfig?: ControlWidgetConfig'), 'lib/preview.d.ts must include control preview size and prop');
+assert(typesDts.includes('extraLarge?: LayoutNode') && typesDts.includes('standBy?: LayoutNode'), 'lib/types.d.ts must include extraLarge and standBy');
+
+console.log('\n🎉 [Test Suite] All 8 test suites passed with 100% assertions satisfied!\n');

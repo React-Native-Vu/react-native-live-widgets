@@ -9,6 +9,7 @@ import {
   TextStyle as RNTextStyle,
 } from 'react-native';
 import {
+  ControlWidgetConfig,
   LayoutNode,
   WidgetSinglePageConfig,
   VStackNode,
@@ -30,7 +31,8 @@ export type WidgetPreviewSize =
   | 'extraLarge'
   | 'standBy'
   | 'lockScreen'
-  | 'dynamicIsland';
+  | 'dynamicIsland'
+  | 'control';
 
 export interface WidgetPreviewProps {
   /**
@@ -42,11 +44,14 @@ export interface WidgetPreviewProps {
    * - 'standBy' (310 × 158 dp)
    * - 'lockScreen' (350 × 80 dp)
    * - 'dynamicIsland' (350 × 160 dp)
-   * Mặc định là 'medium'.
+   * - 'control' (170 × 76 dp — iOS 18 Control Center / Android Quick Settings Tile)
+   * Mặc định là 'medium' (hoặc 'control' nếu truyền controlConfig).
    */
   size?: WidgetPreviewSize;
   /** Cây LayoutNode hoặc đối tượng chứa { small, medium, large, extraLarge, standBy } */
   layout?: LayoutNode | WidgetSinglePageConfig;
+  /** Cấu hình Control Widget dùng để xem trước Control Center / Quick Settings Tile */
+  controlConfig?: ControlWidgetConfig;
   /** Cú pháp JSX trực tiếp truyền vào bên trong thẻ `<WidgetPreview>` */
   children?: React.ReactNode;
   /** Bắt sự kiện khi người dùng bấm vào các nút tương tác trên Widget xem trước */
@@ -67,6 +72,7 @@ const SIZE_DIMENSIONS: Record<WidgetPreviewSize, { width: number; height: number
   standBy: { width: 310, height: 158, label: 'StandBy • 310×158' },
   lockScreen: { width: 350, height: 80, label: 'Lock Screen • 350×80' },
   dynamicIsland: { width: 350, height: 160, label: 'Dynamic Island' },
+  control: { width: 170, height: 76, label: 'Control • iOS 18 / QS Tile' },
 };
 
 function parseDynamicColor(c: any, mode: 'light' | 'dark' | 'tinted' = 'dark'): string | undefined {
@@ -126,14 +132,16 @@ type PreviewSyncVars = {
 };
 
 export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
-  size: initialSize = 'medium',
+  size: initialSizeProp,
   layout,
+  controlConfig,
   children,
   onAction,
   showBadge = true,
   interactiveSizeSwitch = false,
   style,
 }: WidgetPreviewProps) => {
+  const initialSize: WidgetPreviewSize = initialSizeProp ?? (controlConfig ? 'control' : 'medium');
   const [activeSize, setActiveSize] = useState<WidgetPreviewSize>(initialSize);
 
   const pageConfigObj =
@@ -248,8 +256,15 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
   const dim =
     SIZE_DIMENSIONS[(activeSize as WidgetPreviewSize) || 'medium'] || SIZE_DIMENSIONS.medium;
 
-  const switchSizes: WidgetPreviewSize[] = ['small', 'medium', 'large'];
   const anyLayout = layout as any;
+  const effectiveControlConfig: ControlWidgetConfig | null =
+    controlConfig ||
+    (anyLayout?.control as ControlWidgetConfig) ||
+    (activeSize === 'control' && anyLayout && !anyLayout.type && typeof anyLayout.title === 'string' && typeof anyLayout.actionId === 'string'
+      ? (anyLayout as ControlWidgetConfig)
+      : null);
+
+  const switchSizes: WidgetPreviewSize[] = ['small', 'medium', 'large'];
   if (
     initialSize === 'extraLarge' ||
     anyLayout?.extraLarge ||
@@ -264,6 +279,9 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
   ) {
     switchSizes.push('standBy');
   }
+  if (initialSize === 'control' || effectiveControlConfig) {
+    switchSizes.push('control');
+  }
 
   return (
     <View style={[styles.container, style]}>
@@ -276,7 +294,7 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
               style={[styles.tabItem, activeSize === s && styles.tabItemActive]}
             >
               <RNText style={[styles.tabText, activeSize === s && styles.tabTextActive]}>
-                {s === 'extraLarge' ? 'XLARGE' : s.toUpperCase()}
+                {s === 'extraLarge' ? 'XLARGE' : s === 'control' ? 'CONTROL' : s.toUpperCase()}
               </RNText>
             </TouchableOpacity>
           ))}
@@ -301,7 +319,19 @@ export const WidgetPreview: React.FC<WidgetPreviewProps> = ({
           },
         ]}
       >
-        {rootNode ? (
+        {activeSize === 'control' ? (
+          <PreviewControlTile
+            config={
+              effectiveControlConfig || {
+                type: 'button',
+                title: 'Live Control',
+                subtitle: 'Nhấn để kích hoạt',
+                actionId: 'control_action_main',
+              }
+            }
+            onAction={handlePreviewAction}
+          />
+        ) : rootNode ? (
           renderPreviewNode(rootNode, handlePreviewAction, true, 'column', syncVars)
         ) : (
           <View style={styles.emptyContainer}>
@@ -318,6 +348,114 @@ export const VoltraWidgetPreview = WidgetPreview;
 
 // ─── RECURSIVE NODE RENDERER ─────────────────────────────────────────────────
 
+function dispatchPreviewAction(
+  actionId: string | undefined,
+  onAction?: (actionId: string) => void,
+  extraPayload?: Record<string, any>
+) {
+  if (!actionId) return;
+  if (onAction) {
+    onAction(actionId);
+  }
+  const payload = { actionId, ...extraPayload };
+  const registered = actionHandlers.get(actionId);
+  if (registered) {
+    try {
+      registered(payload);
+    } catch (e) {
+      console.warn(`[WidgetPreview] Action '${actionId}' error:`, e);
+    }
+  }
+  for (const globalHandler of globalActionHandlers) {
+    try {
+      globalHandler(actionId, extraPayload);
+    } catch (e) {
+      console.warn(`[WidgetPreview] Global action handler error:`, e);
+    }
+  }
+}
+
+const PreviewControlTile: React.FC<{
+  config: ControlWidgetConfig;
+  onAction?: (actionId: string) => void;
+}> = ({ config, onAction }) => {
+  const [isOn, setIsOn] = useState<boolean>(Boolean(config.checked));
+
+  useEffect(() => {
+    setIsOn(Boolean(config.checked));
+  }, [config.checked]);
+
+  const isToggle = config.type === 'toggle' || Boolean(config.actionId?.startsWith('toggle:'));
+  const active = isToggle && isOn;
+  const tint = config.tintColor || '#2563EB';
+  const title = active ? config.checkedTitle || config.title : config.title;
+  const subtitle = active
+    ? config.checkedSubtitle ?? config.subtitle ?? 'Đang bật'
+    : config.subtitle ?? (isToggle ? 'Tạm tắt' : config.systemName || 'Control');
+
+  return (
+    <TouchableOpacity
+      accessible
+      accessibilityRole={isToggle ? 'switch' : 'button'}
+      accessibilityLabel={title}
+      accessibilityValue={isToggle ? { text: active ? 'Bật' : 'Tắt' } : undefined}
+      activeOpacity={0.75}
+      onPress={() => {
+        const nextVal = isToggle ? !isOn : undefined;
+        if (isToggle) {
+          setIsOn(Boolean(nextVal));
+        }
+        dispatchPreviewAction(
+          config.actionId,
+          onAction,
+          isToggle ? { isChecked: nextVal } : undefined
+        );
+      }}
+      style={{
+        width: '100%',
+        height: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        gap: 10,
+        backgroundColor: active ? '#1E293B' : '#0F172A',
+        borderWidth: active ? 1.5 : 1,
+        borderColor: active ? tint : 'rgba(148, 163, 184, 0.2)',
+        borderRadius: 20,
+      }}
+    >
+      <View
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 17,
+          backgroundColor: active ? tint : 'rgba(255, 255, 255, 0.1)',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <RNText style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' }}>
+          {active ? '✓' : '⚡'}
+        </RNText>
+      </View>
+      <View style={{ flex: 1 }}>
+        <RNText
+          numberOfLines={1}
+          style={{ color: '#F8FAFC', fontSize: 12, fontWeight: '700' }}
+        >
+          {title}
+        </RNText>
+        <RNText
+          numberOfLines={1}
+          style={{ color: active ? '#93C5FD' : '#94A3B8', fontSize: 10, marginTop: 1 }}
+        >
+          {subtitle}
+        </RNText>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
 const PreviewToggleItem: React.FC<{
   node: any;
   onAction?: (actionId: string) => void;
@@ -330,26 +468,7 @@ const PreviewToggleItem: React.FC<{
   const handlePress = () => {
     const nextVal = !isChecked;
     setIsChecked(nextVal);
-    if (p.actionId) {
-      if (onAction) {
-        onAction(p.actionId);
-      }
-      const registered = actionHandlers.get(p.actionId);
-      if (registered) {
-        try {
-          registered({ actionId: p.actionId, isChecked: nextVal });
-        } catch (e) {
-          console.warn(`[WidgetPreview] Action '${p.actionId}' error:`, e);
-        }
-      }
-      for (const globalHandler of globalActionHandlers) {
-        try {
-          globalHandler(p.actionId, { isChecked: nextVal });
-        } catch (e) {
-          console.warn(`[WidgetPreview] Global action handler error:`, e);
-        }
-      }
-    }
+    dispatchPreviewAction(p.actionId, onAction, { isChecked: nextVal });
   };
 
   return (
@@ -749,28 +868,7 @@ function renderPreviewNode(
           accessibilityHint={p.accessibilityHint}
           accessibilityRole="button"
           activeOpacity={0.7}
-          onPress={() => {
-            if (p.actionId) {
-              if (onAction) {
-                onAction(p.actionId);
-              }
-              const registered = actionHandlers.get(p.actionId);
-              if (registered) {
-                try {
-                  registered({ actionId: p.actionId });
-                } catch (e) {
-                  console.warn(`[WidgetPreview] Action '${p.actionId}' error:`, e);
-                }
-              }
-              for (const globalHandler of globalActionHandlers) {
-                try {
-                  globalHandler(p.actionId);
-                } catch (e) {
-                  console.warn(`[WidgetPreview] Global action handler error:`, e);
-                }
-              }
-            }
-          }}
+          onPress={() => dispatchPreviewAction(p.actionId, onAction)}
           style={btnStyle}
         >
           <RNText numberOfLines={1} style={textStyle}>

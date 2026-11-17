@@ -1192,16 +1192,23 @@ Version **v1.2.1** addresses critical real-world interaction challenges on physi
 Beyond `small`, `medium`, `large`, and Lock Screen (`accessoryRectangular`, `accessoryCircular`, `accessoryInline`) layouts:
 - **`extraLarge?: LayoutNode`**: Targets iPadOS (`systemExtraLarge`) and Android tablets (`widgetHeightDp >= 280dp`). Supported in `<WidgetPreview size="extraLarge">`.
 - **`standBy?: LayoutNode`**: Automatically activated in iOS 17+ StandBy Mode (`family == .systemSmall && !showsWidgetContainerBackground`), alongside `.applyStandByMargins()` and `widgetAccentable` support on `Text`, `Progress`, `Gauge`, and `Image`. Supported in `<WidgetPreview size="standBy">`.
-- **iOS 18+ Control Widgets (`Widget.setControl`)**: Configure iOS 18 Control Center, Lock Screen controls, and Action Button widgets natively via `DynamicControlWidget` (Button) and `DynamicControlToggleWidget` (Toggle using `DynamicControlToggleIntent`):
+- **iOS 18+ Control Widgets & Android Quick Settings Tile (`ControlWidget` / `Widget.setControl`)**: Configure iOS 18 Control Center, Lock Screen controls, and Action Button widgets natively via `ios/Widgets/DynamicControlWidget.swift` (`DynamicControlWidget` & `DynamicControlToggleWidget`) and Android Quick Settings Tiles via `DynamicQuickSettingsTileService.kt`, connected directly to `DynamicWidgetStateStore` and `useWidgetAction`:
   ```typescript
-  await Widget.setControl('toggle', {
-    type: 'toggle',
+  import { ControlWidget, UI, WidgetPreview } from 'react-native-live-widgets';
+
+  const shiftControl = ControlWidget.toggle({
     title: 'Work Shift',
+    subtitle: 'Tap to clock in',
     checkedTitle: 'On Shift',
+    checkedSubtitle: 'Tap to clock out',
     systemName: 'clock.badge.checkmark.fill',
     checked: true,
     actionId: 'toggle:attendance',
   });
+
+  await ControlWidget.set('toggle', shiftControl);
+  // Also supports UI.ControlButton({ ... }) and Widget.setControl('main', ...)
+  // Preview in-app: <WidgetPreview size="control" controlConfig={shiftControl} />
   ```
 
 #### 2. Complete Live Activity Lifecycle API

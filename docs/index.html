@@ -702,13 +702,13 @@ await Widget.setLayout('shift', {
               <tbody class="divide-y divide-cardBorder text-slate-300">
                 <tr>
                   <td class="py-2 pr-4 font-mono text-sky-400">size</td>
-                  <td class="py-2 pr-4 font-mono text-xs text-slate-400">'small' | 'medium' | 'large' | 'extraLarge' | 'standBy' | 'lockScreen' | 'dynamicIsland'</td>
-                  <td class="py-2">Kích thước khung xem trước (mặc định <code>'medium'</code> 338×158dp). Hỗ trợ cả StandBy &amp; iPadOS ExtraLarge.</td>
+                  <td class="py-2 pr-4 font-mono text-xs text-slate-400">'small' | 'medium' | 'large' | 'extraLarge' | 'standBy' | 'lockScreen' | 'dynamicIsland' | 'control'</td>
+                  <td class="py-2">Kích thước khung xem trước (mặc định <code>'medium'</code> 338×158dp). Hỗ trợ StandBy, ExtraLarge &amp; Control Tile (170×76dp).</td>
                 </tr>
                 <tr>
-                  <td class="py-2 pr-4 font-mono text-sky-400">layout / children</td>
-                  <td class="py-2 pr-4 font-mono text-xs text-slate-400">LayoutNode | WidgetSinglePageConfig | ReactNode</td>
-                  <td class="py-2">Nhận cây JSON DSL, object đa kích cỡ, hoặc thẻ JSX lồng trực tiếp.</td>
+                  <td class="py-2 pr-4 font-mono text-sky-400">layout / controlConfig / children</td>
+                  <td class="py-2 pr-4 font-mono text-xs text-slate-400">LayoutNode | WidgetSinglePageConfig | ControlWidgetConfig | ReactNode</td>
+                  <td class="py-2">Nhận cây JSON DSL, object đa kích cỡ, cấu hình <code>ControlWidget</code> (kèm <code>size="control"</code>), hoặc thẻ JSX lồng trực tiếp.</td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4 font-mono text-sky-400">showBadge</td>
@@ -1333,9 +1333,9 @@ await LiveActivity.start({
                   <td class="py-2.5">Cập nhật giao diện cho <code>small</code>, <code>medium</code>, <code>large</code>, <code>extraLarge</code>, <code>standBy</code>, <code>pages</code> đa trang và 3 kích thước Lock Screen iOS (<code>accessoryRectangular</code>, <code>accessoryCircular</code>, <code>accessoryInline</code>).</td>
                 </tr>
                 <tr>
-                  <td class="py-2.5 pr-3 font-mono text-emerald-400 font-medium">Widget.setControl(id, config) / getControlState(id)</td>
-                  <td class="py-2.5 pr-3 text-xs text-slate-400 font-mono">ControlWidgetConfig (iOS 18+)</td>
-                  <td class="py-2.5">Cấu hình nút/công tắc nhanh trong iOS 18 Control Center, Action Button &amp; góc màn hình khóa (<code>DynamicControlWidget</code> / <code>DynamicControlToggleWidget</code>).</td>
+                  <td class="py-2.5 pr-3 font-mono text-emerald-400 font-medium">ControlWidget.set(id, cfg) / Widget.setControl(id, cfg)</td>
+                  <td class="py-2.5 pr-3 text-xs text-slate-400 font-mono">UI.ControlButton / UI.ControlToggle</td>
+                  <td class="py-2.5">Cấu hình nút/công tắc nhanh trong iOS 18 Control Center, Action Button &amp; Lock Screen (<code>DynamicControlWidget.swift</code>) và Android Quick Settings Tile (<code>DynamicQuickSettingsTileService.kt</code>). Hỗ trợ xem trước với <code>&lt;WidgetPreview size="control" /&gt;</code>.</td>
                 </tr>
                 <tr>
                   <td class="py-2.5 pr-3 font-mono text-emerald-400 font-medium">Widget.reload(kind) / Widget.reloadAll()</td>
@@ -1646,11 +1646,11 @@ console.log(ir.renderStrategy, ir.semanticSummary);</code></pre>
             <span class="text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 px-2.5 py-1 rounded-full">OS Surfaces &amp; Lifecycle</span>
           </div>
           <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Hỗ trợ đầy đủ giao diện riêng cho <strong>iOS 17+ StandBy Mode</strong> (tự nhận diện <code>showsWidgetContainerBackground == false</code> kèm <code>.applyStandByMargins()</code> &amp; <code>widgetAccentable</code>), <strong>iPadOS / Tablet Extra Large</strong> (<code>extraLarge</code>), <strong>iOS 18+ Control Center / Action Button</strong> (<code>Widget.setControl</code>), và hệ thống vòng đời Live Activity hoàn chỉnh (Stale, Relevance Score, AlertConfiguration, Scheduled End, Auto-Expiration, Push-to-Start &amp; Multi-Activity Inspection).
+            Hỗ trợ đầy đủ giao diện riêng cho <strong>iOS 17+ StandBy Mode</strong> (tự nhận diện <code>showsWidgetContainerBackground == false</code> kèm <code>.applyStandByMargins()</code> &amp; <code>widgetAccentable</code>), <strong>iPadOS / Tablet Extra Large</strong> (<code>extraLarge</code>), <strong>iOS 18+ Control Center / Action Button &amp; Android Quick Settings Tile</strong> (<code>ControlWidget</code> DSL, <code>DynamicControlWidget.swift</code>, <code>DynamicQuickSettingsTileService.kt</code>, <code>&lt;WidgetPreview size="control" /&gt;</code>), và hệ thống vòng đời Live Activity hoàn chỉnh (Stale, Relevance Score, AlertConfiguration, Scheduled End, Auto-Expiration, Push-to-Start &amp; Multi-Activity Inspection).
           </p>
           <div class="relative">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
-            <pre><code class="language-typescript">// 1. Thiết lập StandBy + ExtraLarge + Control Center iOS 18+
+            <pre><code class="language-typescript">// 1. Thiết lập StandBy + ExtraLarge + Control Widget (iOS 18+ / Android QS Tile)
 await Widget.setLayout('main', {
   small: compactNode,
   medium: mediumNode,
@@ -1659,14 +1659,17 @@ await Widget.setLayout('main', {
   standBy: standByBigClockNode,
 });
 
-await Widget.setControl('toggle', {
-  type: 'toggle',
+const shiftCtrl = ControlWidget.toggle({
   title: 'Ca làm việc',
+  subtitle: 'Chạm để chấm công',
   checkedTitle: 'Đang trong ca',
+  checkedSubtitle: 'Nhấn để kết thúc',
   systemName: 'clock.badge.checkmark.fill',
   checked: true,
   actionId: 'toggle:attendance',
 });
+await ControlWidget.set('toggle', shiftCtrl);
+// Xem trước Control Tile ngay trong App: &lt;WidgetPreview size="control" controlConfig={shiftCtrl} /&gt;
 
 // 2. Theo dõi toàn bộ vòng đời &amp; kiểm tra Live Activity đồng thời
 const unsubLifecycle = LiveActivity.onStateChange((event) =&gt; {

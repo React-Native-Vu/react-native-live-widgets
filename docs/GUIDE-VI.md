@@ -1216,16 +1216,25 @@ Phiên bản **v1.2.1** giải quyết dứt điểm các bài toán thực tế
 Ngoài 3 kích thước cơ bản (`small`, `medium`, `large`) và 3 kiểu Lock Screen (`accessoryRectangular`, `accessoryCircular`, `accessoryInline`), thư viện hỗ trợ thêm:
 - **`extraLarge?: LayoutNode`**: Dành cho iPadOS (`systemExtraLarge`) và Tablet/Android 4x4+ (`widgetHeightDp >= 280dp`). Hỗ trợ xem trước trực tiếp trong `<WidgetPreview size="extraLarge">`.
 - **`standBy?: LayoutNode`**: Tự động kích hoạt khi iPhone ở chế độ StandBy iOS 17+ (`family == .systemSmall && !showsWidgetContainerBackground`). Hỗ trợ `widgetAccentable` trên `Text`, `Progress`, `Gauge`, `Image` và `<WidgetPreview size="standBy">`. Widget extension có thể gọi `.applyStandByMargins()` trên `StaticConfiguration` để bật chế độ full-bleed.
-- **`ControlWidget` iOS 18+ (`Widget.setControl`)**: Điều khiển trực tiếp Control Center, Action Button và nút góc Lock Screen thông qua `DynamicControlWidget` (Button) và `DynamicControlToggleWidget` (Toggle dùng `DynamicControlToggleIntent`):
+- **`ControlWidget` iOS 18+ & Android Quick Settings Tile (`ControlWidget` / `Widget.setControl`)**: Điều khiển trực tiếp iOS 18 Control Center, Action Button, Lock Screen Controls thông qua module [`ios/Widgets/DynamicControlWidget.swift`](https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/ios/Widgets/DynamicControlWidget.swift) (`DynamicControlWidget` & `DynamicControlToggleWidget`) và Android Quick Settings Tile qua `DynamicQuickSettingsTileService.kt` — kết nối trực tiếp vào `DynamicWidgetStateStore` và `useWidgetAction`:
   ```typescript
-  await Widget.setControl('toggle', {
-    type: 'toggle',
+  import { ControlWidget, UI, WidgetPreview } from 'react-native-live-widgets';
+
+  const shiftControl = ControlWidget.toggle({
     title: 'Ca làm việc',
+    subtitle: 'Chạm để chấm công',
     checkedTitle: 'Đang trong ca',
+    checkedSubtitle: 'Nhấn để kết thúc',
     systemName: 'clock.badge.checkmark.fill',
     checked: true,
     actionId: 'toggle:attendance',
   });
+
+  await ControlWidget.set('toggle', shiftControl);
+  // Hoặc dùng UI.ControlButton({ ... }) / Widget.setControl('main', ...)
+
+  // Xem trước trực tiếp trong App:
+  // <WidgetPreview size="control" controlConfig={shiftControl} />
   ```
 
 #### 2. API Quản lý Vòng đời Live Activity Hoàn chỉnh

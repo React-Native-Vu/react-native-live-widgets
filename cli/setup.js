@@ -183,6 +183,12 @@ struct LiveWidgetsBundle: WidgetBundle {
 
     // 6. Tiện ích Không gian làm việc đa trang (Multi-Page Workspace)
     MultiPageHomeScreenWidget()
+
+    // 7. iOS 18+ Interactive Control Center Widgets
+    if #available(iOS 18.0, *) {
+      DynamicControlWidget()
+      DynamicControlToggleWidget()
+    }
   }
 }
 
@@ -225,6 +231,7 @@ struct ProFeaturesHomeScreenWidget: Widget {
     .configurationDisplayName("Bảo mật & KPI Pro")
     .description("Tự che số khi khoá máy (Privacy Sensitive) và hỗ trợ chế độ StandBy.")
     .supportedFamilies(commonFamilies)
+    .applyStandByMargins()
   }
 }
 
@@ -257,7 +264,7 @@ struct MultiPageHomeScreenWidget: Widget {
 }
 
 private var commonFamilies: [WidgetFamily] {
-  var list: [WidgetFamily] = [.systemSmall, .systemMedium, .systemLarge]
+  var list: [WidgetFamily] = [.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge]
   if #available(iOS 16.0, *) {
     list.append(contentsOf: [.accessoryRectangular, .accessoryCircular, .accessoryInline])
   }

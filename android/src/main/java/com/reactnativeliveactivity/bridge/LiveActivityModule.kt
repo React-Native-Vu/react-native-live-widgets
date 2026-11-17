@@ -325,6 +325,10 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
                     }
                 }
 
+                if (key.startsWith("widget_control_")) {
+                    DynamicQuickSettingsTileService.requestTileUpdate(reactContext)
+                }
+
                 DynamicWidgetImageCache.prefetchUrlsSync(reactContext, value)
                 DynamicHomeScreenWidgetProvider.updateAllWidgets(reactContext)
             }.onSuccess {
