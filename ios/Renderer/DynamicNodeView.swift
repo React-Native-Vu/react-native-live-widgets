@@ -916,6 +916,10 @@ struct DynamicNodeAccessibilityModifier: ViewModifier {
   let props: [String: AnyCodable]?
 
   func body(content: Content) -> some View {
+    buildAccessibilityView(content: content)
+  }
+
+  private func buildAccessibilityView(content: Content) -> AnyView {
     let accessible = props?["accessible"]?.boolValue
     let label = props?["accessibilityLabel"]?.stringValue
     let hint = props?["accessibilityHint"]?.stringValue
@@ -924,33 +928,35 @@ struct DynamicNodeAccessibilityModifier: ViewModifier {
 
     if accessible == false {
       return AnyView(content.accessibilityHidden(true))
-    } else if label != nil || hint != nil || value != nil || role != nil {
-      var view = AnyView(content)
-      if let label = label {
-        view = AnyView(view.accessibilityLabel(Text(label)))
-      }
-      if let hint = hint {
-        view = AnyView(view.accessibilityHint(Text(hint)))
-      }
-      if let value = value {
-        view = AnyView(view.accessibilityValue(Text(value)))
-      }
-      if let role = role {
-        switch role {
-        case "header":
-          view = AnyView(view.accessibilityAddTraits(.isHeader))
-        case "button":
-          view = AnyView(view.accessibilityAddTraits(.isButton))
-        case "image":
-          view = AnyView(view.accessibilityAddTraits(.isImage))
-        default:
-          break
-        }
-      }
-      return AnyView(view)
-    } else {
+    }
+
+    if label == nil && hint == nil && value == nil && role == nil {
       return AnyView(content)
     }
+
+    var view = AnyView(content)
+    if let label = label {
+      view = AnyView(view.accessibilityLabel(Text(label)))
+    }
+    if let hint = hint {
+      view = AnyView(view.accessibilityHint(Text(hint)))
+    }
+    if let value = value {
+      view = AnyView(view.accessibilityValue(Text(value)))
+    }
+    if let role = role {
+      switch role {
+      case "header":
+        view = AnyView(view.accessibilityAddTraits(.isHeader))
+      case "button":
+        view = AnyView(view.accessibilityAddTraits(.isButton))
+      case "image":
+        view = AnyView(view.accessibilityAddTraits(.isImage))
+      default:
+        break
+      }
+    }
+    return view
   }
 }
 
@@ -997,9 +1003,13 @@ struct ContainerStyleModifier: ViewModifier {
         RoundedRectangle(cornerRadius: cornerRadius).fill(firstColor)
       } else if let color = Color.resolve(from: props?["backgroundColor"], colorScheme: colorScheme) {
         RoundedRectangle(cornerRadius: cornerRadius).fill(color)
+      } else {
+        EmptyView()
       }
     } else if let color = Color.resolve(from: props?["backgroundColor"], colorScheme: colorScheme) {
       RoundedRectangle(cornerRadius: cornerRadius).fill(color)
+    } else {
+      EmptyView()
     }
   }
 
@@ -1008,16 +1018,19 @@ struct ContainerStyleModifier: ViewModifier {
     let borderWidth = props?["borderWidth"]?.doubleValue.map { CGFloat($0) } ?? 0
     if borderWidth > 0, let borderColor = Color.resolve(from: props?["borderColor"], colorScheme: colorScheme) {
       let borderStyle = props?["borderStyle"]?.stringValue ?? "solid"
-      let strokeStyle: StrokeStyle
-      if borderStyle == "dashed" {
-        strokeStyle = StrokeStyle(lineWidth: borderWidth, dash: [6, 4])
-      } else if borderStyle == "dotted" {
-        strokeStyle = StrokeStyle(lineWidth: borderWidth, dash: [2, 3])
-      } else {
-        strokeStyle = StrokeStyle(lineWidth: borderWidth)
-      }
+      let strokeStyle: StrokeStyle = {
+        if borderStyle == "dashed" {
+          return StrokeStyle(lineWidth: borderWidth, dash: [6, 4])
+        } else if borderStyle == "dotted" {
+          return StrokeStyle(lineWidth: borderWidth, dash: [2, 3])
+        } else {
+          return StrokeStyle(lineWidth: borderWidth)
+        }
+      }()
       RoundedRectangle(cornerRadius: cornerRadius)
         .strokeBorder(borderColor, style: strokeStyle)
+    } else {
+      EmptyView()
     }
   }
 
