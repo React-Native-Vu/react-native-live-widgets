@@ -592,14 +592,14 @@ export type LayoutNode =
   | CustomNode;
 
 export interface DynamicIslandConfig {
-  compactLeading: LayoutNode;
-  compactTrailing: LayoutNode;
-  minimal?: LayoutNode;
+  compactLeading: LayoutNode | React.ReactNode;
+  compactTrailing: LayoutNode | React.ReactNode;
+  minimal?: LayoutNode | React.ReactNode;
   expanded?: {
-    leading?: LayoutNode;
-    trailing?: LayoutNode;
-    bottom?: LayoutNode;
-    center?: LayoutNode;
+    leading?: LayoutNode | React.ReactNode;
+    trailing?: LayoutNode | React.ReactNode;
+    bottom?: LayoutNode | React.ReactNode;
+    center?: LayoutNode | React.ReactNode;
   };
 }
 

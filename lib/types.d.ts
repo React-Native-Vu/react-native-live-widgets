@@ -457,14 +457,14 @@ export interface CustomNode extends BaseNode {
 }
 export type LayoutNode = VStackNode | HStackNode | ZStackNode | GridNode | DividerNode | TextNode | TimerNode | ProgressNode | GaugeNode | ChartNode | ImageNode | SpacerNode | ButtonNode | ToggleNode | BadgeNode | LinkNode | EqualizerNode | CustomNode;
 export interface DynamicIslandConfig {
-    compactLeading: LayoutNode;
-    compactTrailing: LayoutNode;
-    minimal?: LayoutNode;
+    compactLeading: LayoutNode | React.ReactNode;
+    compactTrailing: LayoutNode | React.ReactNode;
+    minimal?: LayoutNode | React.ReactNode;
     expanded?: {
-        leading?: LayoutNode;
-        trailing?: LayoutNode;
-        bottom?: LayoutNode;
-        center?: LayoutNode;
+        leading?: LayoutNode | React.ReactNode;
+        trailing?: LayoutNode | React.ReactNode;
+        bottom?: LayoutNode | React.ReactNode;
+        center?: LayoutNode | React.ReactNode;
     };
 }
 export interface PhaseConfig {
