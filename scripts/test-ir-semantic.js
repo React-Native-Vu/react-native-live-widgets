@@ -288,4 +288,11 @@ const i18nSwiftCode = generateSwiftSource(i18nTestConfig, catalog, defaultLocale
 assert(i18nSwiftCode.includes('.configurationDisplayName(LocalizedStringKey("widgets.counter.title"))'));
 assert(i18nSwiftCode.includes('.description(LocalizedStringKey("widget.counter.desc"))'));
 
-console.log('\n🎉 [Test Suite] All 11 test suites passed with 100% assertions satisfied!\n');
+// ── Test 12: Android i18n strings.xml Resource Mapping ───────────────────────
+console.log('   ✓ Test 12: Verifying Android i18n Resource Mapping (toAndroidStringName)...');
+const { toAndroidStringName } = require('../cli/codegen');
+assert.strictEqual(toAndroidStringName('widgets.counter.title'), 'widgets_counter_title');
+assert.strictEqual(toAndroidStringName('widgets.shift-attendance.desc'), 'widgets_shift_attendance_desc');
+assert.strictEqual(toAndroidStringName('123.kpi'), 'str_123_kpi');
+
+console.log('\n🎉 [Test Suite] All 12 test suites passed with 100% assertions satisfied!\n');

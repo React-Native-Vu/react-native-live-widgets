@@ -296,6 +296,94 @@ function writeI18nFiles(targetDir, catalog, defaultLocale) {
 }
 
 /**
+ * Chuyển đổi key sang tên tài nguyên Android hợp lệ:
+ * 'widgets.counter.title' -> 'widgets_counter_title'
+ */
+function toAndroidStringName(key) {
+  if (!key) return 'rn_live_widget_str';
+  let clean = key
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  if (/^[0-9]/.test(clean)) {
+    clean = 'str_' + clean;
+  }
+  return clean;
+}
+
+/**
+ * Escape chuỗi đặc biệt cho Android XML
+ */
+function escapeAndroidXmlString(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '\\"')
+    .replace(/'/g, "\\'");
+}
+
+/**
+ * Tự động tạo và cập nhật các file strings.xml cho Android
+ * Thư mục: android/app/src/main/res/values/ (mặc định) và values-{lang}/ (các ngôn ngữ khác)
+ */
+function writeAndroidI18nFiles(projectRoot, catalog, defaultLocale) {
+  const resDir = path.join(projectRoot, 'android', 'app', 'src', 'main', 'res');
+  if (!fs.existsSync(resDir)) {
+    return;
+  }
+
+  const locales = Object.keys(catalog);
+  if (locales.length === 0) return;
+
+  for (const loc of locales) {
+    // Với defaultLocale -> res/values/strings.xml
+    // Với các ngôn ngữ khác -> res/values-{loc}/strings.xml (ví dụ: values-vi, values-en, values-ja)
+    const folderName = loc === defaultLocale ? 'values' : `values-${loc}`;
+    const valuesDir = path.join(resDir, folderName);
+    if (!fs.existsSync(valuesDir)) {
+      fs.mkdirSync(valuesDir, { recursive: true });
+    }
+
+    const stringsXmlPath = path.join(valuesDir, 'strings.xml');
+    const existingStrings = new Map();
+
+    if (fs.existsSync(stringsXmlPath)) {
+      const existingContent = fs.readFileSync(stringsXmlPath, 'utf8');
+      const regex = /<string\s+name="([^"]+)">([\s\S]*?)<\/string>/g;
+      let match;
+      while ((match = regex.exec(existingContent)) !== null) {
+        existingStrings.set(match[1], match[2]);
+      }
+    }
+
+    // Merge các bản dịch vào file
+    const dict = catalog[loc] || {};
+    for (const [key, value] of Object.entries(dict)) {
+      const androidName = toAndroidStringName(key);
+      const escaped = escapeAndroidXmlString(value);
+      existingStrings.set(androidName, escaped);
+    }
+
+    const lines = [
+      '<?xml version="1.0" encoding="utf-8"?>',
+      '<resources>',
+    ];
+    for (const [name, val] of existingStrings.entries()) {
+      lines.push(`    <string name="${name}">${val}</string>`);
+    }
+    lines.push('</resources>');
+    lines.push('');
+
+    fs.writeFileSync(stringsXmlPath, lines.join('\n'), 'utf8');
+  }
+
+  console.log(`🤖 Đã tự động đồng bộ bản dịch Android (${locales.join(', ')})`);
+  console.log(`   - Thư mục: android/app/src/main/res/values-*/strings.xml`);
+}
+
+/**
  * Sinh mã nguồn Swift từ cấu hình
  */
 function generateSwiftSource(config, catalog = {}, defaultLocale = 'vi') {
@@ -488,6 +576,7 @@ function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
   // 1. Sinh file i18n Localizable nếu có catalog
   if (Object.keys(catalog).length > 0) {
     writeI18nFiles(targetDir, catalog, defaultLocale);
+    writeAndroidI18nFiles(projectRoot, catalog, defaultLocale);
   }
 
   // 2. Sinh mã nguồn Swift
@@ -533,4 +622,6 @@ module.exports = {
   loadWidgetsConfig,
   buildI18nCatalog,
   flattenObject,
+  toAndroidStringName,
+  writeAndroidI18nFiles,
 };
