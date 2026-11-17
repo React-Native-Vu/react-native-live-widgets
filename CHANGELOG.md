@@ -2,6 +2,13 @@
 
 All notable changes to `react-native-live-widgets` will be documented in this file.
 
+## [1.2.1] - 2026-11-17
+### Fixed
+- **iOS Swift 6 Compatibility**: Resolved `@ViewBuilder` type inference and closure encapsulation for `renderText()`, `DynamicNodeAccessibilityModifier`, and `ContainerStyleModifier` to prevent `type '()' cannot conform to 'View'` compiler error.
+- **Android Exact Hit Layer**: Replaced fixed grid layout with dynamic `FrameLayout` hit zones (`rn_hit_layer`), accurately mapping bitmap coordinates with launcher aspect ratio letterboxing to eliminate touch offsets and misclicks.
+- **Android Live Chronometer**: Integrated native `android.widget.Chronometer` with `setChronometerCountDown(true)` for smooth, real-time 1s countdown ticking without redrawing bitmaps.
+- **Dynamic Variable Interpolation**: Added dynamic template variable resolution (`{{id}}`, `{{title}}`, counter values) and `defaultChecked` persistence in `DynamicWidgetStateStore`.
+
 ## [1.2.0] - 2026-11-16
 ### Added
 - **JSX / TSX Declarative DSL**: Support building Widgets and Live Activities directly using intuitive React JSX syntax (`<VStack>`, `<HStack>`, `<ZStack>`, `<Grid>`, `<Text>`, `<Button>`, `<Badge>`, `<Progress>`, `<Timer>`, `<Image>`, `<Spacer>`, `<Divider>`) instead of nested function calls `UI.VStack(...)`.
