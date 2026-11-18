@@ -63,12 +63,32 @@ if (fs.existsSync(packageJsonPath)) {
 let appGroup = customAppGroup || `group.com.${pkgName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
 console.log(`📦 App Group configured: ${appGroup}`);
 
-// 2. Handle Expo project (app.json)
-const isExpo = fs.existsSync(appJsonPath);
-if (isExpo) {
+// 2. Handle Expo project (app.json with "expo" property or "expo" dependency)
+let isExpo = false;
+let appJson = null;
+
+if (fs.existsSync(appJsonPath)) {
+  try {
+    appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
+    if (appJson && typeof appJson.expo === 'object') {
+      isExpo = true;
+    }
+  } catch (_e) {}
+}
+
+if (!isExpo && fs.existsSync(packageJsonPath)) {
+  try {
+    const pkgJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    const allDeps = { ...(pkgJson.dependencies || {}), ...(pkgJson.devDependencies || {}) };
+    if (allDeps['expo']) {
+      isExpo = true;
+    }
+  } catch (_e) {}
+}
+
+if (isExpo && appJson) {
   try {
     console.log('📱 Expo project detected. Updating app.json...');
-    const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
     if (!appJson.expo) appJson.expo = {};
     if (!appJson.expo.plugins) appJson.expo.plugins = [];
 
