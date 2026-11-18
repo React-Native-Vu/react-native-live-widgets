@@ -1,6 +1,6 @@
 {
   "name": "react-native-live-widgets",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "All-in-One Live Activities (iOS 16.1+ WidgetKit / Dynamic Island), Live Updates (Android 16+ ProgressStyle) and Interactive Multi-Page Home Screen Widgets for React Native & Expo with Declarative Dynamic UI Engine",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

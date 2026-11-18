@@ -2,6 +2,16 @@
 
 All notable changes to `react-native-live-widgets` will be documented in this file.
 
+## [1.2.3] - 2026-11-18
+### Fixed & Improved
+- **Automatic Xcode String Catalog Linking (`Localizable.xcstrings`)**:
+  - `codegen.js` now automatically inspects `project.pbxproj` and links `Localizable.xcstrings` into the `PBXResourcesBuildPhase` and `PBXFileReference` of the `LiveWidgetsExtension` target, preventing raw i18n keys (e.g., `widgets.main.title`, `widgets.shift.title`) from leaking into the iOS Widget Gallery.
+  - Automatically updates `CFBundleLocalizations` (`vi`, `en`, `ja`) inside `LiveWidgetsExtension/Info.plist` and synchronizes project `knownRegions`.
+- **Full Bilingual i18n Web Documentation**:
+  - Completed English translations across `docs/index.html` (sidebar categories, links, exact hit layer, and quick start sections) with 101/101 dynamic `data-i18n` keys.
+- **Library Peer Dependency Deduplication**:
+  - Sanitized library build environment to eliminate nested React instances, preventing `Cannot read property 'useRef' of null` dispatch errors in host apps.
+
 ## [1.2.2] - 2026-11-18
 ### Added
 - **All-in-One Automated Setup Integration**: `npx react-native-live-widgets init` now automatically runs the entire icon extraction and codegen pipeline out of the box (syncing 9,500+ Apple SF Symbols and 3,800+ Google Material Icons into TypeScript auto-complete, generating `LiveWidgetsBundle.swift`, and synchronizing string catalogs).
