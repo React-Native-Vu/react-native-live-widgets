@@ -313,7 +313,7 @@ function buildI18nCatalog(projectRoot, config) {
 /**
  * Xuất các file Localizable.strings và Localizable.xcstrings cho iOS Extension target
  */
-function writeI18nFiles(targetDir, catalog, defaultLocale) {
+function writeI18nFiles(targetDir, catalog, defaultLocale, projectRoot) {
   const locales = Object.keys(catalog);
   if (locales.length === 0) return;
 
@@ -377,6 +377,106 @@ function writeI18nFiles(targetDir, catalog, defaultLocale) {
 
   console.log(`🌐 Successfully generated iOS localizations (${locales.join(', ')})`);
   console.log(`   - String Catalog: ${path.basename(targetDir)}/Localizable.xcstrings`);
+
+  if (projectRoot) {
+    syncI18nWithXcodeProject(projectRoot, locales, targetDir);
+  }
+}
+
+/**
+ * Tự động liên kết Localizable.xcstrings vào Xcode project.pbxproj và cập nhật CFBundleLocalizations
+ */
+function syncI18nWithXcodeProject(projectRoot, locales, targetDir) {
+  const iosDir = path.join(projectRoot, 'ios');
+  if (!fs.existsSync(iosDir)) return;
+
+  // 1. Cập nhật CFBundleLocalizations trong Info.plist của Extension
+  const infoPlistPath = path.join(targetDir, 'Info.plist');
+  if (fs.existsSync(infoPlistPath)) {
+    try {
+      let plistContent = fs.readFileSync(infoPlistPath, 'utf8');
+      if (!plistContent.includes('CFBundleLocalizations')) {
+        const localizationsXml = [
+          '\t<key>CFBundleLocalizations</key>',
+          '\t<array>',
+          ...locales.map((loc) => `\t\t<string>${loc}</string>`),
+          '\t</array>',
+        ].join('\n');
+        plistContent = plistContent.replace('</dict>', `${localizationsXml}\n</dict>`);
+        fs.writeFileSync(infoPlistPath, plistContent, 'utf8');
+      }
+    } catch (_e) {}
+  }
+
+  // 2. Tìm project.pbxproj
+  try {
+    const entries = fs.readdirSync(iosDir);
+    const xcodeProj = entries.find((e) => e.endsWith('.xcodeproj'));
+    if (!xcodeProj) return;
+
+    const pbxPath = path.join(iosDir, xcodeProj, 'project.pbxproj');
+    if (!fs.existsSync(pbxPath)) return;
+
+    let pbxContent = fs.readFileSync(pbxPath, 'utf8');
+    let modified = false;
+
+    // Check if Localizable.xcstrings is already referenced
+    if (!pbxContent.includes('Localizable.xcstrings')) {
+      const buildFileUuid = 'CC0100000000000000000001';
+      const fileRefUuid = 'CC0200000000000000000001';
+
+      // Add to PBXBuildFile
+      const buildFileEntry = `/* Begin PBXBuildFile section */\n\t\t${buildFileUuid} /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = ${fileRefUuid} /* Localizable.xcstrings */; };`;
+      if (pbxContent.includes('/* Begin PBXBuildFile section */')) {
+        pbxContent = pbxContent.replace('/* Begin PBXBuildFile section */', buildFileEntry);
+        modified = true;
+      }
+
+      // Add to PBXFileReference
+      const relXcstringsPath = `${path.basename(targetDir)}/Localizable.xcstrings`;
+      const fileRefEntry = `/* Begin PBXFileReference section */\n\t\t${fileRefUuid} /* Localizable.xcstrings */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json.xcstrings; name = Localizable.xcstrings; path = ${relXcstringsPath}; sourceTree = "<group>"; };`;
+      if (pbxContent.includes('/* Begin PBXFileReference section */')) {
+        pbxContent = pbxContent.replace('/* Begin PBXFileReference section */', fileRefEntry);
+        modified = true;
+      }
+
+      // Add to Extension Group children
+      const extGroupName = path.basename(targetDir);
+      const groupRegex = new RegExp(`(/\\* ${extGroupName} \\*/ = {[\\s\\S]*?children = \\()([\\s\\S]*?\\);)`);
+      if (groupRegex.test(pbxContent)) {
+        pbxContent = pbxContent.replace(groupRegex, `$1\n\t\t\t\t${fileRefUuid} /* Localizable.xcstrings */,$2`);
+        modified = true;
+      }
+
+      // Add to Resources Build Phase of Extension
+      const resPhaseRegex = /(isa = PBXResourcesBuildPhase;[\s\S]*?files = \()([\s\S]*?\);)/g;
+      const matches = [...pbxContent.matchAll(resPhaseRegex)];
+      if (matches.length > 0) {
+        const targetMatch = matches.length > 1 ? matches[1] : matches[0];
+        const updatedMatch = `${targetMatch[1]}\n\t\t\t\t${buildFileUuid} /* Localizable.xcstrings in Resources */,${targetMatch[2]}`;
+        pbxContent = pbxContent.replace(targetMatch[0], updatedMatch);
+        modified = true;
+      }
+    }
+
+    // Sync knownRegions with locales
+    for (const loc of locales) {
+      if (!pbxContent.includes(`\t\t\t\t${loc},\n`)) {
+        pbxContent = pbxContent.replace(
+          /(knownRegions = \([\s\S]*?Base,)/,
+          `$1\n\t\t\t\t${loc},`
+        );
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      fs.writeFileSync(pbxPath, pbxContent, 'utf8');
+      console.log(`📎 Automatically linked Localizable.xcstrings into ${xcodeProj} Resources.`);
+    }
+  } catch (err) {
+    console.warn(`⚠️ [i18n] Could not auto-link Localizable.xcstrings in project.pbxproj:`, err.message);
+  }
 }
 
 /**
@@ -728,7 +828,7 @@ function runCodegen(projectRoot = process.cwd(), customConfigPath = null) {
 
     // 1. Generate i18n Localizable if catalog exists
     if (Object.keys(catalog).length > 0) {
-      writeI18nFiles(targetDir, catalog, defaultLocale);
+      writeI18nFiles(targetDir, catalog, defaultLocale, projectRoot);
     }
 
     // 2. Generate Swift source code
