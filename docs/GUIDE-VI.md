@@ -78,32 +78,47 @@ npx expo run:ios # hoặc npx expo run:android
 
 ## 3. Cài đặt và Thiết lập Dự án
 
-### Dành cho dự án Expo
-Nếu bạn sử dụng **Expo**, thư viện hỗ trợ sẵn **Expo Config Plugin (`app.plugin.js`)** và **CLI Wizard**.
-👉 **Xem hướng dẫn chi tiết từng bước tại: [Tài liệu Expo Tích hợp (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md)**
+### 📋 Bảng Tra Cứu Các Lệnh CLI Quan Trọng
 
-```bash
-# 1. Cài đặt
-npx expo install react-native-live-widgets
-
-# 2. Thêm plugin vào app.json và sinh mã native
-npx expo prebuild
-
-# 3. Tự động liên kết target Widget Extension
-npx react-native-live-widgets init --group group.com.yourcompany.app
-```
+| Lệnh | Chức năng | Thời điểm sử dụng |
+| :--- | :--- | :--- |
+| `npx react-native-live-widgets init` | **Thiết lập tự động All-in-One**: Tự cấu hình `app.json` (Expo), Xcode Target, Entitlements, Podfile, `pod install`, Android permissions, tạo file `widgets.config.ts`, trích xuất 13,000+ icons và biên dịch Swift bundle. | Chạy 1 lần duy nhất khi tích hợp thư viện vào dự án |
+| `npx react-native-live-widgets codegen` | **Đồng bộ Codegen & i18n**: Đọc lại `widgets.config.ts`, cập nhật `LiveWidgetsBundle.swift`, Apple String Catalog (`Localizable.xcstrings`) và Android `strings.xml`. | Mỗi khi sửa `widgets.config.ts` hoặc thêm widget/ngôn ngữ mới |
+| `npx react-native-live-widgets init --group <name>` | **Chỉ định App Group tuỳ chỉnh**: Ví dụ `group.com.yourcompany.app`. | Khi bạn muốn dùng App Group khác với mã bundle tự nhận diện |
 
 ---
 
-### Cài đặt package (Dành cho Bare React Native CLI)
-Trong thư mục gốc của dự án React Native:
-```bash
-npm install react-native-live-widgets
-# hoặc
-yarn add react-native-live-widgets
+### Cách 1: Dành cho dự án Expo (Managed / CNG)
 
-# Tự động cấu hình Info.plist, Entitlements, AndroidManifest và tạo file mẫu Widget
-npx react-native-live-widgets init --group group.com.yourcompany.app
+```bash
+# Bước 1: Cài đặt thư viện
+npx expo install react-native-live-widgets
+
+# Bước 2: Thiết lập tự động 1 lệnh (tự ghi app.json, tạo widgets.config.ts, sync icons & Swift)
+npx react-native-live-widgets init
+
+# Bước 3: Khởi chạy trên thiết bị / máy ảo
+npx expo run:ios
+# hoặc: npx expo run:android
+```
+
+> 👉 **Xem hướng dẫn chi tiết từng bước cho Expo tại: [Tài liệu Expo Tích hợp (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md)**
+
+---
+
+### Cách 2: Dành cho Bare React Native CLI
+
+```bash
+# Bước 1: Cài đặt thư viện
+npm install react-native-live-widgets
+# hoặc: yarn add react-native-live-widgets
+
+# Bước 2: Thiết lập tự động 1 lệnh (tự cấu hình Xcode target, Podfile, pod install, Android permissions, widgets.config.ts, Swift bundle)
+npx react-native-live-widgets init
+
+# Bước 3: Khởi chạy trên thiết bị / máy ảo
+npx react-native run-ios
+# hoặc: npx react-native run-android
 ```
 
 ---

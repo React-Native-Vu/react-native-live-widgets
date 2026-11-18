@@ -78,32 +78,47 @@ npx expo run:ios # or npx expo run:android
 
 ## 3. Installation & Project Setup
 
-### For Expo Projects
-If you are using **Expo**, the library provides an **Expo Config Plugin (`app.plugin.js`)** and **CLI Wizard** out of the box.
-👉 **See the dedicated step-by-step guide: [Expo Integration Guide (EXPO-GUIDE-EN.md)](./EXPO-GUIDE-EN.md)**
+### 📋 CLI Command Cheat Sheet
+
+| Command | Purpose | When to use |
+| :--- | :--- | :--- |
+| `npx react-native-live-widgets init` | **All-in-One Automated Setup**: Configures `app.json` (Expo), Xcode Extension target, Entitlements, App Groups, Podfile, `pod install`, Android permissions, default `widgets.config.ts`, SF Symbols/Material Icons sync, and Swift bundle codegen. | First time setting up the library in your project |
+| `npx react-native-live-widgets codegen` | **Sync & Re-generate**: Re-reads `widgets.config.ts` and syncs `LiveWidgetsBundle.swift`, iOS `Localizable.xcstrings`, Android `strings.xml`, and type definitions. | Whenever you edit `widgets.config.ts` or add new widgets/locales |
+| `npx react-native-live-widgets init --group <name>` | **Custom App Group**: Explicitly specify your App Group identifier (e.g. `group.com.mycompany.app`). | If you prefer a custom group instead of auto-detection |
+
+---
+
+### Option A: For Expo Projects (Managed / CNG)
 
 ```bash
 # 1. Install package
 npx expo install react-native-live-widgets
 
-# 2. Add plugin to app.json & generate native projects
-npx expo prebuild
+# 2. Automated one-command setup (updates app.json, creates widgets.config.ts, syncs icons & bundle)
+npx react-native-live-widgets init
 
-# 3. Automatically link and configure Widget Extension
-npx react-native-live-widgets init --group group.com.yourcompany.app
+# 3. Launch on Simulator / Emulator
+npx expo run:ios
+# or: npx expo run:android
 ```
+
+> 👉 **See the dedicated step-by-step guide: [Expo Integration Guide (EXPO-GUIDE-EN.md)](./EXPO-GUIDE-EN.md)**
 
 ---
 
-### Package Installation (Bare React Native CLI)
-From the root directory of your React Native project:
-```bash
-npm install react-native-live-widgets
-# or
-yarn add react-native-live-widgets
+### Option B: For Bare React Native CLI
 
-# Automatically configure Info.plist, Entitlements, AndroidManifest & Widget templates
-npx react-native-live-widgets init --group group.com.yourcompany.app
+```bash
+# 1. Install package
+npm install react-native-live-widgets
+# or: yarn add react-native-live-widgets
+
+# 2. Automated one-command setup (links Xcode target, Podfile, pod install, Android permissions, widgets.config.ts, codegen)
+npx react-native-live-widgets init
+
+# 3. Launch on Simulator / Emulator
+npx react-native run-ios
+# or: npx react-native run-android
 ```
 
 ---

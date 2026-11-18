@@ -232,78 +232,84 @@ Version **1.2.1** introduces an industry-grade architecture built on three core 
 
 ---
 
-## ⚡ Quick Start
+## ⚡ Quick Start: Essential Commands & Setup
 
-### 1. Installation
+Get Live Activities and Interactive Home Screen Widgets running in **less than 2 minutes** with zero manual native code.
 
-```bash
-# React Native CLI
-npm install react-native-live-widgets
+### 📋 CLI Command Cheat Sheet
 
-# Expo (Managed or Bare)
-npx expo install react-native-live-widgets
-```
+| Command | Purpose | When to use |
+| :--- | :--- | :--- |
+| `npx react-native-live-widgets init` | **All-in-One Automated Setup**: Configures `app.json` (Expo), Xcode Extension target, Entitlements, App Groups, Podfile, `pod install`, Android permissions, default `widgets.config.ts`, SF Symbols/Material Icons sync, and Swift bundle codegen. | First time setting up the library in your project |
+| `npx react-native-live-widgets codegen` | **Sync & Re-generate**: Re-reads `widgets.config.ts` and syncs `LiveWidgetsBundle.swift`, iOS `Localizable.xcstrings`, Android `strings.xml`, and type definitions. | Whenever you edit `widgets.config.ts` or add new widgets/locales |
+| `npx react-native-live-widgets init --group <name>` | **Custom App Group**: Explicitly specify your App Group identifier (e.g. `group.com.mycompany.app`). | If you prefer a custom group instead of auto-detection |
 
 ---
 
-### 2. Configuration
-
-#### A. If using Expo (Config Plugin)
-
-Add `react-native-live-widgets` to your `app.json` or `app.config.js`:
-
-```json
-{
-  "expo": {
-    "name": "My Expo App",
-    "plugins": [
-      [
-        "react-native-live-widgets",
-        {
-          "appGroup": "group.com.yourcompany.app",
-          "enableLiveActivities": true,
-          "frequentUpdates": true
-        }
-      ]
-    ]
-  }
-}
-```
-
-Then generate native projects or run with Expo Dev Client:
+### Option A: Expo (SDK 50, 51, 52, 58+ CNG & EAS Build)
 
 ```bash
-# 1. Generate native folders
-npx expo prebuild
+# 1. Install package
+npx expo install react-native-live-widgets
 
-# 2. Automatically scaffold & link Xcode Widget Extension target
-npx react-native-live-widgets init --group group.com.yourcompany.app
+# 2. Run automated setup (auto-updates app.json, creates widgets.config.ts, syncs icons & bundle)
+npx react-native-live-widgets init
 
-# 3. Run on iOS Simulator & Android Emulator:
+# 3. Launch on Simulator / Emulator
 npx expo run:ios
+# or
 npx expo run:android
 ```
 
-> 📖 **Detailed Step-by-Step Expo Guide**: [English](docs/EXPO-GUIDE-EN.md) • [Tiếng Việt](docs/EXPO-GUIDE-VI.md)
+> 💡 **What happens automatically:**
+> - Injects the `react-native-live-widgets` Config Plugin into `app.json`.
+> - Enables `NSSupportsLiveActivities` and `frequentUpdates` for iOS.
+> - Auto-configures App Group Entitlements.
+> - Injects Android notification & foreground service permissions.
+> - Creates `widgets.config.ts` and triggers Swift Codegen.
+> - 📖 [Read the Detailed Step-by-Step Expo Guide](docs/EXPO-GUIDE-EN.md) • [Hướng dẫn Expo Tiếng Việt](docs/EXPO-GUIDE-VI.md)
 
-#### B. If using Bare React Native CLI
+---
 
-Run the automated scaffolding script in your React Native project root:
-
-```bash
-npx react-native-live-widgets init --group group.com.yourcompany.app
-```
-
-This will automatically:
-- Inject `NSSupportsLiveActivities` and `NSSupportsLiveActivitiesFrequentUpdates` into `Info.plist`.
-- Scaffold the `LiveWidgetsExtension` bundle in your `ios/` folder.
-- Configure `AndroidManifest.xml` with required notification permissions.
-
-And install CocoaPods dependencies:
+### Option B: Bare React Native CLI
 
 ```bash
-cd ios && pod install
+# 1. Install package
+npm install react-native-live-widgets
+# or: yarn add react-native-live-widgets
+
+# 2. Run automated setup (links Xcode target, Podfile, pod install, Android permissions, codegen)
+npx react-native-live-widgets init
+
+# 3. Launch on Simulator / Emulator
+npx react-native run-ios
+# or
+npx react-native run-android
 ```
+
+> 💡 **What happens automatically:**
+> - Creates and links the `LiveWidgetsExtension` target in `ios/*.xcodeproj/project.pbxproj` with separate build phases.
+> - Adds `NSSupportsLiveActivities` to `Info.plist` and creates `.entitlements` with App Group.
+> - Copies native Swift models & UI renderers into `LiveWidgetsExtension/Shared/`.
+> - Appends `pod 'react-native-live-widgets'` to `ios/Podfile` and executes `pod install`.
+> - Verifies and updates `android/app/src/main/AndroidManifest.xml` permissions.
+> - Creates `widgets.config.ts`, extracts 13,000+ vector icons, and compiles `LiveWidgetsBundle.swift`.
+
+---
+
+### 🔄 Updating Widgets or Translations (`widgets.config.ts`)
+
+Whenever you add or modify widgets in `widgets.config.ts`:
+
+```bash
+npx react-native-live-widgets codegen
+```
+
+This single command synchronizes:
+1. `ios/LiveWidgetsExtension/LiveWidgetsBundle.swift`
+2. `ios/LiveWidgetsExtension/Localizable.xcstrings` (iOS String Catalog)
+3. `android/app/src/main/res/values-*/strings.xml` (Android String Resources)
+4. Apple SF Symbols & Google Material Icons auto-completion definitions.
 
 ---
 

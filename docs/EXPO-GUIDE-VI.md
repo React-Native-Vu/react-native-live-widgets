@@ -86,7 +86,25 @@ npx expo run:android
 
 ## 3. Cài đặt & Thiết lập Từng bước
 
-### Bước 1: Cài đặt package
+### Cách nhanh nhất: Tự động hoá 100% bằng 1 câu lệnh
+
+```bash
+# 1. Cài đặt package
+npx expo install react-native-live-widgets
+
+# 2. Khởi tạo tự động (Tự chèn Config Plugin vào app.json, tạo widgets.config.ts, sync icons & Swift)
+npx react-native-live-widgets init
+
+# 3. Chạy ứng dụng trên máy ảo / thiết bị thật
+npx expo run:ios
+# hoặc: npx expo run:android
+```
+
+---
+
+### Quy trình thủ công (Nếu bạn muốn tự kiểm soát cấu hình)
+
+#### Bước 1: Cài đặt package
 Tại thư mục gốc của dự án Expo:
 ```bash
 npx expo install react-native-live-widgets
@@ -94,7 +112,7 @@ npx expo install react-native-live-widgets
 
 ---
 
-### Bước 2: Cấu hình `app.json` (Expo Config Plugin)
+#### Bước 2: Cấu hình `app.json` (Expo Config Plugin)
 Mở file `app.json` và bổ sung plugin `react-native-live-widgets`:
 
 ```json
