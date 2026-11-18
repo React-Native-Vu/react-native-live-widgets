@@ -1,6 +1,6 @@
 {
   "name": "react-native-live-widgets",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "All-in-One Live Activities (iOS 16.1+ WidgetKit / Dynamic Island), Live Updates (Android 16+ ProgressStyle) and Interactive Multi-Page Home Screen Widgets for React Native & Expo with Declarative Dynamic UI Engine",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -27,18 +27,21 @@
     "cli",
     "docs",
     "assets",
+    "scripts",
     "react-native-live-widgets.podspec",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
   ],
   "bin": {
-    "react-native-live-widgets": "cli/setup.js"
+    "react-native-live-widgets": "cli/setup.js",
+    "live-widgets-codegen": "cli/codegen.js"
   },
   "scripts": {
     "build": "node scripts/build.js",
     "test": "node scripts/test-ir-semantic.js",
     "typecheck": "tsc --noEmit",
+    "codegen": "node cli/codegen.js",
     "prepack": "node scripts/build.js",
     "docs:serve": "npx serve docs",
     "version:patch": "node scripts/release.js patch",

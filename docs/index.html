@@ -129,9 +129,9 @@
   <!-- Top Announcement Bar -->
   <div class="bg-gradient-to-r from-sky-900/50 via-indigo-900/40 to-purple-900/50 border-b border-sky-500/20 py-2 px-4 text-center text-xs text-sky-200">
     <span class="inline-flex items-center space-x-1.5 font-medium">
-      <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold text-[10px] uppercase tracking-wide">Mới v1.2.1</span>
-      <span>Exact Dynamic Hit Layer, Native Chronometer Countdown, Swift 6 Ready & Chuẩn hoá <strong>UI IR</strong></span>
-      <a href="#exact-hit-layer" class="underline hover:text-white ml-2">Xem chi tiết &rarr;</a>
+      <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold text-[10px] uppercase tracking-wide" data-i18n="announcement_tag">Mới v1.2.1</span>
+      <span data-i18n="announcement_text">Exact Dynamic Hit Layer, Native Chronometer Countdown, Swift 6 Ready & Chuẩn hoá <strong>UI IR</strong></span>
+      <a href="#exact-hit-layer" data-i18n="announcement_link" class="underline hover:text-white ml-2">Xem chi tiết &rarr;</a>
     </span>
   </div>
 
@@ -148,7 +148,7 @@
           <a href="#" class="font-bold text-base sm:text-lg text-white hover:text-sky-400 transition leading-tight">
             react-native-live-widgets
           </a>
-          <span class="text-[11px] text-slate-400 hidden sm:inline">Declarative Widgets & Dynamic Island Engine</span>
+          <span class="text-[11px] text-slate-400 hidden sm:inline" data-i18n="brand_subtitle">Declarative Widgets & Dynamic Island Engine</span>
         </div>
         <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
           v1.2.1
@@ -156,19 +156,27 @@
       </div>
 
       <!-- Nav Links & Search -->
-      <nav class="flex items-center space-x-3 sm:space-x-5">
+      <nav class="flex items-center space-x-3 sm:space-x-4">
         <a href="#interactive-simulator" class="text-xs sm:text-sm text-slate-300 hover:text-white hidden lg:inline flex items-center space-x-1">
           <i data-lucide="play-circle" class="w-4 h-4 text-sky-400"></i>
-          <span>Live Simulator</span>
+          <span data-i18n="nav_sim">Live Simulator</span>
         </a>
-        <a href="#quick-start" class="text-xs sm:text-sm text-slate-300 hover:text-white hidden md:inline">Cài đặt</a>
-        <a href="#dsl-catalog" class="text-xs sm:text-sm text-slate-300 hover:text-white hidden md:inline">UI DSL & JSX</a>
-        <a href="#core-api" class="text-xs sm:text-sm text-slate-300 hover:text-white hidden md:inline">API Reference</a>
+        <a href="#quick-start" class="text-xs sm:text-sm text-slate-300 hover:text-white hidden md:inline" data-i18n="nav_install">Cài đặt</a>
+        <a href="#dsl-catalog" class="text-xs sm:text-sm text-slate-300 hover:text-white hidden md:inline" data-i18n="nav_dsl">UI DSL & JSX</a>
+        <a href="#core-api" class="text-xs sm:text-sm text-slate-300 hover:text-white hidden md:inline" data-i18n="nav_api">API Reference</a>
         
         <a href="#llms-ai" class="text-xs sm:text-sm text-sky-400 font-medium hover:text-sky-300 flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-500/20">
           <i data-lucide="bot" class="w-4 h-4"></i>
           <span>llms.txt</span>
         </a>
+
+        <!-- Language Switcher (VI / EN) -->
+        <div class="flex items-center space-x-1 border-l border-cardBorder pl-3">
+          <div class="inline-flex items-center rounded-lg bg-slate-800/80 p-0.5 border border-slate-700/80 text-[11px] font-semibold">
+            <button id="lang-btn-vi" onclick="switchLanguage('vi')" class="px-2 py-0.5 rounded-md transition text-sky-400 bg-sky-500/20 shadow-sm" title="Tiếng Việt">VI</button>
+            <button id="lang-btn-en" onclick="switchLanguage('en')" class="px-2 py-0.5 rounded-md transition text-slate-400 hover:text-white" title="English">EN</button>
+          </div>
+        </div>
 
         <!-- GitHub Repo & Demo links -->
         <div class="flex items-center space-x-1 border-l border-cardBorder pl-3">
@@ -190,18 +198,18 @@
       <!-- Badges -->
       <div class="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-slate-800/90 border border-slate-700/80 text-xs text-slate-300 mb-6 shadow-inner">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>100% Declarative UI • Không viết Swift / Kotlin • Expo CNG Ready</span>
+        <span data-i18n="hero_badge">100% Declarative UI • Không viết Swift / Kotlin • Expo CNG Ready</span>
       </div>
 
       <!-- Main Headline -->
       <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-tight sm:leading-none">
-        Live Activities & Dynamic Island <br class="hidden sm:inline">
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-teal-300 to-indigo-400">
+        <span data-i18n="hero_title_1">Live Activities & Dynamic Island</span> <br class="hidden sm:inline">
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-teal-300 to-indigo-400" data-i18n="hero_title_2">
           Chỉ với TypeScript & JSX
         </span>
       </h1>
 
-      <p class="mt-6 text-base sm:text-xl text-slate-300 max-w-3xl mx-auto font-normal leading-relaxed">
+      <p class="mt-6 text-base sm:text-xl text-slate-300 max-w-3xl mx-auto font-normal leading-relaxed" data-i18n="hero_desc">
         Giải pháp toàn diện All-in-One cho <strong>Live Activities</strong>, <strong>Dynamic Island</strong> và 
         <strong>Interactive Home Screen Widgets</strong> trên cả iOS & Android. Tích hợp sẵn bộ mô phỏng <code>&lt;WidgetPreview&gt;</code> và chuẩn dữ liệu mở cho AI Agent.
       </p>
@@ -210,15 +218,15 @@
       <div class="mt-8 flex flex-wrap justify-center items-center gap-4">
         <a href="#quick-start" class="px-6 py-3.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold shadow-lg shadow-sky-600/30 hover:shadow-sky-500/40 transition-all duration-200 flex items-center space-x-2">
           <i data-lucide="zap" class="w-4 h-4"></i>
-          <span>Bắt đầu Cài đặt</span>
+          <span data-i18n="hero_btn_install">Bắt đầu Cài đặt</span>
         </a>
         <a href="#interactive-simulator" class="px-6 py-3.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700 font-semibold transition flex items-center space-x-2">
           <i data-lucide="play" class="w-4 h-4 text-sky-400"></i>
-          <span>Trải nghiệm Live Simulator</span>
+          <span data-i18n="hero_btn_sim">Trải nghiệm Live Simulator</span>
         </a>
         <a href="https://github.com/React-Native-Vu/LiveWidgetsExampleExpo" target="_blank" class="px-6 py-3.5 rounded-xl bg-indigo-950/70 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-700/50 font-semibold transition flex items-center space-x-2">
           <i data-lucide="smartphone" class="w-4 h-4"></i>
-          <span>Expo Sample App ↗</span>
+          <span data-i18n="hero_btn_expo">Expo Sample App ↗</span>
         </a>
       </div>
 
@@ -227,7 +235,7 @@
         <span class="px-2 text-sky-400 select-all">$ npm install react-native-live-widgets</span>
         <button onclick="copyText('npm install react-native-live-widgets', this)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center space-x-1">
           <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-          <span>Copy</span>
+          <span data-i18n="btn_copy">Copy</span>
         </button>
       </div>
 
@@ -241,12 +249,12 @@
       <div class="text-center max-w-3xl mx-auto mb-10">
         <div class="inline-flex items-center space-x-1 text-xs font-semibold uppercase tracking-wider text-sky-400 mb-2">
           <i data-lucide="sparkles" class="w-4 h-4"></i>
-          <span>Tương tác trực tiếp trên trình duyệt</span>
+          <span data-i18n="sim_header_badge">Tương tác trực tiếp trên trình duyệt</span>
         </div>
-        <h2 class="text-3xl sm:text-4xl font-extrabold text-white">
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white" data-i18n="sim_header_title">
           Live Simulator: Trải Nghiệm Widget & Dynamic Island
         </h2>
-        <p class="mt-3 text-slate-400 text-sm sm:text-base">
+        <p class="mt-3 text-slate-400 text-sm sm:text-base" data-i18n="sim_header_desc">
           Nhấp chuột vào các chế độ bên dưới để xem Dynamic Island co dãn, sóng âm Equalizer chuyển động và nút bấm Home Widget phản hồi tức thì!
         </p>
       </div>
@@ -255,19 +263,19 @@
       <div class="flex flex-wrap justify-center gap-2 mb-8">
         <button onclick="switchSimulator('delivery')" id="btn-sim-delivery" class="sim-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-sky-600 text-white shadow-lg shadow-sky-600/30 flex items-center space-x-2">
           <i data-lucide="bike" class="w-4 h-4"></i>
-          <span>1. Giao đồ ăn (Dynamic Island)</span>
+          <span data-i18n="sim_tab_delivery">1. Giao đồ ăn (Dynamic Island)</span>
         </button>
         <button onclick="switchSimulator('music')" id="btn-sim-music" class="sim-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 flex items-center space-x-2">
           <i data-lucide="music" class="w-4 h-4"></i>
-          <span>2. Sóng nhạc Equalizer</span>
+          <span data-i18n="sim_tab_music">2. Sóng nhạc Equalizer</span>
         </button>
         <button onclick="switchSimulator('pomodoro')" id="btn-sim-pomodoro" class="sim-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 flex items-center space-x-2">
           <i data-lucide="timer" class="w-4 h-4"></i>
-          <span>3. Bấm giờ Phần cứng (UI.Timer)</span>
+          <span data-i18n="sim_tab_pomodoro">3. Bấm giờ Phần cứng (UI.Timer)</span>
         </button>
         <button onclick="switchSimulator('widget-interactive')" id="btn-sim-widget-interactive" class="sim-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 flex items-center space-x-2">
           <i data-lucide="layout" class="w-4 h-4"></i>
-          <span>4. Home Widget Tương Tác 2 Chiều</span>
+          <span data-i18n="sim_tab_widget">4. Home Widget Tương Tác 2 Chiều</span>
         </button>
       </div>
 
@@ -286,19 +294,19 @@
             <!-- Hint below phone -->
             <p id="sim-hint" class="mt-4 text-xs text-slate-500 text-center flex items-center space-x-1">
               <i data-lucide="info" class="w-3.5 h-3.5"></i>
-              <span>Nhấn vào các nút bên trong widget để thấy phản hồi tương tác!</span>
+              <span data-i18n="sim_hint">Nhấn vào các nút bên trong widget để thấy phản hồi tương tác!</span>
             </p>
           </div>
 
           <!-- Code Snippet for Current Simulator State -->
           <div class="lg:col-span-6 flex flex-col">
             <div class="flex items-center justify-between mb-2">
-              <span id="sim-code-label" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <span id="sim-code-label" class="text-xs font-semibold text-slate-400 uppercase tracking-wider" data-i18n="sim_code_label">
                 Mã TypeScript Declarative
               </span>
               <button onclick="copySimulatorCode()" class="text-xs text-sky-400 hover:text-sky-300 flex items-center space-x-1">
                 <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                <span>Copy Code</span>
+                <span data-i18n="btn_copy_code">Copy Code</span>
               </button>
             </div>
             <div class="relative">
@@ -318,8 +326,8 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <div class="text-center max-w-3xl mx-auto mb-12">
-        <h2 class="text-2xl sm:text-3xl font-bold text-white">Tại sao chọn `react-native-live-widgets`?</h2>
-        <p class="mt-2 text-slate-400 text-sm sm:text-base">Kiến trúc đột phá giúp phát triển Widget Native nhanh gấp 10 lần mà vẫn bảo toàn hiệu năng tối đa.</p>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white" data-i18n="why_title">Tại sao chọn `react-native-live-widgets`?</h2>
+        <p class="mt-2 text-slate-400 text-sm sm:text-base" data-i18n="why_desc">Kiến trúc đột phá giúp phát triển Widget Native nhanh gấp 10 lần mà vẫn bảo toàn hiệu năng tối đa.</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -329,8 +337,8 @@
           <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center mb-4">
             <i data-lucide="code-2" class="w-6 h-6"></i>
           </div>
-          <h3 class="text-lg font-bold text-white">100% Không Viết Swift / Kotlin</h3>
-          <p class="mt-2 text-sm text-slate-400 leading-relaxed">
+          <h3 class="text-lg font-bold text-white" data-i18n="f1_title">100% Không Viết Swift / Kotlin</h3>
+          <p class="mt-2 text-sm text-slate-400 leading-relaxed" data-i18n="f1_desc">
             Viết giao diện hoàn toàn bằng JavaScript/TypeScript hoặc cú pháp JSX. Thư viện tự động chuyển đổi thành cây Native AST cho WidgetKit và RemoteViews.
           </p>
         </div>
@@ -340,8 +348,8 @@
           <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-4">
             <i data-lucide="mouse-pointer-click" class="w-6 h-6"></i>
           </div>
-          <h3 class="text-lg font-bold text-white">Tương Tác 2 Chiều (AppIntents)</h3>
-          <p class="mt-2 text-sm text-slate-400 leading-relaxed">
+          <h3 class="text-lg font-bold text-white" data-i18n="f2_title">Tương Tác 2 Chiều (AppIntents)</h3>
+          <p class="mt-2 text-sm text-slate-400 leading-relaxed" data-i18n="f2_desc">
             Nút bấm trên Home Widget kích hoạt trực tiếp hàm JavaScript trong React Native qua React Hook <code>useWidgetAction()</code> mà không cần mở toàn màn hình ứng dụng.
           </p>
         </div>
@@ -351,8 +359,8 @@
           <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-4">
             <i data-lucide="battery-charging" class="w-6 h-6"></i>
           </div>
-          <h3 class="text-lg font-bold text-white">Timer Phần Cứng (0% Tiêu Hao Pin)</h3>
-          <p class="mt-2 text-sm text-slate-400 leading-relaxed">
+          <h3 class="text-lg font-bold text-white" data-i18n="f3_title">Timer Phần Cứng (0% Tiêu Hao Pin)</h3>
+          <p class="mt-2 text-sm text-slate-400 leading-relaxed" data-i18n="f3_desc">
             <code>UI.Timer</code> tự động đếm giây mượt mà trên Dynamic Island dựa vào chip hệ thống của iOS/Android mà không làm thức giấc CPU hay hao tổn pin thiết bị.
           </p>
         </div>
@@ -362,8 +370,8 @@
           <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-4">
             <i data-lucide="radio" class="w-6 h-6"></i>
           </div>
-          <h3 class="text-lg font-bold text-white">Sóng Nhạc Động (Equalizer)</h3>
-          <p class="mt-2 text-sm text-slate-400 leading-relaxed">
+          <h3 class="text-lg font-bold text-white" data-i18n="f4_title">Sóng Nhạc Động (Equalizer)</h3>
+          <p class="mt-2 text-sm text-slate-400 leading-relaxed" data-i18n="f4_desc">
             Duy nhất trên thị trường hỗ trợ hiệu ứng sóng âm thanh chuyển động liên tục cho ứng dụng nghe nhạc, podcast, radio trực tiếp trên Dynamic Island & Notification.
           </p>
         </div>
@@ -373,8 +381,8 @@
           <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4">
             <i data-lucide="cloud-lightning" class="w-6 h-6"></i>
           </div>
-          <h3 class="text-lg font-bold text-white">Đồng Bộ Ngầm Khi Kill App</h3>
-          <p class="mt-2 text-sm text-slate-400 leading-relaxed">
+          <h3 class="text-lg font-bold text-white" data-i18n="f5_title">Đồng Bộ Ngầm Khi Kill App</h3>
+          <p class="mt-2 text-sm text-slate-400 leading-relaxed" data-i18n="f5_desc">
             Hàm <code>Widget.setRemoteConfig()</code> cho phép cấu hình URL API ngầm để hệ điều hành iOS/Android tự động fetch dữ liệu mới cho Widget kể cả khi ứng dụng đã bị tắt.
           </p>
         </div>
@@ -384,7 +392,11 @@
           <div class="w-12 h-12 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center mb-4">
             <i data-lucide="bot" class="w-6 h-6"></i>
           </div>
-          <h3 class="text-lg font-bold text-white">Chuẩn AI Agent (llms.txt)</h3>
+          <h3 class="text-lg font-bold text-white" data-i18n="f6_title">Chuẩn AI Agent (llms.txt)</h3>
+          <p class="mt-2 text-sm text-slate-400 leading-relaxed" data-i18n="f6_desc">
+            Sẵn sàng 100% cho ChatGPT, Claude Code, Cursor, Antigravity thông qua <code>llms.txt</code> và <code>SKILL.md</code>. Agent của bạn có thể tự lập trình widget không lỗi.
+          </p>
+        </div>
           <p class="mt-2 text-sm text-slate-400 leading-relaxed">
             Sẵn sàng 100% cho ChatGPT, Claude Code, Cursor, Antigravity thông qua <code>llms.txt</code> và <code>SKILL.md</code>. Agent của bạn có thể tự lập trình widget không lỗi.
           </p>
@@ -407,9 +419,9 @@
           <span>Bắt đầu</span>
         </h4>
         <ul class="space-y-1 border-l border-slate-800 pl-3">
-          <li><a href="#quick-start" class="sidebar-link text-slate-300 hover:text-white block py-1 transition">Cài đặt All-in-One CLI</a></li>
-          <li><a href="#expo-setup" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">Expo (Config Plugin &amp; CNG)</a></li>
-          <li><a href="#bare-rn-setup" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">Bare React Native CLI</a></li>
+          <li><a href="#quick-start" class="sidebar-link text-slate-300 hover:text-white block py-1 transition" data-i18n="side_quick_start">Cài đặt All-in-One CLI</a></li>
+          <li><a href="#expo-setup" class="sidebar-link text-slate-400 hover:text-white block py-1 transition" data-i18n="side_expo_setup">Expo (Config Plugin &amp; CNG)</a></li>
+          <li><a href="#bare-rn-setup" class="sidebar-link text-slate-400 hover:text-white block py-1 transition" data-i18n="side_bare_rn">Bare React Native CLI</a></li>
         </ul>
       </div>
 
@@ -419,12 +431,12 @@
           <span>Cú pháp &amp; UI Engine</span>
         </h4>
         <ul class="space-y-1 border-l border-slate-800 pl-3">
-          <li><a href="#jsx-support" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">Cú pháp JSX / TSX &amp; StyleSheet</a></li>
-          <li><a href="#widget-preview-comp" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">Mô phỏng &lt;WidgetPreview&gt;</a></li>
-          <li><a href="#exact-hit-layer" class="sidebar-link text-emerald-400 hover:text-white block py-1 transition font-medium">Exact Hit Layer &amp; Chronometer (v1.2.1)</a></li>
+          <li><a href="#jsx-support" class="sidebar-link text-slate-400 hover:text-white block py-1 transition" data-i18n="side_jsx_support">Cú pháp JSX / TSX &amp; StyleSheet</a></li>
+          <li><a href="#widget-preview-comp" class="sidebar-link text-slate-400 hover:text-white block py-1 transition" data-i18n="side_widget_preview">Mô phỏng &lt;WidgetPreview&gt;</a></li>
+          <li><a href="#exact-hit-layer" class="sidebar-link text-emerald-400 hover:text-white block py-1 transition font-medium" data-i18n="side_exact_hit">Exact Hit Layer &amp; Chronometer (v1.2.1)</a></li>
           <li><a href="#dsl-containers" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">VStack, HStack, ZStack, Grid, Divider</a></li>
           <li><a href="#dsl-text-badge" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">UI.Text, UI.Badge &amp; Biến động</a></li>
-          <li><a href="#dsl-image" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">UI.Image &amp; SF Symbols</a></li>
+          <li><a href="#dsl-image" class="sidebar-link text-slate-400 hover:text-white block py-1 transition" data-i18n="side_dsl_image">UI.Image &amp; System Icons (Apple / Google)</a></li>
           <li><a href="#dsl-timer" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">UI.Timer (Đếm giờ phần cứng)</a></li>
           <li><a href="#dsl-progress" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">UI.Progress (Bar, Segmented, Circle)</a></li>
           <li><a href="#dsl-equalizer" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">UI.Equalizer (Sóng âm)</a></li>
@@ -458,6 +470,7 @@
           <li><a href="#ir-semantic" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">3 Trụ cột Kiến trúc &amp; UI IR</a></li>
           <li><a href="#a11y-layer" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">Accessibility (VoiceOver &amp; TalkBack)</a></li>
           <li><a href="#capability-matrix" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">Bảng Năng lực &amp; Lộ trình 6 Phases</a></li>
+          <li><a href="#extended-families-lifecycle" class="sidebar-link text-emerald-400 hover:text-white block py-1 transition font-medium">StandBy, ControlWidget &amp; Lifecycle</a></li>
           <li><a href="#troubleshooting" class="sidebar-link text-slate-400 hover:text-white block py-1 transition">Xử lý sự cố thường gặp</a></li>
         </ul>
       </div>
@@ -525,20 +538,15 @@
             <pre><code class="language-bash"># Bước 1: Cài đặt thư viện
 npx expo install react-native-live-widgets
 
-# Bước 2: Thêm plugin vào app.json (xem mẫu cấu hình bên dưới)
+# Bước 2: Thiết lập tự động 1 lệnh (tự cấu hình app.json, tạo widgets.config.ts, sync icons & Swift)
+npx react-native-live-widgets init
 
-# Bước 3: Sinh thư mục native
-npx expo prebuild
-
-# Bước 4: Tự động khởi tạo Widget Extension target & App Groups
-npx react-native-live-widgets init --group group.com.yourcompany.app
-
-# Bước 5: Chạy ứng dụng trên máy ảo
+# Bước 3: Chạy ứng dụng trên máy ảo / thiết bị thật
 npx expo run:ios
 npx expo run:android</code></pre>
           </div>
 
-          <p class="text-xs font-semibold text-slate-300">Cấu hình Config Plugin trong tập tin <code class="text-sky-300">app.json</code>:</p>
+          <p class="text-xs font-semibold text-slate-300">Cấu hình Config Plugin được tự động thêm vào tập tin <code class="text-sky-300">app.json</code>:</p>
           <div class="relative">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
             <pre><code class="language-json">{
@@ -574,15 +582,36 @@ npx expo run:android</code></pre>
 
           <div class="relative">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
-            <pre><code class="language-bash"># Cài đặt package
+            <pre><code class="language-bash"># Bước 1: Cài đặt package
 npm install react-native-live-widgets
+# hoặc: yarn add react-native-live-widgets
 
-# Tự động inject Xcode Widget Extension, Entitlements, Podfile và Android Manifest
-npx react-native-live-widgets init --group group.com.yourcompany.app
+# Bước 2: Tự động cấu hình Xcode Target, Entitlements, Podfile, pod install, Android permissions và Swift bundle
+npx react-native-live-widgets init
 
-# Khởi chạy dự án
+# Bước 3: Khởi chạy dự án
 npx react-native run-ios
 npx react-native run-android</code></pre>
+          </div>
+        </div>
+
+        <!-- Codegen Card -->
+        <div id="codegen-setup" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-4 shadow-lg">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white text-base sm:text-lg flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-purple-400"></span>
+              <span>3. Lệnh đồng bộ Codegen &amp; Đa ngôn ngữ (i18n)</span>
+            </span>
+            <span class="text-xs bg-purple-500/10 text-purple-400 px-2.5 py-1 rounded-full border border-purple-500/20 font-semibold">
+              Codegen Engine
+            </span>
+          </div>
+          <p class="text-sm text-slate-300 leading-relaxed">
+            Mỗi khi bạn thêm widget mới hoặc chỉnh sửa nội dung trong tập tin <code class="text-sky-300">widgets.config.ts</code>, chỉ cần chạy 1 câu lệnh để tự động cập nhật toàn bộ:
+          </p>
+          <div class="relative">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
+            <pre><code class="language-bash">npx react-native-live-widgets codegen</code></pre>
           </div>
         </div>
       </section>
@@ -701,13 +730,13 @@ await Widget.setLayout('shift', {
               <tbody class="divide-y divide-cardBorder text-slate-300">
                 <tr>
                   <td class="py-2 pr-4 font-mono text-sky-400">size</td>
-                  <td class="py-2 pr-4 font-mono text-xs text-slate-400">'small' | 'medium' | 'large' | 'lockScreen' | 'dynamicIsland'</td>
-                  <td class="py-2">Kích thước khung xem trước (mặc định <code>'medium'</code> 338×158dp).</td>
+                  <td class="py-2 pr-4 font-mono text-xs text-slate-400">'small' | 'medium' | 'large' | 'extraLarge' | 'standBy' | 'lockScreen' | 'dynamicIsland' | 'control'</td>
+                  <td class="py-2">Kích thước khung xem trước (mặc định <code>'medium'</code> 338×158dp). Hỗ trợ StandBy, ExtraLarge &amp; Control Tile (170×76dp).</td>
                 </tr>
                 <tr>
-                  <td class="py-2 pr-4 font-mono text-sky-400">layout / children</td>
-                  <td class="py-2 pr-4 font-mono text-xs text-slate-400">LayoutNode | WidgetSinglePageConfig | ReactNode</td>
-                  <td class="py-2">Nhận cây JSON DSL, object đa kích cỡ, hoặc thẻ JSX lồng trực tiếp.</td>
+                  <td class="py-2 pr-4 font-mono text-sky-400">layout / controlConfig / children</td>
+                  <td class="py-2 pr-4 font-mono text-xs text-slate-400">LayoutNode | WidgetSinglePageConfig | ControlWidgetConfig | ReactNode</td>
+                  <td class="py-2">Nhận cây JSON DSL, object đa kích cỡ, cấu hình <code>ControlWidget</code> (kèm <code>size="control"</code>), hoặc thẻ JSX lồng trực tiếp.</td>
                 </tr>
                 <tr>
                   <td class="py-2 pr-4 font-mono text-sky-400">showBadge</td>
@@ -918,18 +947,53 @@ export default function PreviewScreen() {
           </div>
         </div>
 
-        <!-- 3. Image & SF Symbols -->
+        <!-- 3. Image & System Icons (Apple SF Symbols + Google Material Icons) -->
         <div id="dsl-image" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h3 class="font-bold text-white text-lg flex items-center space-x-2">
               <i data-lucide="image" class="w-5 h-5 text-pink-400"></i>
-              <span>Hình ảnh &amp; Biểu tượng: <code>UI.Image</code> (5 nguồn ảnh)</span>
+              <span data-i18n="dsl_image_title">Hình ảnh &amp; Biểu tượng Hệ thống: <code>UI.Image</code> &amp; <code>&lt;Image&gt;</code></span>
             </h3>
-            <span class="text-xs bg-pink-500/10 text-pink-300 px-2.5 py-0.5 rounded-full font-mono">Auto-Cache 360px</span>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs bg-pink-500/10 text-pink-300 px-2.5 py-0.5 rounded-full font-mono">Auto-Cache 360px</span>
+              <span class="text-xs bg-emerald-500/10 text-emerald-300 px-2.5 py-0.5 rounded-full font-mono">13,000+ Icons</span>
+            </div>
           </div>
-          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Hỗ trợ <strong>5 nguồn ảnh</strong>: <code>url</code> (tự tải ngầm, nén tối đa 360px tránh vượt ngưỡng 30MB WidgetKit và lưu vào App Group cache), <code>base64</code> (QR/Barcode), <code>systemName</code> (SF Symbols iOS / Vector icon Android), <code>assetName</code>, và <code>filePath</code>. Hỗ trợ <code>fallbackSystemName</code>, <code>contentMode</code> (<code>'fill' | 'fit'</code>), <code>symbolEffect</code> (iOS 17+: <code>bounce</code>, <code>pulse</code>, <code>variableColor</code>), và <code>widgetAccentable</code>.
+          
+          <p data-i18n="dsl_image_desc" class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Hỗ trợ <strong>5 nguồn ảnh</strong>: <code>url</code> (tự tải ngầm, nén tối đa 360px tránh vượt ngưỡng 30MB WidgetKit và lưu vào App Group cache), <code>base64</code> (QR/Barcode), <code>systemName</code>, <code>assetName</code>, và <code>filePath</code>.
+            Đặc biệt hỗ trợ icon hệ thống đa nền tảng chuyên biệt: <code>systemNameIos</code> (Apple SF Symbols) và <code>systemNameAndroid</code> (Google Material Icons) với gợi ý type IntelliSense đầy đủ.
           </p>
+
+          <!-- Official Icon Catalog Links -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <a href="https://developer.apple.com/sf-symbols/" target="_blank" class="p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 hover:border-sky-500/50 hover:bg-slate-800/80 transition flex items-center justify-between group">
+              <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center font-bold text-lg">
+                  🍏
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white group-hover:text-sky-300 transition">Apple SF Symbols Catalog</h4>
+                  <p class="text-[11px] text-slate-400">9,500+ biểu tượng vector native iOS</p>
+                </div>
+              </div>
+              <span class="text-xs text-sky-400 group-hover:translate-x-0.5 transition font-semibold">Tra cứu ↗</span>
+            </a>
+
+            <a href="https://fonts.google.com/icons" target="_blank" class="p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 hover:border-emerald-500/50 hover:bg-slate-800/80 transition flex items-center justify-between group">
+              <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-lg">
+                  🤖
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white group-hover:text-emerald-300 transition">Google Material Icons Catalog</h4>
+                  <p class="text-[11px] text-slate-400">3,800+ vector glyphs Android (snake/kebab)</p>
+                </div>
+              </div>
+              <span class="text-xs text-emerald-400 group-hover:translate-x-0.5 transition font-semibold">Tra cứu ↗</span>
+            </a>
+          </div>
+
           <div class="relative">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
             <pre><code class="language-typescript">// 1. Ảnh Avatar từ URL mạng có viền &amp; icon dự phòng
@@ -944,15 +1008,23 @@ UI.Image({
   borderWidth: 2,
 })
 
-// 2. Icon hệ thống với hiệu ứng iOS 17+
+// 2. Icon hệ thống đa nền tảng (Apple SF Symbols + Google Material Icons)
 UI.Image({
-  systemName: 'bell.badge.fill',
-  tintColor: '#FB923C',
-  width: 20,
-  height: 20,
-  symbolEffect: 'bounce',
-  widgetAccentable: true,
-})</code></pre>
+  systemNameIos: 'bolt.horizontal.fill', // 9,500+ Apple SF Symbols
+  systemNameAndroid: 'bolt',              // 3,800+ Google Material Icons
+  tintColor: '#10B981',
+  width: 24,
+  height: 24,
+})
+
+// 3. Hoặc sử dụng dạng JSX React Component:
+&lt;Image
+  systemNameIos="person.crop.circle.badge.checkmark"
+  systemNameAndroid="verified_user"
+  tintColor="#10B981"
+  width={24}
+  height={24}
+/&gt;</code></pre>
           </div>
         </div>
 
@@ -1256,9 +1328,14 @@ DynamicNodeRegistry.register(
                   <td class="py-2.5">Đóng toàn bộ các Live Activities đang hoạt động.</td>
                 </tr>
                 <tr>
-                  <td class="py-2.5 pr-3 font-mono text-sky-400 font-medium">LiveActivity.getActiveActivities()</td>
-                  <td class="py-2.5 pr-3 text-xs text-slate-400 font-mono">Promise&lt;ActiveActivityInfo[]&gt;</td>
-                  <td class="py-2.5">Liệt kê danh sách các Live Activity đang chạy kèm ID và trạng thái.</td>
+                  <td class="py-2.5 pr-3 font-mono text-sky-400 font-medium">LiveActivity.getActiveActivities() / get(id) / isActive(id)</td>
+                  <td class="py-2.5 pr-3 text-xs text-slate-400 font-mono">id?: string</td>
+                  <td class="py-2.5">Quản lý nhiều phiên đồng thời: trả về <code>activityId</code>, <code>systemActivityId</code>, <code>isStale</code>, <code>relevanceScore</code>, <code>scheduledEndTimestamp</code>, <code>pushToken</code>.</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 pr-3 font-mono text-sky-400 font-medium">LiveActivity.onStateChange(listener) / cleanupExpired()</td>
+                  <td class="py-2.5 pr-3 text-xs text-slate-400 font-mono">LiveActivityStateEvent</td>
+                  <td class="py-2.5">Lắng nghe chuyển đổi vòng đời (<code>active</code>, <code>started_by_push</code>, <code>stale</code>, <code>expired</code>, <code>ended</code>, <code>dismissed</code>) và tự động dọn dẹp phiên hết hạn.</td>
                 </tr>
                 <tr>
                   <td class="py-2.5 pr-3 font-mono text-sky-400 font-medium">LiveActivity.areActivitiesEnabled() / canPostPromoted()</td>
@@ -1276,10 +1353,17 @@ DynamicNodeRegistry.register(
 
           <div class="relative">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
-            <pre><code class="language-typescript">// Cấu hình Dynamic Island (iOS) + tự động chuyển pha theo thời gian (phases)
+            <pre><code class="language-typescript">// Cấu hình Dynamic Island + Stale UI + RelevanceScore + Auto Scheduled End
 await LiveActivity.start({
   activityId: 'shift_01',
-  layout: lockScreenCardNode,
+  lockScreen: lockScreenCardNode,
+  staleLockScreen: staleFallbackNode,
+  staleTimestamp: shiftEndSec - 120,
+  scheduledEndTimestamp: shiftEndSec,
+  expiredLockScreen: completedSummaryNode,
+  expiredDismissalPolicy: 'default',
+  relevanceScore: 95,
+  alertConfig: { title: 'Bắt đầu ca làm', body: 'Ca hành chính đã kích hoạt!', sound: 'default' },
   dynamicIsland: {
     compactLeading: UI.HStack({ spacing: 4 }, avatarImg, UI.Text('08:02', { fontSize: 12, color: '#60A5FA' })),
     compactTrailing: UI.Timer(shiftEndSec, { mode: 'countdown', fontSize: 12, color: '#60A5FA' }),
@@ -1300,8 +1384,8 @@ await LiveActivity.start({
         <!-- Widget API -->
         <div id="api-widget" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-5">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">2. <code>Widget</code> API (Multi-Page, Lock Screen Widgets &amp; Android In-App Pin)</h3>
-            <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full">WidgetKit + AppWidget</span>
+            <h3 class="text-lg font-bold text-white">2. <code>Widget</code> API (Multi-Page, ExtraLarge, StandBy &amp; Control Center)</h3>
+            <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full">WidgetKit + ControlWidget</span>
           </div>
 
           <div class="overflow-x-auto">
@@ -1317,7 +1401,12 @@ await LiveActivity.start({
                 <tr>
                   <td class="py-2.5 pr-3 font-mono text-emerald-400 font-medium">Widget.setLayout(key, config, appGroup?)</td>
                   <td class="py-2.5 pr-3 text-xs text-slate-400 font-mono">WidgetLayoutConfig (alias <code>Widget.update</code>)</td>
-                  <td class="py-2.5">Cập nhật giao diện cho <code>small</code>, <code>medium</code>, <code>large</code>, <code>pages</code> đa trang và 3 kích thước Lock Screen iOS (<code>accessoryRectangular</code>, <code>accessoryCircular</code>, <code>accessoryInline</code>).</td>
+                  <td class="py-2.5">Cập nhật giao diện cho <code>small</code>, <code>medium</code>, <code>large</code>, <code>extraLarge</code>, <code>standBy</code>, <code>pages</code> đa trang và 3 kích thước Lock Screen iOS (<code>accessoryRectangular</code>, <code>accessoryCircular</code>, <code>accessoryInline</code>).</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 pr-3 font-mono text-emerald-400 font-medium">ControlWidget.set(id, cfg) / Widget.setControl(id, cfg)</td>
+                  <td class="py-2.5 pr-3 text-xs text-slate-400 font-mono">UI.ControlButton / UI.ControlToggle</td>
+                  <td class="py-2.5">Cấu hình nút/công tắc nhanh trong iOS 18 Control Center, Action Button &amp; Lock Screen (<code>DynamicControlWidget.swift</code>) và Android Quick Settings Tile (<code>DynamicQuickSettingsTileService.kt</code>). Hỗ trợ xem trước với <code>&lt;WidgetPreview size="control" /&gt;</code>.</td>
                 </tr>
                 <tr>
                   <td class="py-2.5 pr-3 font-mono text-emerald-400 font-medium">Widget.reload(kind) / Widget.reloadAll()</td>
@@ -1395,23 +1484,60 @@ const saved = await SharedStorage.get('pending_checkin', 'group.com.yourapp');</
           </div>
         </div>
 
-        <!-- Remote API Sync -->
-        <div id="api-remote-sync" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-4">
+        <!-- Remote API Sync & Background Data Engine 2.0 -->
+        <div id="api-remote-sync" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-5">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <h3 class="text-lg font-bold text-white">4. Đồng bộ API Ngầm kể cả khi Kill App (<code>Widget.setRemoteConfig</code>)</h3>
+            <h3 class="text-lg font-bold text-white">4. Background Data Engine 2.0 &amp; Structured Data Binding</h3>
             <span class="text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2.5 py-1 rounded-full">URLSession &amp; AlarmManager</span>
           </div>
           <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Khi App bị vuốt tắt hoàn toàn, Native Extension sẽ tự gọi API định kỳ theo <code>refreshIntervalMinutes</code> (alias <code>intervalMinutes</code>) hoặc ngay khi người dùng bấm nút <code>actionId: 'refresh'</code>, điền JSON trả về vào các biến <code>{{ten_bien}}</code> và tự động cập nhật biến hệ thống <code>{{_lastSyncTime}}</code> (<code>HH:mm:ss</code>).
-            <em>Lưu ý: iOS cấp hạn mức ~40–70 lần reload/ngày (WidgetKit Budget) và Android Doze Mode gom tác vụ nền; nếu cần cập nhật từng giây, hãy kết hợp Server Push APNs/FCM.</em>
+            Hỗ trợ đầy đủ REST (<code>GET</code>/<code>POST</code>/<code>PUT</code> + <code>body</code>), <code>headers</code>, <code>timeoutMs</code>, <code>cacheTtlSeconds</code>, <code>enableETag</code> (gửi <code>If-None-Match</code> &amp; xử lý HTTP <code>304 Not Modified</code>), <code>maxRetries</code> / <code>retryDelayMs</code> (Exponential Backoff), đa nguồn <code>sources</code>, chuẩn hóa <code>mapping</code> &amp; Pipe Transform, kiểm định <code>schema</code>, tự làm mới token <code>authRefresh</code> khi gặp HTTP <code>401</code>, biến lỗi <code>{{_syncStatus}}</code> / <code>{{_syncError}}</code> / <code>{{_httpStatus}}</code> + <code>errorFallback</code> và Proxy gợi ý kiểu <code>Widget.createDataBinding&lt;T&gt;()</code>.
           </p>
+          <div class="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3.5 text-xs text-amber-200 leading-relaxed">
+            <strong>⚠️ Lưu ý bắt buộc về Ngân sách Reload của OS:</strong> Không cam kết đồng bộ chính xác mỗi 15 phút khi app bị đóng. Apple WidgetKit sử dụng ngân sách reload động (thường khoảng <strong>40–70 lần/ngày</strong> tùy hành vi người dùng; <code>refreshIntervalMinutes</code> chỉ là mốc thời gian sớm nhất được đề xuất). Android cũng áp dụng giới hạn <em>Doze Mode</em> &amp; <em>App Standby Buckets</em> cho tác vụ nền.
+          </div>
           <div class="relative">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
-            <pre><code class="language-typescript">await Widget.setRemoteConfig('main', {
-  url: 'https://api.yourcompany.com/v1/widget-summary',
-  method: 'GET',
-  headers: { Authorization: `Bearer ${accessToken}` },
-  refreshIntervalMinutes: 15, // Chu kỳ gợi ý cho OS
+            <pre><code class="language-tsx">// 1. Structured Data Binding + Pipe Transform trực tiếp trong TSX
+const data = Widget.createDataBinding&lt;{
+  user: { name: string };
+  attendance: { progress: number };
+}&gt;({
+  defaults: { user: { name: 'Nhân viên' }, attendance: { progress: 0 } },
+});
+
+await Widget.setLayout('main', {
+  medium: (
+    &lt;VStack padding={14} spacing={6}&gt;
+      &lt;Text&gt;{data.user.name}&lt;/Text&gt;
+      &lt;Text&gt;{data.attendance.progress}%&lt;/Text&gt;
+      &lt;Progress value={data.attendance.progress.divide(100)} /&gt;
+    &lt;/VStack&gt;
+  ),
+});
+
+// 2. Cấu hình Background Data Engine 2.0 (TTL, ETag, Retry, Multi-source, Schema, Auth Refresh)
+await Widget.setRemoteConfig('main', {
+  cacheTtlSeconds: 300,
+  timeoutMs: 6000,
+  enableETag: true,
+  maxRetries: 2,
+  retryDelayMs: 500,
+  sources: {
+    user: { url: 'https://api.yourcompany.com/v1/me' },
+    attendance: { url: 'https://api.yourcompany.com/v1/attendance/today' },
+  },
+  schema: {
+    requiredKeys: ['user.name', 'attendance.progress'],
+    types: { 'attendance.progress': 'number' },
+  },
+  authRefresh: {
+    url: 'https://api.yourcompany.com/v1/auth/refresh',
+    method: 'POST',
+    tokenPath: 'accessToken',
+  },
+  errorFallback: &lt;Text color="#F87171"&gt;Lỗi {{_httpStatus}}: {{_syncError}}&lt;/Text&gt;,
+  refreshIntervalMinutes: 15, // Mốc gợi ý sớm nhất theo OS WidgetKit Budget
 }, 'group.com.yourcompany.app');</code></pre>
           </div>
         </div>
@@ -1618,6 +1744,50 @@ console.log(ir.renderStrategy, ir.semanticSummary);</code></pre>
           </div>
         </div>
 
+        <!-- Extended Families & Complete Live Activity Lifecycle -->
+        <div id="extended-families-lifecycle" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-bold text-white text-lg flex items-center space-x-2">
+              <i data-lucide="smartphone" class="w-5 h-5 text-emerald-400"></i>
+              <span>Widget Family Mở rộng (<code>extraLarge</code>, <code>standBy</code>, <code>ControlWidget</code>) &amp; Vòng đời Live Activity</span>
+            </h3>
+            <span class="text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 px-2.5 py-1 rounded-full">OS Surfaces &amp; Lifecycle</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Hỗ trợ đầy đủ giao diện riêng cho <strong>iOS 17+ StandBy Mode</strong> (tự nhận diện <code>showsWidgetContainerBackground == false</code> kèm <code>.applyStandByMargins()</code> &amp; <code>widgetAccentable</code>), <strong>iPadOS / Tablet Extra Large</strong> (<code>extraLarge</code>), <strong>iOS 18+ Control Center / Action Button &amp; Android Quick Settings Tile</strong> (<code>ControlWidget</code> DSL, <code>DynamicControlWidget.swift</code>, <code>DynamicQuickSettingsTileService.kt</code>, <code>&lt;WidgetPreview size="control" /&gt;</code>), và hệ thống vòng đời Live Activity hoàn chỉnh (Stale, Relevance Score, AlertConfiguration, Scheduled End, Auto-Expiration, Push-to-Start &amp; Multi-Activity Inspection).
+          </p>
+          <div class="relative">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
+            <pre><code class="language-typescript">// 1. Thiết lập StandBy + ExtraLarge + Control Widget (iOS 18+ / Android QS Tile)
+await Widget.setLayout('main', {
+  small: compactNode,
+  medium: mediumNode,
+  large: largeNode,
+  extraLarge: tabletDashboardNode,
+  standBy: standByBigClockNode,
+});
+
+const shiftCtrl = ControlWidget.toggle({
+  title: 'Ca làm việc',
+  subtitle: 'Chạm để chấm công',
+  checkedTitle: 'Đang trong ca',
+  checkedSubtitle: 'Nhấn để kết thúc',
+  systemName: 'clock.badge.checkmark.fill',
+  checked: true,
+  actionId: 'toggle:attendance',
+});
+await ControlWidget.set('toggle', shiftCtrl);
+// Xem trước Control Tile ngay trong App: &lt;WidgetPreview size="control" controlConfig={shiftCtrl} /&gt;
+
+// 2. Theo dõi toàn bộ vòng đời &amp; kiểm tra Live Activity đồng thời
+const unsubLifecycle = LiveActivity.onStateChange((event) =&gt; {
+  console.log(`Activity ${event.activityId} -&gt; ${event.state}`);
+});
+const active = await LiveActivity.get('shift_01');
+const cleanedIds = await LiveActivity.cleanupExpired();</code></pre>
+          </div>
+        </div>
+
         <!-- Troubleshooting -->
         <div id="troubleshooting" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-4">
           <h3 class="font-bold text-white text-lg flex items-center space-x-2">
@@ -1728,8 +1898,8 @@ curl -s https://react-native-vu.github.io/react-native-live-widgets/llms-full.tx
           ⚡
         </div>
         <div>
-          <p class="text-slate-300 font-medium">react-native-live-widgets — Phát triển bởi <strong>Trần Tuấn Vũ</strong></p>
-          <p class="text-[11px] text-slate-500">Giấy phép mã nguồn mở MIT • Sẵn sàng cho Production</p>
+          <p class="text-slate-300 font-medium" data-i18n="footer_dev">react-native-live-widgets — Phát triển bởi <strong>Trần Tuấn Vũ</strong></p>
+          <p class="text-[11px] text-slate-500" data-i18n="footer_sub">Giấy phép mã nguồn mở MIT • Sẵn sàng cho Production</p>
         </div>
       </div>
 
@@ -2069,6 +2239,147 @@ useWidgetAction('INCREMENT', () => {
       });
     }
 
+    // Multilingual i18n Dictionary (Vietnamese & English)
+    const translations = {
+      vi: {
+        announcement_tag: 'Mới v1.2.1',
+        announcement_text: 'Exact Dynamic Hit Layer, Native Chronometer Countdown, Swift 6 Ready & Chuẩn hoá <strong>UI IR</strong>',
+        announcement_link: 'Xem chi tiết &rarr;',
+        brand_subtitle: 'Declarative Widgets & Dynamic Island Engine',
+        nav_sim: 'Live Simulator',
+        nav_install: 'Cài đặt',
+        nav_dsl: 'UI DSL & JSX',
+        nav_api: 'API Reference',
+        hero_badge: '100% Declarative UI • Không viết Swift / Kotlin • Expo CNG Ready',
+        hero_title_1: 'Live Activities & Dynamic Island',
+        hero_title_2: 'Chỉ với TypeScript & JSX',
+        hero_desc: 'Giải pháp toàn diện All-in-One cho <strong>Live Activities</strong>, <strong>Dynamic Island</strong> và <strong>Interactive Home Screen Widgets</strong> trên cả iOS & Android. Tích hợp sẵn bộ mô phỏng <code>&lt;WidgetPreview&gt;</code> và chuẩn dữ liệu mở cho AI Agent.',
+        hero_btn_install: 'Bắt đầu Cài đặt',
+        hero_btn_sim: 'Trải nghiệm Live Simulator',
+        hero_btn_expo: 'Expo Sample App ↗',
+        btn_copy: 'Copy',
+        btn_copy_code: 'Copy Code',
+        sim_header_badge: 'Tương tác trực tiếp trên trình duyệt',
+        sim_header_title: 'Live Simulator: Trải Nghiệm Widget & Dynamic Island',
+        sim_header_desc: 'Nhấp chuột vào các chế độ bên dưới để xem Dynamic Island co dãn, sóng âm Equalizer chuyển động và nút bấm Home Widget phản hồi tức thì!',
+        sim_tab_delivery: '1. Giao đồ ăn (Dynamic Island)',
+        sim_tab_music: '2. Sóng nhạc Equalizer',
+        sim_tab_pomodoro: '3. Bấm giờ Phần cứng (UI.Timer)',
+        sim_tab_widget: '4. Home Widget Tương Tác 2 Chiều',
+        sim_hint: 'Nhấn vào các nút bên trong widget để thấy phản hồi tương tác!',
+        sim_code_label: 'Mã TypeScript Declarative',
+        why_title: 'Tại sao chọn `react-native-live-widgets`?',
+        why_desc: 'Kiến trúc đột phá giúp phát triển Widget Native nhanh gấp 10 lần mà vẫn bảo toàn hiệu năng tối đa.',
+        f1_title: '100% Không Viết Swift / Kotlin',
+        f1_desc: 'Viết giao diện hoàn toàn bằng JavaScript/TypeScript hoặc cú pháp JSX. Thư viện tự động chuyển đổi thành cây Native AST cho WidgetKit và RemoteViews.',
+        f2_title: 'Tương Tác 2 Chiều (AppIntents)',
+        f2_desc: 'Nút bấm trên Home Widget kích hoạt trực tiếp hàm JavaScript trong React Native qua React Hook useWidgetAction() mà không cần mở toàn màn hình ứng dụng.',
+        f3_title: 'Timer Phần Cứng (0% Tiêu Hao Pin)',
+        f3_desc: 'UI.Timer tự động đếm giây mượt mà trên Dynamic Island dựa vào chip hệ thống của iOS/Android mà không làm thức giấc CPU hay hao tổn pin thiết bị.',
+        f4_title: 'Sóng Nhạc Động (Equalizer)',
+        f4_desc: 'Duy nhất trên thị trường hỗ trợ hiệu ứng sóng âm thanh chuyển động liên tục cho ứng dụng nghe nhạc, podcast, radio trực tiếp trên Dynamic Island & Notification.',
+        f5_title: 'Đồng Bộ Ngầm Khi Kill App',
+        f5_desc: 'Hàm Widget.setRemoteConfig() cho phép cấu hình URL API ngầm để hệ điều hành iOS/Android tự động fetch dữ liệu mới cho Widget kể cả khi ứng dụng đã bị tắt.',
+        f6_title: 'Chuẩn AI Agent (llms.txt)',
+        f6_desc: 'Sẵn sàng 100% cho ChatGPT, Claude Code, Cursor, Antigravity thông qua llms.txt và SKILL.md. Agent của bạn có thể tự lập trình widget không lỗi.',
+        dsl_image_title: 'Hình ảnh & Biểu tượng Hệ thống: <code>UI.Image</code> & <code>&lt;Image&gt;</code>',
+        dsl_image_desc: 'Hỗ trợ <strong>5 nguồn ảnh</strong>: <code>url</code> (tự tải ngầm, nén tối đa 360px tránh vượt ngưỡng 30MB WidgetKit và lưu vào App Group cache), <code>base64</code> (QR/Barcode), <code>systemName</code>, <code>assetName</code>, và <code>filePath</code>. Đặc biệt hỗ trợ icon hệ thống đa nền tảng chuyên biệt: <code>systemNameIos</code> (Apple SF Symbols) và <code>systemNameAndroid</code> (Google Material Icons) với gợi ý type IntelliSense đầy đủ.',
+        side_quick_start: 'Cài đặt All-in-One CLI',
+        side_expo_setup: 'Expo (Config Plugin & CNG)',
+        side_bare_rn: 'Bare React Native CLI',
+        side_jsx_support: 'Cú pháp JSX / TSX & StyleSheet',
+        side_widget_preview: 'Mô phỏng &lt;WidgetPreview&gt;',
+        side_exact_hit: 'Exact Hit Layer & Chronometer (v1.2.1)',
+        side_dsl_image: 'UI.Image & System Icons (Apple / Google)',
+        footer_dev: 'react-native-live-widgets — Phát triển bởi <strong>Trần Tuấn Vũ</strong>',
+        footer_sub: 'Giấy phép mã nguồn mở MIT • Sẵn sàng cho Production',
+      },
+      en: {
+        announcement_tag: 'New v1.2.1',
+        announcement_text: 'Exact Dynamic Hit Layer, Native Chronometer Countdown, Swift 6 Ready & Standardized <strong>UI IR</strong>',
+        announcement_link: 'Learn more &rarr;',
+        brand_subtitle: 'Declarative Widgets & Dynamic Island Engine',
+        nav_sim: 'Live Simulator',
+        nav_install: 'Installation',
+        nav_dsl: 'UI DSL & JSX',
+        nav_api: 'API Reference',
+        hero_badge: '100% Declarative UI • Zero Swift / Kotlin • Expo CNG Ready',
+        hero_title_1: 'Live Activities & Dynamic Island',
+        hero_title_2: 'Powered by TypeScript & JSX',
+        hero_desc: 'All-in-One declarative solution for <strong>Live Activities</strong>, <strong>Dynamic Island</strong>, and <strong>Interactive Home Screen Widgets</strong> on iOS & Android. Built-in <code>&lt;WidgetPreview&gt;</code> and open AI Agent standard.',
+        hero_btn_install: 'Get Started',
+        hero_btn_sim: 'Live Simulator',
+        hero_btn_expo: 'Expo Sample App ↗',
+        btn_copy: 'Copy',
+        btn_copy_code: 'Copy Code',
+        sim_header_badge: 'Interactive In-Browser Demo',
+        sim_header_title: 'Live Simulator: Dynamic Island & Home Widgets',
+        sim_header_desc: 'Click presets below to see Dynamic Island morphing, live Equalizer waves, and instant Home Widget button reactions!',
+        sim_tab_delivery: '1. Food Delivery (Dynamic Island)',
+        sim_tab_music: '2. Live Equalizer Waves',
+        sim_tab_pomodoro: '3. Hardware Timer (UI.Timer)',
+        sim_tab_widget: '4. Interactive 2-Way Home Widget',
+        sim_hint: 'Click buttons inside the widget to see interactive response!',
+        sim_code_label: 'Declarative TypeScript Code',
+        why_title: 'Why Choose `react-native-live-widgets`?',
+        why_desc: 'A breakthrough architecture that builds Native Widgets 10x faster while preserving maximum runtime performance.',
+        f1_title: 'Zero Swift / Kotlin Coding',
+        f1_desc: 'Author your UI entirely in JavaScript/TypeScript or React JSX. The engine automatically compiles layouts into native ASTs for WidgetKit and RemoteViews.',
+        f2_title: 'Bidirectional AppIntents',
+        f2_desc: 'Home Widget buttons trigger JavaScript callbacks inside React Native via the useWidgetAction() hook without opening the main app.',
+        f3_title: 'Zero-Battery Hardware Timers',
+        f3_desc: 'UI.Timer executes smooth second ticks on Dynamic Island and Home Widgets using native OS hardware clocks without waking up the CPU.',
+        f4_title: 'Realtime Audio Equalizer',
+        f4_desc: 'The only library providing smooth oscillating sound wave animations on Dynamic Island and ongoing notifications for audio and podcast apps.',
+        f5_title: 'Background API Sync When Killed',
+        f5_desc: 'Widget.setRemoteConfig() lets the operating system autonomously fetch JSON from remote REST endpoints and update widgets even when the app is force-closed.',
+        f6_title: 'AI Agent Standard (llms.txt)',
+        f6_desc: '100% optimized for Claude Code, ChatGPT, Cursor, and Antigravity through llms.txt and SKILL.md. Your coding agent can build error-free widgets.',
+        dsl_image_title: 'Images & System Icons: <code>UI.Image</code> & <code>&lt;Image&gt;</code>',
+        dsl_image_desc: 'Supports <strong>5 image sources</strong>: <code>url</code> (auto-downloaded, downscaled to 360px max dimension, and cached), <code>base64</code> (QR/Barcode), <code>systemName</code>, <code>assetName</code>, and <code>filePath</code>. Features dedicated cross-platform props <code>systemNameIos</code> (Apple SF Symbols) and <code>systemNameAndroid</code> (Google Material Icons) with full TypeScript auto-complete.',
+        side_quick_start: 'All-in-One CLI Setup',
+        side_expo_setup: 'Expo (Config Plugin & CNG)',
+        side_bare_rn: 'Bare React Native CLI',
+        side_jsx_support: 'JSX / TSX & StyleSheet Syntax',
+        side_widget_preview: '<WidgetPreview> Simulation',
+        side_exact_hit: 'Exact Hit Layer & Chronometer (v1.2.1)',
+        side_dsl_image: 'UI.Image & System Icons (Apple / Google)',
+        footer_dev: 'react-native-live-widgets — Developed by <strong>Vu Tran</strong>',
+        footer_sub: 'MIT Open Source License • Production Ready',
+      }
+    };
+
+    let currentLang = 'vi';
+
+    function switchLanguage(lang) {
+      currentLang = lang;
+      try {
+        localStorage.setItem('rn_live_widgets_lang', lang);
+      } catch (_e) {}
+      document.documentElement.lang = lang;
+      
+      const dict = translations[lang] || translations.vi;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+          el.innerHTML = dict[key];
+        }
+      });
+
+      // Update button toggle style
+      const btnVi = document.getElementById('lang-btn-vi');
+      const btnEn = document.getElementById('lang-btn-en');
+      if (btnVi && btnEn) {
+        if (lang === 'vi') {
+          btnVi.className = 'px-2 py-0.5 rounded-md transition text-sky-400 bg-sky-500/20 shadow-sm font-bold';
+          btnEn.className = 'px-2 py-0.5 rounded-md transition text-slate-400 hover:text-white font-normal';
+        } else {
+          btnVi.className = 'px-2 py-0.5 rounded-md transition text-slate-400 hover:text-white font-normal';
+          btnEn.className = 'px-2 py-0.5 rounded-md transition text-sky-400 bg-sky-500/20 shadow-sm font-bold';
+        }
+      }
+    }
+
     // Scroll to top button visibility & Sidebar ScrollSpy
     function updateActiveSidebarLink() {
       const links = Array.from(document.querySelectorAll('#docs-sidebar a.sidebar-link'));
@@ -2117,6 +2428,10 @@ useWidgetAction('INCREMENT', () => {
       }
       switchSimulator('delivery');
       updateActiveSidebarLink();
+      try {
+        const savedLang = localStorage.getItem('rn_live_widgets_lang') || 'vi';
+        switchLanguage(savedLang);
+      } catch (_e) {}
     });
   </script>
 </body>

@@ -46,6 +46,42 @@ data class ButtonActionBinding(
 
 object DynamicWidgetCanvasRenderer {
     var activeTimerInfo: WidgetTimerInfo? = null
+    private var materialTypeface: Typeface? = null
+
+    private fun getMaterialTypeface(context: Context): Typeface? {
+        if (materialTypeface == null) {
+            try {
+                materialTypeface = Typeface.createFromAsset(context.assets, "fonts/MaterialIcons-Regular.ttf")
+            } catch (_: Exception) {
+            }
+        }
+        return materialTypeface
+    }
+
+    private fun normalizeMaterialName(symbol: String): String {
+        if (symbol.isEmpty()) return ""
+        val s = symbol.lowercase().replace('.', '_').replace('-', '_')
+        return when {
+            s == "bolt_horizontal_fill" || s == "bolt_fill" -> "bolt"
+            s == "chart_line_uptrend_xyaxis" -> "trending_up"
+            s == "chart_line_downtrend_xyaxis" -> "trending_down"
+            s == "person_crop_circle_badge_checkmark" -> "verified_user"
+            s == "checkmark_circle_fill" || s == "checkmark_circle" -> "check_circle"
+            s == "xmark_circle_fill" || s == "xmark_circle" -> "cancel"
+            s == "bell_fill" || s == "bell" -> "notifications"
+            s == "clock_fill" || s == "clock" -> "schedule"
+            s == "star_fill" -> "star"
+            s == "heart_fill" -> "favorite"
+            s == "lock_fill" -> "lock"
+            s == "shield_fill" -> "security"
+            s == "gearshape_fill" || s == "gearshape" -> "settings"
+            s == "arrow_clockwise" -> "sync"
+            s == "cart_fill" -> "shopping_cart"
+            s == "envelope_fill" -> "mail"
+            s == "trash_fill" -> "delete"
+            else -> s.removeSuffix("_fill")
+        }
+    }
 
     private fun isFlexibleSpacer(node: JSONObject?): Boolean {
         if (node == null || node.optString("type") != "Spacer") return false
@@ -792,21 +828,58 @@ object DynamicWidgetCanvasRenderer {
                     canvas.drawRoundRect(rect, radius, radius, paint)
 
                     paint.color = parseHexColor(tintHex, Color.BLUE)
-                    paint.textSize = min(w, h) * 0.48f
                     paint.textAlign = Paint.Align.CENTER
-                    val symbol = props?.optString("systemName", "") ?: ""
-                    val glyph = when {
-                        symbol.contains("person") -> "👤"
-                        symbol.contains("sparkle") -> "✨"
-                        symbol.contains("check") -> "✓"
-                        symbol.contains("bell") -> "🔔"
-                        symbol.contains("heart") -> "💜"
-                        symbol.contains("star") -> "★"
-                        else -> "🖼️"
+
+                    val symbol = (props?.optString("androidSystemName", "")
+                        ?.ifEmpty { props.optString("systemNameAndroid", "") }
+                        ?.ifEmpty { props.optString("materialName", "") }
+                        ?.ifEmpty { props.optString("systemName", "") } ?: "").lowercase()
+
+                    val matName = normalizeMaterialName(symbol)
+                    val matTypeface = getMaterialTypeface(context)
+
+                    if (matTypeface != null && matName.isNotEmpty()) {
+                        paint.typeface = matTypeface
+                        paint.textSize = min(w, h) * 0.58f
+                        val fm = paint.fontMetrics
+                        val cy = top + h / 2f - (fm.ascent + fm.descent) / 2f
+                        // Tận dụng OpenType Ligatures của Google: Font tự ghép chuỗi ký tự thành icon vector!
+                        canvas.drawText(matName, left + w / 2f, cy, paint)
+                        paint.typeface = null
+                    } else {
+                        paint.textSize = min(w, h) * 0.48f
+                        val glyph = when {
+                            symbol.contains("bolt") -> "⚡"
+                            symbol.contains("chart") -> "📈"
+                            symbol.contains("clock") || symbol.contains("timer") || symbol.contains("stopwatch") -> "⏱️"
+                            symbol.contains("calendar") -> "📅"
+                            symbol.contains("check") -> "✓"
+                            symbol.contains("xmark") -> "✕"
+                            symbol.contains("person") -> "👤"
+                            symbol.contains("bell") -> "🔔"
+                            symbol.contains("flame") -> "🔥"
+                            symbol.contains("star") -> "★"
+                            symbol.contains("heart") -> "💜"
+                            symbol.contains("sparkle") -> "✨"
+                            symbol.contains("trophy") || symbol.contains("medal") -> "🏆"
+                            symbol.contains("target") -> "🎯"
+                            symbol.contains("shield") || symbol.contains("lock") -> "🔒"
+                            symbol.contains("plus") -> "➕"
+                            symbol.contains("minus") -> "➖"
+                            symbol.contains("play") -> "▶️"
+                            symbol.contains("pause") -> "⏸️"
+                            symbol.contains("wifi") -> "📶"
+                            symbol.contains("battery") -> "🔋"
+                            symbol.contains("cart") || symbol.contains("bag") || symbol.contains("dollar") -> "💳"
+                            symbol.contains("map") || symbol.contains("location") -> "📍"
+                            symbol.contains("phone") -> "📞"
+                            symbol.contains("message") || symbol.contains("envelope") || symbol.contains("mail") -> "✉️"
+                            else -> "🖼️"
+                        }
+                        val fm = paint.fontMetrics
+                        val cy = top + h / 2f - (fm.ascent + fm.descent) / 2f
+                        canvas.drawText(glyph, left + w / 2f, cy, paint)
                     }
-                    val fm = paint.fontMetrics
-                    val cy = top + h / 2f - (fm.ascent + fm.descent) / 2f
-                    canvas.drawText(glyph, left + w / 2f, cy, paint)
                 }
 
                 if (borderW > 0f) {

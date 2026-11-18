@@ -34,7 +34,9 @@ public struct DynamicWidgetProvider: TimelineProvider {
     let group = appGroup
 
     // 1. Kiểm tra xem có cấu hình Timeline nhiều mốc thời gian không (widget_timeline_<key>)
-    if let timelineRaw = Self.readSharedString(forKey: "widget_timeline_\(wKey)", appGroup: group),
+    let timelineRaw = Self.readSharedString(forKey: "widget_timeline_\(wKey)", appGroup: group)
+      ?? (wKey != "main" ? Self.readSharedString(forKey: "widget_timeline_main", appGroup: group) : nil)
+    if let timelineRaw = timelineRaw,
        let data = timelineRaw.data(using: .utf8),
        let timelineDTO = try? JSONDecoder().decode(WidgetTimelineConfigDTO.self, from: data),
        !timelineDTO.entries.isEmpty {
@@ -79,11 +81,11 @@ public struct DynamicWidgetProvider: TimelineProvider {
 
     // 2. Chạy cơ chế đơn mốc mặc định (Layout snapshot hiện tại)
     let rawLayout = Self.readSharedString(forKey: "widget_layout_\(wKey)", appGroup: group)
-    let hasTemplateVars = rawLayout?.contains("{{") == true
     let hasRemoteConfig = Self.readSharedString(forKey: "widget_remote_config_\(wKey)", appGroup: group) != nil
     let state = DynamicWidgetStateStore.loadState()
-    let secondsSinceLastUpdate = Date().timeIntervalSince1970 - (state.updatedAt ?? 0)
-    let needsRemoteSync = hasRemoteConfig && hasTemplateVars && (state.lastSyncTime == nil || secondsSinceLastUpdate >= 20)
+    let secondsSinceLastUpdate = Date().timeIntervalSince1970 - state.updatedAt
+    let effectiveTtl = Double(readCacheTtlSeconds())
+    let needsRemoteSync = hasRemoteConfig && (state.lastSyncTime == nil || secondsSinceLastUpdate >= effectiveTtl)
     let needsImagePrefetch = rawLayout.map { DynamicWidgetImageCache.hasUncachedUrls(in: $0) } ?? false
 
     // Trả Timeline ngay lập tức để chuyển đổi giữa các mẫu Widget mượt mà tức thì
@@ -106,46 +108,89 @@ public struct DynamicWidgetProvider: TimelineProvider {
     }
   }
 
-  private func readRefreshIntervalMinutes() -> Int {
+  private func readRemoteConfig() -> WidgetRemoteConfigDTO? {
     let configKey = "widget_remote_config_\(widgetKey)"
-    if let json = Self.readSharedString(forKey: configKey, appGroup: appGroup),
-       let data = json.data(using: .utf8),
-       let config = try? JSONDecoder().decode(WidgetRemoteConfigDTO.self, from: data) {
+    guard let json = Self.readSharedString(forKey: configKey, appGroup: appGroup),
+          let data = json.data(using: .utf8) else {
+      return nil
+    }
+    return try? JSONDecoder().decode(WidgetRemoteConfigDTO.self, from: data)
+  }
+
+  private func readRefreshIntervalMinutes() -> Int {
+    if let config = readRemoteConfig() {
       return max(1, config.effectiveIntervalMinutes)
     }
     return 15
   }
 
-  private func readLayoutJson() -> String? {
-    let key = "widget_layout_\(widgetKey)"
-    var raw: String? = Self.readSharedString(forKey: key, appGroup: appGroup)
-    if raw == nil && widgetKey != "main" {
-      raw = Self.readSharedString(forKey: "widget_layout_main", appGroup: appGroup)
+  private func readCacheTtlSeconds() -> Int {
+    if let ttl = readRemoteConfig()?.cacheTtlSeconds {
+      return max(0, ttl)
     }
-    guard var raw = raw else {
-      return nil
-    }
+    return 20
+  }
 
+  private func readLayoutJson() -> String? {
     let state = DynamicWidgetStateStore.loadState()
     let syncTime = state.lastSyncTime ?? {
       let f = DateFormatter()
       f.dateFormat = "HH:mm:ss"
       return f.string(from: Date())
     }()
-    raw = raw.replacingOccurrences(of: "{{_lastSyncTime}}", with: syncTime)
 
-    if let vars = state.remoteVariables {
-      for (k, v) in vars {
-        let escaped = v.replacingOccurrences(of: "\"", with: "\\\"")
-        raw = raw.replacingOccurrences(of: "{{\(k)}}", with: escaped)
+    var allVars: [String: String] = [:]
+    let boundJson = Self.readSharedString(forKey: "widget_bound_data_\(widgetKey)", appGroup: appGroup)
+      ?? (widgetKey != "main" ? Self.readSharedString(forKey: "widget_bound_data_main", appGroup: appGroup) : nil)
+    if let boundJson = boundJson,
+       let boundData = boundJson.data(using: .utf8),
+       let jsonObj = try? JSONSerialization.jsonObject(with: boundData) {
+      DynamicWidgetStateStore.flattenJsonObject(jsonObj, prefix: "", into: &allVars)
+    }
+    if let remoteVars = state.remoteVariables {
+      for (k, v) in remoteVars {
+        allVars[k] = v
+      }
+    }
+    allVars["_lastSyncTime"] = syncTime
+    allVars["_syncStatus"] = state.syncStatus ?? allVars["_syncStatus"] ?? "ok"
+    allVars["_syncError"] = state.lastSyncError ?? allVars["_syncError"] ?? ""
+    if let httpStatus = state.lastHttpStatus {
+      allVars["_httpStatus"] = "\(httpStatus)"
+    }
+    if let selectedConfig = Self.readSharedString(forKey: "widget_selected_config_\(widgetKey)", appGroup: appGroup) {
+      allVars["_selectedConfigId"] = selectedConfig
+      allVars["selectedConfigId"] = selectedConfig
+    }
+    let storedCounter = Self.readSharedString(forKey: "widget_counter_value", appGroup: appGroup)?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    let counterVal: String? = (storedCounter?.isEmpty == false ? storedCounter : nil) ?? allVars["counter"]
+    if let counterVal = counterVal {
+      allVars["counter"] = counterVal
+    }
+
+    var raw: String?
+    if state.syncStatus == "error",
+       let errNode = readRemoteConfig()?.errorFallback,
+       let errData = try? JSONEncoder().encode(["root": errNode]),
+       let errJson = String(data: errData, encoding: .utf8) {
+      raw = errJson
+    } else {
+      let key = "widget_layout_\(widgetKey)"
+      raw = Self.readSharedString(forKey: key, appGroup: appGroup)
+      if raw == nil && widgetKey != "main" {
+        raw = Self.readSharedString(forKey: "widget_layout_main", appGroup: appGroup)
       }
     }
 
-    if let selectedConfig = Self.readSharedString(forKey: "widget_selected_config_\(widgetKey)", appGroup: appGroup) {
-      raw = raw.replacingOccurrences(of: "{{_selectedConfigId}}", with: selectedConfig)
-      raw = raw.replacingOccurrences(of: "{{selectedConfigId}}", with: selectedConfig)
+    guard let rawLayout = raw else {
+      return nil
     }
-    return raw
+    var resolved = DynamicWidgetStateStore.resolveTemplateString(rawLayout, with: allVars, escapeForJson: true)
+    if let counterVal = counterVal {
+      resolved = DynamicWidgetStateStore.applyCounterReplacement(in: resolved, counterValue: counterVal)
+    }
+    return resolved
   }
 
   public static func readSharedString(forKey key: String, appGroup: String) -> String? {
@@ -213,10 +258,15 @@ public struct DynamicWidgetProvider: TimelineProvider {
 public struct DynamicHomeScreenWidgetView: View {
   @Environment(\.widgetFamily) var family
   @Environment(\.colorScheme) var colorScheme
+  @Environment(\.showsWidgetContainerBackground) var showsWidgetBackground
   let entry: DynamicWidgetEntry
 
   public init(entry: DynamicWidgetEntry) {
     self.entry = entry
+  }
+
+  private var isStandByMode: Bool {
+    return family == .systemSmall && !showsWidgetBackground
   }
 
   private var parsedPayload: WidgetMultiPagePayloadDTO? {
@@ -264,6 +314,8 @@ public struct DynamicHomeScreenWidgetView: View {
           small: pageConfig.small ?? payload.small,
           medium: pageConfig.medium ?? payload.medium,
           large: pageConfig.large ?? payload.large,
+          extraLarge: pageConfig.extraLarge ?? payload.extraLarge,
+          standBy: pageConfig.standBy ?? payload.standBy,
           accessoryRectangular: pageConfig.accessoryRectangular ?? payload.accessoryRectangular,
           accessoryCircular: pageConfig.accessoryCircular ?? payload.accessoryCircular,
           accessoryInline: pageConfig.accessoryInline ?? payload.accessoryInline
@@ -275,6 +327,8 @@ public struct DynamicHomeScreenWidgetView: View {
       small: payload.small,
       medium: payload.medium,
       large: payload.large,
+      extraLarge: payload.extraLarge,
+      standBy: payload.standBy,
       accessoryRectangular: payload.accessoryRectangular,
       accessoryCircular: payload.accessoryCircular,
       accessoryInline: payload.accessoryInline
@@ -285,6 +339,8 @@ public struct DynamicHomeScreenWidgetView: View {
     small: LayoutNodeDTO?,
     medium: LayoutNodeDTO?,
     large: LayoutNodeDTO?,
+    extraLarge: LayoutNodeDTO? = nil,
+    standBy: LayoutNodeDTO? = nil,
     accessoryRectangular: LayoutNodeDTO? = nil,
     accessoryCircular: LayoutNodeDTO? = nil,
     accessoryInline: LayoutNodeDTO? = nil
@@ -302,13 +358,19 @@ public struct DynamicHomeScreenWidgetView: View {
       }
     }
 
+    if isStandByMode, let standByNode = standBy {
+      return standByNode
+    }
+
     switch family {
     case .systemSmall:
       return small ?? medium ?? large
     case .systemMedium:
       return medium ?? small ?? large
-    case .systemLarge, .systemExtraLarge:
+    case .systemLarge:
       return large ?? medium ?? small
+    case .systemExtraLarge:
+      return extraLarge ?? large ?? medium ?? small
     default:
       return small ?? medium ?? large
     }
@@ -434,6 +496,17 @@ extension View {
           self.padding().background(color)
         }
       }
+    }
+  }
+}
+
+extension WidgetConfiguration {
+  /// Tùy chọn tắt lề mặc định để hỗ trợ chế độ StandBy / Full-Bleed Widget trên iOS 17+
+  public func applyStandByMargins() -> some WidgetConfiguration {
+    if #available(iOS 15.0, *) {
+      return self.contentMarginsDisabled()
+    } else {
+      return self
     }
   }
 }

@@ -1,19 +1,26 @@
 import { ViewStyle } from 'react-native';
-import { LayoutNode, WidgetSinglePageConfig } from './types';
-export type WidgetPreviewSize = 'small' | 'medium' | 'large' | 'lockScreen' | 'dynamicIsland';
+import { ControlWidgetConfig, LayoutNode, WidgetSinglePageConfig } from './types';
+export type WidgetPreviewSize = 'small' | 'medium' | 'large' | 'extraLarge' | 'standBy' | 'lockScreen' | 'dynamicIsland' | 'control';
 export interface WidgetPreviewProps {
     /**
      * Kích thước tiện ích cần xem trước:
      * - 'small' (158 × 158 dp)
      * - 'medium' (338 × 158 dp)
      * - 'large' (338 × 354 dp)
+     * - 'extraLarge' (338 × 420 dp)
+     * - 'standBy' (310 × 158 dp)
      * - 'lockScreen' (350 × 80 dp)
      * - 'dynamicIsland' (350 × 160 dp)
-     * Mặc định là 'medium'.
+     * - 'control' (170 × 76 dp — iOS 18 Control Center / Android Quick Settings Tile)
+     * Mặc định là 'medium' (hoặc 'control' nếu truyền controlConfig).
      */
     size?: WidgetPreviewSize;
-    /** Cây LayoutNode hoặc đối tượng chứa { small, medium, large } */
+    /** Cây LayoutNode hoặc đối tượng chứa { small, medium, large, extraLarge, standBy } */
     layout?: LayoutNode | WidgetSinglePageConfig;
+    /** Dữ liệu JSON mẫu dùng để nội suy các biểu thức Data Binding (`{{user.name}}`, `data.*`) khi xem trước */
+    data?: Record<string, any>;
+    /** Cấu hình Control Widget dùng để xem trước Control Center / Quick Settings Tile */
+    controlConfig?: ControlWidgetConfig;
     /** Cú pháp JSX trực tiếp truyền vào bên trong thẻ `<WidgetPreview>` */
     children?: React.ReactNode;
     /** Bắt sự kiện khi người dùng bấm vào các nút tương tác trên Widget xem trước */

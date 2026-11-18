@@ -86,7 +86,25 @@ npx expo run:android
 
 ## 3. Step-by-Step Installation & Setup
 
-### Step 1: Install Package
+### Fastest Method: 100% Automated 1-Command Setup
+
+```bash
+# 1. Install package
+npx expo install react-native-live-widgets
+
+# 2. Automated one-command setup (auto-injects Config Plugin, creates widgets.config.ts, syncs icons & Swift)
+npx react-native-live-widgets init
+
+# 3. Launch on Simulator / Emulator
+npx expo run:ios
+# or: npx expo run:android
+```
+
+---
+
+### Manual Workflow (If you prefer configuring by hand)
+
+#### Step 1: Install Package
 In your Expo project root:
 ```bash
 npx expo install react-native-live-widgets
@@ -94,7 +112,7 @@ npx expo install react-native-live-widgets
 
 ---
 
-### Step 2: Configure `app.json` (Expo Config Plugin)
+#### Step 2: Configure `app.json` (Expo Config Plugin)
 Open `app.json` and add the `react-native-live-widgets` plugin under `expo.plugins`:
 
 ```json

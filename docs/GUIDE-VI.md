@@ -40,6 +40,7 @@ Tài liệu hướng dẫn toàn diện từ cài đặt, thiết lập native (
 11. [Cấu trúc Payload Server Push (APNs & FCM)](#10-cấu-trúc-payload-server-push-apns--fcm)
 12. [Xử lý sự cố thường gặp (Troubleshooting)](#11-xử-lý-sự-cố-thường-gặp-troubleshooting)
 13. [Hệ thống Styling Modifiers, UI IR, Exact Hit Layer & Năng lực Nền tảng (v1.2.1)](#12-hệ-thống-styling-modifiers--bảng-năng-lực-nền-tảng-capability--fallback-matrix)
+14. [TypeScript-Driven Swift Codegen & Tự động Đồng bộ Đa ngôn ngữ i18n (`widgets.config.ts`)](#14-typescript-driven-swift-codegen--tự-động-đồng-bộ-đa-ngôn-ngữ-i18n-widgetsconfigts)
 
 ---
 
@@ -77,32 +78,47 @@ npx expo run:ios # hoặc npx expo run:android
 
 ## 3. Cài đặt và Thiết lập Dự án
 
-### Dành cho dự án Expo
-Nếu bạn sử dụng **Expo**, thư viện hỗ trợ sẵn **Expo Config Plugin (`app.plugin.js`)** và **CLI Wizard**.
-👉 **Xem hướng dẫn chi tiết từng bước tại: [Tài liệu Expo Tích hợp (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md)**
+### 📋 Bảng Tra Cứu Các Lệnh CLI Quan Trọng
 
-```bash
-# 1. Cài đặt
-npx expo install react-native-live-widgets
-
-# 2. Thêm plugin vào app.json và sinh mã native
-npx expo prebuild
-
-# 3. Tự động liên kết target Widget Extension
-npx react-native-live-widgets init --group group.com.yourcompany.app
-```
+| Lệnh | Chức năng | Thời điểm sử dụng |
+| :--- | :--- | :--- |
+| `npx react-native-live-widgets init` | **Thiết lập tự động All-in-One**: Tự cấu hình `app.json` (Expo), Xcode Target, Entitlements, Podfile, `pod install`, Android permissions, tạo file `widgets.config.ts`, trích xuất 13,000+ icons và biên dịch Swift bundle. | Chạy 1 lần duy nhất khi tích hợp thư viện vào dự án |
+| `npx react-native-live-widgets codegen` | **Đồng bộ Codegen & i18n**: Đọc lại `widgets.config.ts`, cập nhật `LiveWidgetsBundle.swift`, Apple String Catalog (`Localizable.xcstrings`) và Android `strings.xml`. | Mỗi khi sửa `widgets.config.ts` hoặc thêm widget/ngôn ngữ mới |
+| `npx react-native-live-widgets init --group <name>` | **Chỉ định App Group tuỳ chỉnh**: Ví dụ `group.com.yourcompany.app`. | Khi bạn muốn dùng App Group khác với mã bundle tự nhận diện |
 
 ---
 
-### Cài đặt package (Dành cho Bare React Native CLI)
-Trong thư mục gốc của dự án React Native:
-```bash
-npm install react-native-live-widgets
-# hoặc
-yarn add react-native-live-widgets
+### Cách 1: Dành cho dự án Expo (Managed / CNG)
 
-# Tự động cấu hình Info.plist, Entitlements, AndroidManifest và tạo file mẫu Widget
-npx react-native-live-widgets init --group group.com.yourcompany.app
+```bash
+# Bước 1: Cài đặt thư viện
+npx expo install react-native-live-widgets
+
+# Bước 2: Thiết lập tự động 1 lệnh (tự ghi app.json, tạo widgets.config.ts, sync icons & Swift)
+npx react-native-live-widgets init
+
+# Bước 3: Khởi chạy trên thiết bị / máy ảo
+npx expo run:ios
+# hoặc: npx expo run:android
+```
+
+> 👉 **Xem hướng dẫn chi tiết từng bước cho Expo tại: [Tài liệu Expo Tích hợp (EXPO-GUIDE-VI.md)](./EXPO-GUIDE-VI.md)**
+
+---
+
+### Cách 2: Dành cho Bare React Native CLI
+
+```bash
+# Bước 1: Cài đặt thư viện
+npm install react-native-live-widgets
+# hoặc: yarn add react-native-live-widgets
+
+# Bước 2: Thiết lập tự động 1 lệnh (tự cấu hình Xcode target, Podfile, pod install, Android permissions, widgets.config.ts, Swift bundle)
+npx react-native-live-widgets init
+
+# Bước 3: Khởi chạy trên thiết bị / máy ảo
+npx react-native run-ios
+# hoặc: npx react-native run-android
 ```
 
 ---
@@ -537,14 +553,37 @@ UI.Image({
   cornerRadius: 8,
 })
 
-// 3. Icon hệ thống (SF Symbols trên iOS / Vector Mapping trên Android)
+// 3. Icon hệ thống đa nền tảng (Apple SF Symbols + Google Material Icons)
+// Cách 1: Tự động ánh xạ trên cả 2 nền tảng
 UI.Image({
-  systemName: 'bicycle',
-  tintColor: '#FB923C',
-  width: 18,
-  height: 18,
+  systemName: 'bolt',
+  tintColor: '#10B981',
+  width: 20,
+  height: 20,
 })
+
+// Cách 2: Chỉ định icon chuyên biệt cho từng hệ điều hành (với gợi ý Type Auto-Complete 9500+ SF Symbols & 3800+ Material Icons)
+UI.Image({
+  systemNameIos: 'bolt.horizontal.fill', // 9,500+ Apple SF Symbols chuẩn xịn
+  systemNameAndroid: 'bolt',              // 3,800+ Google Material Icons (hỗ trợ cả snake_case và kebab-case)
+  tintColor: '#10B981',
+  width: 24,
+  height: 24,
+})
+
+// Hoặc sử dụng dạng JSX React Component:
+<Image
+  systemNameIos="person.crop.circle.badge.checkmark"
+  systemNameAndroid="verified_user"
+  tintColor="#10B981"
+  width={24}
+  height={24}
+/>
 ```
+
+> 💡 **Tra cứu danh mục Icons chính thức từ Apple & Google:**
+> - 🍏 **Apple SF Symbols (9,500+ Icons)**: Tra cứu và xem trước tại [Apple SF Symbols Official Website](https://developer.apple.com/sf-symbols/). Định nghĩa sẵn type `KnownSFSymbol` với IntelliSense auto-complete.
+> - 🤖 **Google Material Icons (3,800+ Icons)**: Tra cứu tên icon tại [Google Fonts Icons / Material Symbols](https://fonts.google.com/icons). Định nghĩa sẵn type `KnownMaterialIcon`, hỗ trợ cả `snake_case` (ví dụ `battery_charging_full`) và `kebab-case` (`battery-charging-full`).
 
 ### `UI.Button` (Nút bấm tương tác trực tiếp trên Widget)
 Cho phép người dùng thao tác ngay trên mặt Widget (iOS 17+ `AppIntents` & Android `PendingIntent` Hit Zones) mà **không cần mở ứng dụng**:
@@ -1207,6 +1246,143 @@ Phiên bản **v1.2.1** giải quyết dứt điểm các bài toán thực tế
   - Đóng gói toàn bộ logic tính `Font` trong `renderText()` vào closure độc lập `{ ... }()`, ngăn compiler Swift 6 hiểu nhầm các câu lệnh điều kiện `if/switch` là View `Void`.
   - Tách logic phân giải `DynamicNodeAccessibilityModifier` sang hàm helper thuần `buildAccessibilityView(content:) -> AnyView`, tránh xung đột với `@ViewBuilder` ngầm định của protocol `ViewModifier`.
   - Đóng gói `strokeStyle` và bổ sung nhánh fallback `else { EmptyView() }` cho `backgroundView` và `borderOverlay` trong `ContainerStyleModifier`.
+
+---
+
+### 12.8. 📱 Widget Family Mở rộng (`extraLarge`, `standBy`, `ControlWidget`) & Quản lý Vòng đời Live Activity Hoàn chỉnh
+
+#### 1. Widget Family Mở rộng
+Ngoài 3 kích thước cơ bản (`small`, `medium`, `large`) và 3 kiểu Lock Screen (`accessoryRectangular`, `accessoryCircular`, `accessoryInline`), thư viện hỗ trợ thêm:
+- **`extraLarge?: LayoutNode`**: Dành cho iPadOS (`systemExtraLarge`) và Tablet/Android 4x4+ (`widgetHeightDp >= 280dp`). Hỗ trợ xem trước trực tiếp trong `<WidgetPreview size="extraLarge">`.
+- **`standBy?: LayoutNode`**: Tự động kích hoạt khi iPhone ở chế độ StandBy iOS 17+ (`family == .systemSmall && !showsWidgetContainerBackground`). Hỗ trợ `widgetAccentable` trên `Text`, `Progress`, `Gauge`, `Image` và `<WidgetPreview size="standBy">`. Widget extension có thể gọi `.applyStandByMargins()` trên `StaticConfiguration` để bật chế độ full-bleed.
+- **`ControlWidget` iOS 18+ & Android Quick Settings Tile (`ControlWidget` / `Widget.setControl`)**: Điều khiển trực tiếp iOS 18 Control Center, Action Button, Lock Screen Controls thông qua module [`ios/Widgets/DynamicControlWidget.swift`](https://github.com/React-Native-Vu/react-native-live-widgets/blob/dev/ios/Widgets/DynamicControlWidget.swift) (`DynamicControlWidget` & `DynamicControlToggleWidget`) và Android Quick Settings Tile qua `DynamicQuickSettingsTileService.kt` — kết nối trực tiếp vào `DynamicWidgetStateStore` và `useWidgetAction`:
+  ```typescript
+  import { ControlWidget, UI, WidgetPreview } from 'react-native-live-widgets';
+
+  const shiftControl = ControlWidget.toggle({
+    title: 'Ca làm việc',
+    subtitle: 'Chạm để chấm công',
+    checkedTitle: 'Đang trong ca',
+    checkedSubtitle: 'Nhấn để kết thúc',
+    systemName: 'clock.badge.checkmark.fill',
+    checked: true,
+    actionId: 'toggle:attendance',
+  });
+
+  await ControlWidget.set('toggle', shiftControl);
+  // Hoặc dùng UI.ControlButton({ ... }) / Widget.setControl('main', ...)
+
+  // Xem trước trực tiếp trong App:
+  // <WidgetPreview size="control" controlConfig={shiftControl} />
+  ```
+
+#### 2. API Quản lý Vòng đời Live Activity Hoàn chỉnh
+Thư viện chuẩn hóa đầy đủ 8 khả năng quản lý vòng đời cho cả iOS ActivityKit và Android Live Updates:
+- **Quản lý nhiều phiên đồng thời**: `LiveActivity.getActiveActivities()`, `LiveActivity.get(activityId)`, `LiveActivity.isActive(activityId)`, `LiveActivity.endAll()` — trả về `activityId` chính xác kèm `systemActivityId` và `pushToken`.
+- **Stale State (`staleTimestamp`, `staleLockScreen`, `staleDynamicIsland`)**: Tự động chuyển sang giao diện dự phòng khi hết độ tươi (`context.isStale` trên iOS 16.2+ / `now >= staleTimestamp` trên Android).
+- **Relevance Score (`relevanceScore`)**: Ưu tiên thứ tự hiển thị trên Lock Screen / Dynamic Island (iOS `ActivityContent.relevanceScore`) và sắp xếp ưu tiên trên Notification Shade Android (`setSortKey`).
+- **Alert Configuration (`alertConfig`)**: Hỗ trợ `{ title, body, sound }` (bên cạnh `alertTitle`/`alertBody`) qua `AlertConfiguration` khi gọi `LiveActivity.update()` trên iOS 16.2+ và bật chuông/rung trên Android.
+- **Scheduled End & Tự động xử lý hết hạn (`scheduledEndTimestamp`, `autoEndAfterSeconds`, `expiredLockScreen`, `expiredDismissalPolicy`)**: Tự động chuyển sang giao diện hết hạn hoặc đóng Activity đúng giờ hẹn, kèm `LiveActivity.cleanupExpired()` và sự kiện `LiveActivity.onStateChange((ev) => ...)` theo dõi các trạng thái `'active' | 'started_by_push' | 'stale' | 'expired' | 'ended' | 'dismissed'`.
+- **Hook `useLiveActivity` nâng cấp**: Trả về thêm `activities`, `lifecycleState`, `isStale`, `refreshActivities`, và `cleanupExpired`.
+
+---
+
+### 12.9. 🔄 Background Data Engine 2.0 & Structured Data Binding
+
+`Widget.setRemoteConfig` và `Widget.createDataBinding<T>()` cung cấp động cơ đồng bộ dữ liệu nền hoàn chỉnh ngay cả khi người dùng đã vuốt đóng (Force-Kill) ứng dụng chính:
+
+| Nhóm tính năng | Khả năng hỗ trợ Native (iOS SwiftUI + Android) |
+| :--- | :--- |
+| **REST & Auth** | `url`, `method` (`GET`/`POST`/`PUT`), `body` JSON, `headers` tùy biến, **`authRefresh`** tự động lấy Access Token mới khi gặp HTTP `401` |
+| **Mạng & Cache** | **`cacheTtlSeconds`** chống gọi lặp khi OS reload timeline, **`enableETag`** (`If-None-Match`/`If-Modified-Since` + HTTP `304 Not Modified`), **`timeoutMs`**, **`maxRetries` + `retryDelayMs`** (Exponential Backoff) |
+| **Đa nguồn & Chuẩn hóa** | **`sources`** gom nhiều API theo tiền tố `<sourceKey>.<nested.path>`, JSON Flattener lồng nhau (`user.name`, `items.0.title`), **`mapping`** & **`schema`** validation (`requiredKeys`, `types`, `defaults`) |
+| **Error State** | Biến hệ thống `{{_syncStatus}}` (`ok` / `partial` / `error`), `{{_syncError}}`, `{{_httpStatus}}` và **`errorFallback`** LayoutNode dự phòng (giữ nguyên dữ liệu cache hợp lệ khi mạng lỗi) |
+| **Structured Data Binding** | `Widget.createDataBinding<T>()` & `UI.bind(path, pipes)` hỗ trợ nested path & Pipe Transform (`default`, `divide`, `multiply`, `add`, `round`, `upper`, `lower`, `currency`, `percent`, `if`) |
+
+```tsx
+const data = Widget.createDataBinding<{
+  user: { name: string };
+  attendance: { progress: number };
+}>({
+  defaults: { user: { name: 'Nhân viên' }, attendance: { progress: 0 } },
+});
+
+await Widget.setLayout('main', {
+  medium: (
+    <VStack padding={14} spacing={6}>
+      <Text>{data.user.name}</Text>
+      <Text>{data.attendance.progress}%</Text>
+      <Progress value={data.attendance.progress.divide(100)} />
+    </VStack>
+  ),
+});
+
+await Widget.setRemoteConfig('main', {
+  cacheTtlSeconds: 300,
+  timeoutMs: 6000,
+  enableETag: true,
+  maxRetries: 2,
+  retryDelayMs: 500,
+  sources: {
+    user: { url: 'https://api.yourapp.com/me' },
+    attendance: { url: 'https://api.yourapp.com/attendance/today' },
+  },
+  schema: { requiredKeys: ['user.name', 'attendance.progress'], types: { 'attendance.progress': 'number' } },
+  authRefresh: { url: 'https://api.yourapp.com/auth/refresh', method: 'POST', tokenPath: 'accessToken' },
+  errorFallback: <Text color="#F87171">Lỗi đồng bộ ({{_httpStatus}}): {{_syncError}}</Text>,
+  refreshIntervalMinutes: 15,
+});
+```
+
+> ⚠️ **Lưu ý quan trọng về Ngân sách Reload của Hệ điều hành:** Không cam kết đồng bộ chính xác từng 15 phút khi ứng dụng bị đóng. **Apple WidgetKit** cấp phát ngân sách reload động cho mỗi Widget (thường khoảng **40–70 lần/ngày** tùy mức độ người dùng xem/tương tác; `refreshIntervalMinutes` map sang `TimelineReloadPolicy.after(...)` như mốc thời gian *sớm nhất được đề xuất*, không phải cron timer tuyệt đối). Trên **Android**, Doze Mode và App Standby Buckets có thể gom hoặc trì hoãn tác vụ nền. Với dữ liệu cần tức thì từng giây (giao hàng, tỷ số), hãy kết hợp Push APNs / FCM.
+
+---
+
+## 14. TypeScript-Driven Swift Codegen & Tự động Đồng bộ Đa ngôn ngữ i18n (`widgets.config.ts`)
+
+Từ phiên bản 1.2.1, bạn không cần phải tự tay chỉnh sửa file Swift (`LiveWidgetsBundle.swift`) hay cấu hình thủ công các file dịch `Localizable.strings` trong Xcode. Toàn bộ cấu hình được định nghĩa bằng **100% TypeScript** qua file `widgets.config.ts` ở thư mục gốc của dự án.
+
+### 1. Cấu hình `widgets.config.ts` mẫu:
+```typescript
+import { defineWidgetConfig } from 'react-native-live-widgets';
+
+export default defineWidgetConfig({
+  bundleName: 'LiveWidgetsBundle',
+  liveActivity: true,       // Bật/tắt Widget Live Activity
+  controlWidgets: true,     // Bật Control Center Widget (iOS 18+)
+  defaultLocale: 'vi',
+  locales: {
+    vi: {
+      'widgets.main.title': 'Tiện ích Live Widgets',
+      'widgets.main.desc': 'Theo dõi KPI và chấm công trực quan',
+    },
+    en: {
+      'widgets.main.title': 'Live Widgets Utility',
+      'widgets.main.desc': 'Visual KPI and attendance tracking',
+    },
+  },
+  widgets: [
+    {
+      key: 'main',
+      kind: 'LiveWidget_main',
+      displayName: 'widgets.main.title',
+      description: 'widgets.main.desc',
+      supportedFamilies: ['systemSmall', 'systemMedium', 'systemLarge'],
+    },
+  ],
+});
+```
+
+### 2. Thực thi lệnh CLI Codegen:
+```bash
+npx react-native-live-widgets codegen
+```
+
+Lệnh này sẽ tự động:
+1. **Trích xuất Icons hệ thống**: Tự động lấy hơn **9,500+ Apple SF Symbols** từ hệ thống macOS và hơn **3,800+ Google Material Icons** vào các file type definitions (`sf-symbols.generated.ts` & `material-icons.generated.ts`) giúp lập trình viên có IntelliSense auto-complete đầy đủ.
+2. **Sinh mã nguồn Swift**: Tạo file `ios/LiveWidgetsExtension/LiveWidgetsBundle.swift` đăng ký đầy đủ các Widget và Control Center Widgets tự động.
+3. **Đồng bộ đa ngôn ngữ iOS**: Tạo file String Catalog hiện đại `ios/LiveWidgetsExtension/Localizable.xcstrings` với đầy đủ các ngôn ngữ đã cấu hình.
+4. **Đồng bộ đa ngôn ngữ Android**: Tự động ghi và cập nhật các file `android/app/src/main/res/values/strings.xml` (ngôn ngữ mặc định) và `values-{lang}/strings.xml` cho Android AppWidget.
 
 ---
 

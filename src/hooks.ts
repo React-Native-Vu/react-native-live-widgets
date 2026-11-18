@@ -7,7 +7,10 @@ import {
 } from './dispatcher';
 import { LiveActivity, SharedStorage, Widget } from './index';
 import {
+  ActiveActivityInfo,
+  LiveActivityLifecycleState,
   LiveActivityPushTokens,
+  LiveActivityStateEvent,
   StartActivityOptions,
   UpdateActivityOptions,
   EndActivityOptions,
@@ -66,6 +69,12 @@ export interface UseLiveActivityResult {
   activityId: string | null;
   /** Trạng thái phiên có đang hoạt động hay không */
   isActive: boolean;
+  /** Trạng thái vòng đời chi tiết ('active', 'started_by_push', 'stale', 'expired', 'ended', 'dismissed') */
+  lifecycleState: LiveActivityLifecycleState | null;
+  /** Cờ báo Live Activity hiện tại đã chuyển sang trạng thái cũ (Stale) hay chưa */
+  isStale: boolean;
+  /** Danh sách tất cả các Live Activity đang chạy đồng thời trên thiết bị */
+  activities: ActiveActivityInfo[];
   /** Token cập nhật tiện ích (iOS activityUpdateToken hoặc devicePushToken) */
   pushToken: string | null;
   /** Toàn bộ bộ 3 loại Push Token (deviceToken, pushToStart, activityUpdateToken) */
@@ -76,29 +85,55 @@ export interface UseLiveActivityResult {
   update: (options: Omit<UpdateActivityOptions, 'activityId'>) => Promise<boolean>;
   /** Kết thúc Live Activity hiện tại */
   end: (options?: EndActivityOptions) => Promise<boolean>;
+  /** Làm mới danh sách các Live Activity đang hoạt động */
+  refreshActivities: () => Promise<ActiveActivityInfo[]>;
+  /** Dọn dẹp tự động các Live Activity đã quá hạn scheduledEndTimestamp */
+  cleanupExpired: () => Promise<string[]>;
 }
 
 /**
  * 🎣 React Hook quản lý vòng đời trọn vẹn của một Live Activity / Android Ongoing Notification.
- * Tương thích Fast Refresh và tự động dọn dẹp state khi component unmount.
+ * Tương thích Fast Refresh, tự động lắng nghe Stale/Expired/Push-to-Start và quản lý nhiều phiên đồng thời.
  *
  * ```typescript
- * const { activityId, isActive, start, update, end } = useLiveActivity();
- *
- * // Bắt đầu khi bấm nút
- * await start({
- *   activityId: 'order_123',
- *   lockScreen: UI.VStack(...)
- * });
+ * const { activityId, isActive, isStale, activities, start, update, end } = useLiveActivity();
  * ```
  */
 export function useLiveActivity(initialActivityId?: string): UseLiveActivityResult {
   const [currentId, setCurrentId] = useState<string | null>(initialActivityId || null);
   const [isActive, setIsActive] = useState<boolean>(!!initialActivityId);
+  const [lifecycleState, setLifecycleState] = useState<LiveActivityLifecycleState | null>(
+    initialActivityId ? 'active' : null
+  );
+  const [isStale, setIsStale] = useState<boolean>(false);
+  const [activities, setActivities] = useState<ActiveActivityInfo[]>([]);
   const [pushTokens, setPushTokens] = useState<LiveActivityPushTokens | null>(null);
+
+  const refreshActivities = useCallback(async (): Promise<ActiveActivityInfo[]> => {
+    try {
+      const list = await LiveActivity.getActiveActivities();
+      setActivities(list);
+      if (currentId) {
+        const matched = list.find((a) => a.activityId === currentId);
+        if (matched) {
+          const active = matched.activityState !== 'ended' && matched.activityState !== 'dismissed' && matched.activityState !== 'expired';
+          setIsActive(active);
+          setIsStale(Boolean(matched.isStale));
+          if (matched.activityState) {
+            setLifecycleState(matched.activityState as LiveActivityLifecycleState);
+          }
+        }
+      }
+      return list;
+    } catch {
+      return [];
+    }
+  }, [currentId]);
 
   useEffect(() => {
     let mounted = true;
+    refreshActivities();
+
     if (currentId) {
       LiveActivity.getAllPushTokens(currentId)
         .then((tokens: LiveActivityPushTokens) => {
@@ -108,10 +143,27 @@ export function useLiveActivity(initialActivityId?: string): UseLiveActivityResu
         })
         .catch(() => {});
     }
+
+    const unsubState = LiveActivity.onStateChange((ev: LiveActivityStateEvent) => {
+      if (!mounted) return;
+      refreshActivities();
+      if (!currentId || ev.activityId === currentId || ev.state === 'started_by_push') {
+        if (ev.state === 'started_by_push' && !currentId) {
+          setCurrentId(ev.activityId);
+        }
+        if (ev.activityId === currentId || !currentId) {
+          setLifecycleState(ev.state);
+          setIsStale(ev.state === 'stale');
+          setIsActive(ev.state === 'active' || ev.state === 'started_by_push' || ev.state === 'stale');
+        }
+      }
+    });
+
     return () => {
       mounted = false;
+      unsubState();
     };
-  }, [currentId]);
+  }, [currentId, refreshActivities]);
 
   const start = useCallback(
     async (options: StartActivityOptions): Promise<string | null> => {
@@ -119,9 +171,13 @@ export function useLiveActivity(initialActivityId?: string): UseLiveActivityResu
       if (ok) {
         setCurrentId(options.activityId);
         setIsActive(true);
+        setIsStale(false);
+        setLifecycleState('active');
         try {
           const tokens = await LiveActivity.getAllPushTokens(options.activityId);
           setPushTokens(tokens);
+          const list = await LiveActivity.getActiveActivities();
+          setActivities(list);
         } catch (_) {}
         return options.activityId;
       }
@@ -133,12 +189,18 @@ export function useLiveActivity(initialActivityId?: string): UseLiveActivityResu
   const update = useCallback(
     async (options: Omit<UpdateActivityOptions, 'activityId'>): Promise<boolean> => {
       if (!currentId) return false;
-      return await LiveActivity.update({
+      const ok = await LiveActivity.update({
         activityId: currentId,
         ...options,
       });
+      if (ok) {
+        setIsStale(false);
+        setLifecycleState('active');
+        refreshActivities();
+      }
+      return ok;
     },
-    [currentId]
+    [currentId, refreshActivities]
   );
 
   const end = useCallback(
@@ -147,20 +209,34 @@ export function useLiveActivity(initialActivityId?: string): UseLiveActivityResu
       const ok = await LiveActivity.end(currentId, options);
       if (ok) {
         setIsActive(false);
+        setIsStale(false);
+        setLifecycleState('ended');
+        refreshActivities();
       }
       return ok;
     },
-    [currentId]
+    [currentId, refreshActivities]
   );
+
+  const cleanupExpired = useCallback(async (): Promise<string[]> => {
+    const cleaned = await LiveActivity.cleanupExpired();
+    await refreshActivities();
+    return cleaned;
+  }, [refreshActivities]);
 
   return {
     activityId: currentId,
     isActive,
+    lifecycleState,
+    isStale,
+    activities,
     pushToken: pushTokens?.activityUpdateToken || pushTokens?.devicePushToken || null,
     pushTokens,
     start,
     update,
     end,
+    refreshActivities,
+    cleanupExpired,
   };
 }
 

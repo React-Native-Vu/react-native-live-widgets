@@ -1,5 +1,5 @@
 import { ActionHandler, GlobalActionHandler } from './dispatcher';
-import { LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, EndActivityOptions } from './types';
+import { ActiveActivityInfo, LiveActivityLifecycleState, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, EndActivityOptions } from './types';
 /**
  * 🎣 React Hook an toàn tuyệt đối với Fast Refresh / Hot Reloading để lắng nghe
  * tương tác nút bấm trên Home Screen Widget hoặc Live Activity.
@@ -25,6 +25,12 @@ export interface UseLiveActivityResult {
     activityId: string | null;
     /** Trạng thái phiên có đang hoạt động hay không */
     isActive: boolean;
+    /** Trạng thái vòng đời chi tiết ('active', 'started_by_push', 'stale', 'expired', 'ended', 'dismissed') */
+    lifecycleState: LiveActivityLifecycleState | null;
+    /** Cờ báo Live Activity hiện tại đã chuyển sang trạng thái cũ (Stale) hay chưa */
+    isStale: boolean;
+    /** Danh sách tất cả các Live Activity đang chạy đồng thời trên thiết bị */
+    activities: ActiveActivityInfo[];
     /** Token cập nhật tiện ích (iOS activityUpdateToken hoặc devicePushToken) */
     pushToken: string | null;
     /** Toàn bộ bộ 3 loại Push Token (deviceToken, pushToStart, activityUpdateToken) */
@@ -35,19 +41,17 @@ export interface UseLiveActivityResult {
     update: (options: Omit<UpdateActivityOptions, 'activityId'>) => Promise<boolean>;
     /** Kết thúc Live Activity hiện tại */
     end: (options?: EndActivityOptions) => Promise<boolean>;
+    /** Làm mới danh sách các Live Activity đang hoạt động */
+    refreshActivities: () => Promise<ActiveActivityInfo[]>;
+    /** Dọn dẹp tự động các Live Activity đã quá hạn scheduledEndTimestamp */
+    cleanupExpired: () => Promise<string[]>;
 }
 /**
  * 🎣 React Hook quản lý vòng đời trọn vẹn của một Live Activity / Android Ongoing Notification.
- * Tương thích Fast Refresh và tự động dọn dẹp state khi component unmount.
+ * Tương thích Fast Refresh, tự động lắng nghe Stale/Expired/Push-to-Start và quản lý nhiều phiên đồng thời.
  *
  * ```typescript
- * const { activityId, isActive, start, update, end } = useLiveActivity();
- *
- * // Bắt đầu khi bấm nút
- * await start({
- *   activityId: 'order_123',
- *   lockScreen: UI.VStack(...)
- * });
+ * const { activityId, isActive, isStale, activities, start, update, end } = useLiveActivity();
  * ```
  */
 export declare function useLiveActivity(initialActivityId?: string): UseLiveActivityResult;

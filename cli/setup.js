@@ -21,6 +21,26 @@ const packageJsonPath = path.join(projectRoot, 'package.json');
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
+
+// Support subcommands: codegen / generate
+if (args[0] === 'codegen' || args[0] === 'generate') {
+  const { runCodegen } = require('./codegen');
+  let configArg = null;
+  for (let i = 1; i < args.length; i++) {
+    if (args[i] === '--config' && args[i + 1]) {
+      configArg = args[i + 1];
+      break;
+    }
+  }
+  try {
+    runCodegen(projectRoot, configArg);
+    process.exit(0);
+  } catch (error) {
+    console.error(`\n❌ [Codegen Error]: ${error.message}\n`);
+    process.exit(1);
+  }
+}
+
 let customAppGroup = null;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--group' && args[i + 1]) {
@@ -29,7 +49,7 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-console.log('\n🚀 [react-native-live-widgets] Bắt đầu thiết lập tự động...');
+console.log('\n🚀 [react-native-live-widgets] Starting automated setup...');
 
 // 1. Detect project name and bundle ID
 let pkgName = 'MyApp';
@@ -40,15 +60,66 @@ if (fs.existsSync(packageJsonPath)) {
   } catch (_e) {}
 }
 
-let appGroup = customAppGroup || `group.com.${pkgName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-console.log(`📦 App Group được sử dụng: ${appGroup}`);
-
-// 2. Handle Expo project (app.json)
-const isExpo = fs.existsSync(appJsonPath);
-if (isExpo) {
+let detectedAppName = pkgName;
+if (fs.existsSync(iosDir)) {
   try {
-    console.log('📱 Phát hiện dự án Expo. Đang cập nhật app.json...');
-    const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
+    const xcodeProjects = fs.readdirSync(iosDir).filter((file) => file.endsWith('.xcodeproj'));
+    if (xcodeProjects.length > 0) {
+      detectedAppName = xcodeProjects[0].replace('.xcodeproj', '');
+    }
+  } catch (_e) {}
+}
+
+let appGroup = customAppGroup || `group.com.${detectedAppName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+console.log(`📦 App Group configured: ${appGroup}`);
+
+// 2. Ensure app.json exists and contains "name" and "displayName"
+let isExpo = false;
+let appJson = null;
+
+if (!fs.existsSync(appJsonPath)) {
+  appJson = {
+    name: detectedAppName,
+    displayName: detectedAppName,
+  };
+  fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + '\n', 'utf8');
+  console.log(`✅ Created app.json with name: "${detectedAppName}"`);
+} else {
+  try {
+    appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
+    if (appJson && typeof appJson.expo === 'object') {
+      isExpo = true;
+    }
+
+    let appJsonChanged = false;
+    if (!appJson.name) {
+      appJson.name = detectedAppName;
+      appJsonChanged = true;
+    }
+    if (!appJson.displayName) {
+      appJson.displayName = appJson.name || detectedAppName;
+      appJsonChanged = true;
+    }
+    if (appJsonChanged) {
+      fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + '\n', 'utf8');
+      console.log(`✅ Updated app.json with name: "${appJson.name}"`);
+    }
+  } catch (_e) {}
+}
+
+if (!isExpo && fs.existsSync(packageJsonPath)) {
+  try {
+    const pkgJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    const allDeps = { ...(pkgJson.dependencies || {}), ...(pkgJson.devDependencies || {}) };
+    if (allDeps['expo']) {
+      isExpo = true;
+    }
+  } catch (_e) {}
+}
+
+if (isExpo && appJson) {
+  try {
+    console.log('📱 Expo project detected. Updating app.json...');
     if (!appJson.expo) appJson.expo = {};
     if (!appJson.expo.plugins) appJson.expo.plugins = [];
 
@@ -68,21 +139,97 @@ if (isExpo) {
 
     if (existingIndex >= 0) {
       appJson.expo.plugins[existingIndex] = pluginConfig;
-      console.log('ℹ️ Đã cập nhật plugin react-native-live-widgets trong app.json');
+      console.log('ℹ️ Updated react-native-live-widgets plugin in app.json');
     } else {
       appJson.expo.plugins.push(pluginConfig);
-      console.log('✅ Đã thêm plugin react-native-live-widgets vào app.json');
+      console.log('✅ Added react-native-live-widgets plugin to app.json');
     }
 
     fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2), 'utf8');
   } catch (e) {
-    console.warn('⚠️ Không thể cập nhật app.json:', e.message);
+    console.warn('⚠️ Failed to update app.json:', e.message);
   }
 }
 
-// 3. Configure iOS Native Project (if ios/ folder exists)
+// 3. Configure Entrypoint file (index.js / index.ts / index.tsx)
+const entryCandidates = ['index.js', 'index.ts', 'index.tsx', 'index.jsx'];
+let entryFile = null;
+for (const cand of entryCandidates) {
+  const full = path.join(projectRoot, cand);
+  if (fs.existsSync(full)) {
+    entryFile = full;
+    break;
+  }
+}
+
+if (entryFile) {
+  try {
+    let content = fs.readFileSync(entryFile, 'utf8');
+    let entryModified = false;
+
+    // Check if AppRegistry uses appName and import from app.json is missing
+    const hasAppJsonImport = /from\s+['"]\.\/app(?:\.json)?['"]/.test(content);
+    const usesAppName = /\bappName\b/.test(content);
+    if (usesAppName && !hasAppJsonImport) {
+      content = "import { name as appName } from './app.json';\n" + content;
+      entryModified = true;
+    }
+
+    // Check if LiveActivity.registerBackgroundActionHandler() is already called
+    const hasBackgroundHandler = content.includes('registerBackgroundActionHandler');
+    if (!hasBackgroundHandler) {
+      const liveWidgetsImportRegex = /from\s+['"]react-native-live-widgets['"]/;
+      if (!liveWidgetsImportRegex.test(content)) {
+        const lines = content.split('\n');
+        let lastImportLineIdx = -1;
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].trim().startsWith('import ')) {
+            lastImportLineIdx = i;
+          }
+        }
+
+        const importLine = "import { LiveActivity } from 'react-native-live-widgets';";
+        if (lastImportLineIdx !== -1) {
+          lines.splice(lastImportLineIdx + 1, 0, importLine);
+        } else {
+          lines.unshift(importLine);
+        }
+        content = lines.join('\n');
+      } else if (!/import\s+[^;]*\bLiveActivity\b[^;]*from\s+['"]react-native-live-widgets['"]/.test(content)) {
+        content = content.replace(
+          /(import\s*\{)([^}]*)(\}\s*from\s*['"]react-native-live-widgets['"])/,
+          '$1 LiveActivity, $2$3'
+        );
+      }
+
+      // Add LiveActivity.registerBackgroundActionHandler(); before AppRegistry.registerComponent or registerRootComponent
+      const handlerCall = '\nLiveActivity.registerBackgroundActionHandler();\n';
+      const mountIndex = content.indexOf('AppRegistry.registerComponent') !== -1
+        ? content.indexOf('AppRegistry.registerComponent')
+        : content.indexOf('registerRootComponent');
+
+      if (mountIndex !== -1) {
+        content = content.slice(0, mountIndex) + handlerCall + content.slice(mountIndex);
+      } else {
+        content += handlerCall;
+      }
+      entryModified = true;
+    }
+
+    if (entryModified) {
+      fs.writeFileSync(entryFile, content, 'utf8');
+      console.log(`✅ Configured ${path.basename(entryFile)} with LiveActivity.registerBackgroundActionHandler()`);
+    } else {
+      console.log(`ℹ️ Entrypoint ${path.basename(entryFile)} is already properly configured`);
+    }
+  } catch (err) {
+    console.warn(`⚠️ Failed to inspect/update entrypoint:`, err.message);
+  }
+}
+
+// 4. Configure iOS Native Project (if ios/ folder exists)
 if (fs.existsSync(iosDir)) {
-  console.log('\n🍎 Đang cấu hình iOS (Info.plist, Entitlements, WidgetExtension Target)...');
+  console.log('\n🍎 Configuring iOS (Info.plist, Entitlements, WidgetExtension Target)...');
 
   try {
     const xcodeProjects = fs.readdirSync(iosDir).filter((file) => file.endsWith('.xcodeproj'));
@@ -102,9 +249,9 @@ if (fs.existsSync(iosDir)) {
             '<dict>\n\t<key>NSSupportsLiveActivities</key>\n\t<true/>\n\t<key>NSSupportsLiveActivitiesFrequentUpdates</key>\n\t<true/>'
           );
           fs.writeFileSync(infoPlistPath, plistContent, 'utf8');
-          console.log(`✅ Đã thêm NSSupportsLiveActivities vào ${appName}/Info.plist`);
+          console.log(`✅ Added NSSupportsLiveActivities to ${appName}/Info.plist`);
         } else {
-          console.log(`ℹ️ NSSupportsLiveActivities đã tồn tại trong ${appName}/Info.plist`);
+          console.log(`ℹ️ NSSupportsLiveActivities already exists in ${appName}/Info.plist`);
         }
       }
 
@@ -123,7 +270,7 @@ if (fs.existsSync(iosDir)) {
 `;
       if (!fs.existsSync(entitlementsPath)) {
         fs.writeFileSync(entitlementsPath, entitlementsXml, 'utf8');
-        console.log(`✅ Đã tạo ${appName}.entitlements với App Group: ${appGroup}`);
+        console.log(`✅ Created ${appName}.entitlements with App Group: ${appGroup}`);
       } else {
         let content = fs.readFileSync(entitlementsPath, 'utf8');
         if (!content.includes(appGroup)) {
@@ -139,7 +286,7 @@ if (fs.existsSync(iosDir)) {
             );
           }
           fs.writeFileSync(entitlementsPath, content, 'utf8');
-          console.log(`✅ Đã thêm App Group vào ${appName}.entitlements`);
+          console.log(`✅ Added App Group to ${appName}.entitlements`);
         }
       }
 
@@ -159,8 +306,8 @@ import SwiftUI
 import react_native_live_widgets
 #endif
 
-/// Bundle mở rộng hỗ trợ cả Live Activity (Lock Screen & Dynamic Island)
-/// và Home Screen Widgets (Màn hình chính iOS 16.1 -> iOS 17/18/27+)
+/// Bundle extension supporting both Live Activities (Dynamic Island / Lock Screen)
+/// and Home Screen Widgets (iOS 16.1 -> iOS 17/18+)
 @main
 struct LiveWidgetsBundle: WidgetBundle {
   var body: some Widget {
@@ -169,24 +316,30 @@ struct LiveWidgetsBundle: WidgetBundle {
       DynamicLiveActivityWidget()
     }
 
-    // 2. Tiện ích chính (Dynamic / Đang chọn trong App)
+    // 2. Primary dynamic Home Screen widget
     DynamicHomeScreenWidget()
 
-    // 3. Tiện ích Bộ đếm tương tác (Interactive TS Counter)
+    // 3. Interactive TypeScript counter widget
     InteractiveCounterHomeScreenWidget()
 
-    // 4. Tiện ích Bảo mật & Tính năng Pro (Core 2.0)
+    // 4. Pro Features & Security widget
     ProFeaturesHomeScreenWidget()
 
-    // 5. Tiện ích Chấm công & Ca làm việc (Shift Attendance)
+    // 5. Shift Attendance widget
     ShiftAttendanceHomeScreenWidget()
 
-    // 6. Tiện ích Không gian làm việc đa trang (Multi-Page Workspace)
+    // 6. Multi-page Workspace widget
     MultiPageHomeScreenWidget()
+
+    // 7. iOS 18+ Interactive Control Center Widgets
+    if #available(iOS 18.0, *) {
+      DynamicControlWidget()
+      DynamicControlToggleWidget()
+    }
   }
 }
 
-// ── 1. TIỆN ÍCH CHÍNH (ĐỒNG BỘ THEO MẪU ĐANG CHỌN) ──
+// ── 1. PRIMARY DYNAMIC WIDGET ──
 struct DynamicHomeScreenWidget: Widget {
   let kind: String = "DynamicHomeScreenWidget"
 
@@ -194,13 +347,13 @@ struct DynamicHomeScreenWidget: Widget {
     StaticConfiguration(kind: kind, provider: DynamicWidgetProvider(widgetKey: "main")) { entry in
       DynamicHomeScreenWidgetView(entry: entry)
     }
-    .configurationDisplayName("Tiện ích Live Widgets")
-    .description("Tự động đồng bộ và hiển thị theo mẫu giao diện bạn chọn trong ứng dụng.")
+    .configurationDisplayName("Live Widgets")
+    .description("Automatically syncs and displays the dynamic layout selected in app.")
     .supportedFamilies(commonFamilies)
   }
 }
 
-// ── 2. TIỆN ÍCH BỘ ĐẾM TƯƠNG TÁC TYPESCRIPT ──
+// ── 2. INTERACTIVE COUNTER WIDGET ──
 struct InteractiveCounterHomeScreenWidget: Widget {
   let kind: String = "InteractiveCounterHomeScreenWidget"
 
@@ -208,13 +361,13 @@ struct InteractiveCounterHomeScreenWidget: Widget {
     StaticConfiguration(kind: kind, provider: DynamicWidgetProvider(widgetKey: "counter")) { entry in
       DynamicHomeScreenWidgetView(entry: entry)
     }
-    .configurationDisplayName("Bộ đếm tương tác (TS)")
-    .description("Bấm nút [+] hoặc [-] để kích hoạt trực tiếp hàm logic TypeScript.")
+    .configurationDisplayName("Interactive Counter (TS)")
+    .description("Tap [+] or [-] to trigger TypeScript logic directly.")
     .supportedFamilies(commonFamilies)
   }
 }
 
-// ── 3. TIỆN ÍCH BẢO MẬT & KPI PRO (CORE 2.0) ──
+// ── 3. PRO FEATURES & SECURITY WIDGET ──
 struct ProFeaturesHomeScreenWidget: Widget {
   let kind: String = "ProFeaturesHomeScreenWidget"
 
@@ -222,13 +375,14 @@ struct ProFeaturesHomeScreenWidget: Widget {
     StaticConfiguration(kind: kind, provider: DynamicWidgetProvider(widgetKey: "pro")) { entry in
       DynamicHomeScreenWidgetView(entry: entry)
     }
-    .configurationDisplayName("Bảo mật & KPI Pro")
-    .description("Tự che số khi khoá máy (Privacy Sensitive) và hỗ trợ chế độ StandBy.")
+    .configurationDisplayName("Security & KPI Pro")
+    .description("Redacts sensitive data when locked and supports StandBy mode.")
     .supportedFamilies(commonFamilies)
+    .applyStandByMargins()
   }
 }
 
-// ── 4. TIỆN ÍCH CHẤM CÔNG & CA LÀM VIỆC ──
+// ── 4. SHIFT ATTENDANCE WIDGET ──
 struct ShiftAttendanceHomeScreenWidget: Widget {
   let kind: String = "ShiftAttendanceHomeScreenWidget"
 
@@ -236,13 +390,13 @@ struct ShiftAttendanceHomeScreenWidget: Widget {
     StaticConfiguration(kind: kind, provider: DynamicWidgetProvider(widgetKey: "shift")) { entry in
       DynamicHomeScreenWidgetView(entry: entry)
     }
-    .configurationDisplayName("Chấm công & Ca làm việc")
-    .description("Theo dõi giờ vào làm, thời gian tan ca và thanh tiến trình công việc.")
+    .configurationDisplayName("Shift & Attendance")
+    .description("Track clock-in time, shift end, and work progress bar.")
     .supportedFamilies(commonFamilies)
   }
 }
 
-// ── 5. TIỆN ÍCH KHÔNG GIAN ĐA TRANG (MULTI-PAGE) ──
+// ── 5. MULTI-PAGE WORKSPACE WIDGET ──
 struct MultiPageHomeScreenWidget: Widget {
   let kind: String = "MultiPageHomeScreenWidget"
 
@@ -250,14 +404,14 @@ struct MultiPageHomeScreenWidget: Widget {
     StaticConfiguration(kind: kind, provider: DynamicWidgetProvider(widgetKey: "workspace")) { entry in
       DynamicHomeScreenWidgetView(entry: entry)
     }
-    .configurationDisplayName("Không gian đa trang")
-    .description("Chuyển đổi qua lại giữa Ca làm, Công việc và OKRs ngay trên mặt Widget.")
+    .configurationDisplayName("Multi-Page Workspace")
+    .description("Switch between Shifts, Tasks, and OKRs directly on the widget.")
     .supportedFamilies(commonFamilies)
   }
 }
 
 private var commonFamilies: [WidgetFamily] {
-  var list: [WidgetFamily] = [.systemSmall, .systemMedium, .systemLarge]
+  var list: [WidgetFamily] = [.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge]
   if #available(iOS 16.0, *) {
     list.append(contentsOf: [.accessoryRectangular, .accessoryCircular, .accessoryInline])
   }
@@ -265,7 +419,7 @@ private var commonFamilies: [WidgetFamily] {
 }
 `;
         fs.writeFileSync(widgetBundlePath, bundleCode, 'utf8');
-        console.log('✅ Đã tạo template: ios/LiveWidgetsExtension/LiveWidgetsBundle.swift');
+        console.log('✅ Created template: ios/LiveWidgetsExtension/LiveWidgetsBundle.swift');
       }
 
       // Create extension Info.plist
@@ -302,14 +456,14 @@ private var commonFamilies: [WidgetFamily] {
 </plist>
 `;
         fs.writeFileSync(widgetInfoPlist, extPlistCode, 'utf8');
-        console.log('✅ Đã tạo Info.plist cho Widget Extension');
+        console.log('✅ Created Info.plist for Widget Extension');
       }
 
       // Create extension Entitlements
       const widgetEntitlementsPath = path.join(widgetTargetDir, 'LiveWidgetsExtension.entitlements');
       if (!fs.existsSync(widgetEntitlementsPath)) {
         fs.writeFileSync(widgetEntitlementsPath, entitlementsXml, 'utf8');
-        console.log('✅ Đã tạo LiveWidgetsExtension.entitlements với App Group');
+        console.log('✅ Created LiveWidgetsExtension.entitlements with App Group');
       }
 
       // Copy shared widget Swift files from library
@@ -324,7 +478,7 @@ private var commonFamilies: [WidgetFamily] {
           }
         }
       }
-      console.log('✅ Đã copy các Swift models và renderers vào LiveWidgetsExtension/Shared/');
+      console.log('✅ Copied Swift models and renderers into LiveWidgetsExtension/Shared/');
 
       // D. Configure Xcode Project (project.pbxproj) via 'xcode' module
       let xcode;
@@ -354,15 +508,15 @@ private var commonFamilies: [WidgetFamily] {
         }
 
         if (!targetExists) {
-          console.log('➕ Đang tạo Xcode Target LiveWidgetsExtension...');
+          console.log('➕ Creating Xcode Target LiveWidgetsExtension...');
           const newTarget = myProj.addTarget(targetName, 'app_extension', targetName);
 
-          // Tạo các Build Phases riêng biệt cho Extension Target
+          // Create separate Build Phases for the Extension Target
           myProj.addBuildPhase([], 'PBXSourcesBuildPhase', 'Sources', newTarget.uuid);
           myProj.addBuildPhase([], 'PBXFrameworksBuildPhase', 'Frameworks', newTarget.uuid);
           myProj.addBuildPhase([], 'PBXResourcesBuildPhase', 'Resources', newTarget.uuid);
 
-          // Thêm các file Swift CHỈ vào Sources của Extension Target (tránh xung đột @main với AppDelegate)
+          // Add Swift files ONLY to Sources of Extension Target (prevents @main conflict with AppDelegate)
           const filesToAdd = [
             'LiveWidgetsExtension/LiveWidgetsBundle.swift',
             ...fs.readdirSync(widgetSharedDir).filter(f => f.endsWith('.swift')).map(f => `LiveWidgetsExtension/Shared/${f}`)
@@ -408,9 +562,9 @@ private var commonFamilies: [WidgetFamily] {
           }
 
           fs.writeFileSync(pbxprojPath, myProj.writeSync(), 'utf8');
-          console.log('✅ Đã nhúng LiveWidgetsExtension vào project.pbxproj thành công!');
+          console.log('✅ Successfully embedded LiveWidgetsExtension in project.pbxproj!');
         } else {
-          console.log('ℹ️ LiveWidgetsExtension target đã tồn tại trong Xcode project.');
+          console.log('ℹ️ LiveWidgetsExtension target already exists in Xcode project.');
         }
       }
 
@@ -424,31 +578,31 @@ private var commonFamilies: [WidgetFamily] {
             `target '${appName}' do\n  pod 'react-native-live-widgets', :path => '../node_modules/react-native-live-widgets'`
           );
           fs.writeFileSync(podfilePath, podContent, 'utf8');
-          console.log(`✅ Đã thêm pod 'react-native-live-widgets' vào Podfile`);
+          console.log(`✅ Added pod 'react-native-live-widgets' to Podfile`);
         }
       }
 
       // F. Run pod install
       try {
-        console.log('🔄 Đang chạy pod install...');
+        console.log('🔄 Running pod install...');
         execSync('pod install', { cwd: iosDir, stdio: 'inherit' });
-        console.log('✅ pod install hoàn tất!');
+        console.log('✅ pod install completed successfully!');
       } catch (_e) {
-        console.warn('⚠️ Vui lòng chạy "cd ios && pod install" thủ công.');
+        console.warn('⚠️ Please run "cd ios && pod install" manually.');
       }
     }
   } catch (e) {
-    console.warn('⚠️ Lỗi khi cấu hình iOS:', e.message);
+    console.warn('⚠️ Error configuring iOS:', e.message);
   }
 } else if (isExpo) {
-  console.log('\n💡 Gợi ý: Thư mục ios/ chưa được tạo. Sau khi cấu hình app.json xong, bạn chỉ cần chạy:');
+  console.log('\n💡 Tip: ios/ directory not found. After configuring app.json, simply run:');
   console.log('👉 npx expo prebuild');
-  console.log('👉 npx react-native-live-widgets init (để tự động liên kết Xcode target)');
+  console.log('👉 npx react-native-live-widgets init (to link Xcode target automatically)');
 }
 
-// 4. Configure Android Native Project (if android/ folder exists)
+// 5. Configure Android Native Project (if android/ folder exists)
 if (fs.existsSync(androidDir)) {
-  console.log('\n🤖 Đang kiểm tra cấu hình Android...');
+  console.log('\n🤖 Verifying Android configuration...');
   const manifestPath = path.join(androidDir, 'app', 'src', 'main', 'AndroidManifest.xml');
   if (fs.existsSync(manifestPath)) {
     try {
@@ -469,18 +623,124 @@ if (fs.existsSync(androidDir)) {
       }
       if (changed) {
         fs.writeFileSync(manifestPath, manifest, 'utf8');
-        console.log('✅ Đã thêm permissions vào AndroidManifest.xml');
+        console.log('✅ Added permissions to AndroidManifest.xml');
       } else {
-        console.log('ℹ️ Permissions Android đã đầy đủ');
+        console.log('ℹ️ Android permissions are already up-to-date');
       }
     } catch (e) {
-      console.warn('⚠️ Không thể cập nhật AndroidManifest.xml:', e.message);
+      console.warn('⚠️ Failed to update AndroidManifest.xml:', e.message);
     }
   }
 }
 
-console.log('\n🎉 THIẾT LẬP HOÀN TẤT 100%!');
-console.log('👉 Bạn có thể chạy ứng dụng ngay bây giờ:');
+// 6. Ensure widgets.config.ts exists
+const configCandidates = [
+  'widgets.config.ts',
+  'widgets.config.js',
+  'widgets.config.mjs',
+  'widgets.config.cjs',
+  'widgets.config.json',
+];
+const hasConfig = configCandidates.some((c) => fs.existsSync(path.join(projectRoot, c)));
+if (!hasConfig) {
+  const targetConfig = path.join(projectRoot, 'widgets.config.ts');
+  const defaultTemplate = `import { defineWidgetConfig } from 'react-native-live-widgets';
+
+/**
+ * ==============================================================================
+ * react-native-live-widgets Configuration (widgets.config.ts)
+ * ==============================================================================
+ *
+ * This configuration file drives the TypeScript codegen engine.
+ * Run the following command whenever you modify this file:
+ *
+ *   npx react-native-live-widgets codegen
+ *
+ * It will automatically:
+ *   1. Generate 'LiveWidgetsBundle.swift' for iOS WidgetKit Extension.
+ *   2. Generate modern Apple String Catalog ('Localizable.xcstrings').
+ *   3. Synchronize Android string resources ('res/values-{lang}/strings.xml').
+ *   4. Synchronize SF Symbols (iOS) & Material Icons (Android) type definitions.
+ * ==============================================================================
+ */
+export default defineWidgetConfig({
+  /**
+   * The name of the Swift WidgetBundle struct generated in the iOS extension.
+   * Default: 'LiveWidgetsBundle'
+   */
+  bundleName: 'LiveWidgetsBundle',
+
+  /**
+   * Enable or disable iOS Lock Screen Live Activities & Dynamic Island.
+   * Set to 'false' if your application only uses Home Screen widgets.
+   */
+  liveActivity: true,
+
+  /**
+   * Enable or disable iOS 18+ Interactive Control Center widgets.
+   */
+  controlWidgets: true,
+
+  /**
+   * Default fallback locale for widget titles, descriptions, and static labels.
+   */
+  defaultLocale: 'vi',
+
+  /**
+   * Multi-language translation catalog.
+   * Keys defined here are automatically mapped to:
+   *   - iOS: Localizable.xcstrings (LocalizedStringKey in Swift)
+   *   - Android: res/values-{lang}/strings.xml (R.string in Kotlin/Java)
+   */
+  locales: {
+    vi: {
+      'widgets.main.title': 'Tiện ích Live Widgets',
+      'widgets.main.desc': 'Tự động đồng bộ và hiển thị theo mẫu giao diện bạn chọn trong ứng dụng.',
+    },
+    en: {
+      'widgets.main.title': 'Live Widgets Utility',
+      'widgets.main.desc': 'Automatically syncs and displays layouts defined in your React Native app.',
+    },
+  },
+
+  /**
+   * List of registered Home Screen widgets.
+   * Each entry maps to a distinct timeline provider and widget kind.
+   */
+  widgets: [
+    {
+      /** Unique key identifier used in Widget.setLayout('<key>', ...) */
+      key: 'main',
+
+      /** Native Swift struct kind name generated in WidgetBundle */
+      kind: 'DynamicHomeScreenWidget',
+
+      /** Display name shown in the iOS & Android Widget Gallery picker */
+      displayName: 'widgets.main.title',
+
+      /** Description shown below the widget preview in the Widget Gallery */
+      description: 'widgets.main.desc',
+
+      /** Supported widget sizes for this widget */
+      supportedFamilies: ['systemSmall', 'systemMedium', 'systemLarge'],
+    },
+  ],
+});
+`;
+  fs.writeFileSync(targetConfig, defaultTemplate, 'utf8');
+  console.log('✅ Created default configuration: widgets.config.ts');
+}
+
+// 7. Automatically run Codegen to generate icons, localizations, and LiveWidgetsBundle.swift
+try {
+  const { runCodegen } = require('./codegen');
+  runCodegen(projectRoot);
+} catch (codegenErr) {
+  console.warn('⚠️ Codegen warning:', codegenErr.message);
+}
+
+console.log('🎉 SETUP 100% COMPLETE!');
+console.log('👉 You can now run your application:');
 if (isExpo) {
   console.log('   - iOS: npx expo run:ios');
   console.log('   - Android: npx expo run:android');

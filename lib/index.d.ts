@@ -1,4 +1,5 @@
-import { ActiveActivityInfo, EndActivityOptions, LiveActivityPushTokens, StartActivityOptions, UpdateActivityOptions, WidgetCapabilities, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig, WidgetIR } from './types';
+import { ActiveActivityInfo, ControlWidgetConfig, EndActivityOptions, LiveActivityPushTokens, LiveActivityStateEvent, StartActivityOptions, UpdateActivityOptions, WidgetCapabilities, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig, WidgetIR } from './types';
+import { createDataBinding } from './builder';
 import { ActionHandler, GlobalActionHandler, registerAction, registerActionHandler, unregisterAction } from './dispatcher';
 export type { ActionHandler, GlobalActionHandler };
 export { registerAction, registerActionHandler, unregisterAction };
@@ -74,10 +75,27 @@ export declare const LiveActivity: {
      */
     unregisterAction: (actionId: string) => void;
     /**
-     * Lấy danh sách các phiên Live Activity đang chạy trên thiết bị (ID và Push Token).
+     * Lấy danh sách các phiên Live Activity đang chạy trên thiết bị (kèm trạng thái Stale, RelevanceScore, ScheduledEnd và Push Token).
      * Giúp ứng dụng khôi phục lại trạng thái giao diện khi mở lại App.
      */
     getActiveActivities: () => Promise<ActiveActivityInfo[]>;
+    /**
+     * Lấy thông tin chi tiết của một Live Activity cụ thể theo activityId.
+     */
+    get: (activityId: string) => Promise<ActiveActivityInfo | null>;
+    /**
+     * Kiểm tra nhanh xem một Live Activity cụ thể có đang chạy trên thiết bị hay không.
+     */
+    isActive: (activityId: string) => Promise<boolean>;
+    /**
+     * Lắng nghe sự kiện chuyển đổi vòng đời Live Activity (`active`, `started_by_push`, `stale`, `expired`, `ended`, `dismissed`).
+     */
+    onStateChange: (listener: (event: LiveActivityStateEvent) => void) => (() => void);
+    /**
+     * Kiểm tra và tự động kết thúc các Live Activity đã quá hạn `scheduledEndTimestamp` (dọn dẹp các phiên bị kẹt).
+     * Trả về danh sách các `activityId` đã được dọn dẹp.
+     */
+    cleanupExpired: () => Promise<string[]>;
     /**
      * Kiểm tra xem người dùng có cấp quyền Hoạt động trực tiếp (Live Activities) trong Cài đặt máy hay không.
      */
@@ -141,15 +159,36 @@ export declare const Widget: {
      */
     setSelectedConfiguration: (widgetKey: string, selectedId: string, appGroup?: string) => Promise<boolean>;
     /**
-     * Cấu hình Endpoint API để bản thân Widget Extension tự chạy ngầm lấy dữ liệu mới
-     * theo chu kỳ (`getTimeline`) hoặc khi bấm nút `actionId: 'refresh'` trên mặt Widget,
-     * kể cả khi người dùng đã vuốt tắt (Kill) hoàn toàn ứng dụng chính!
+     * Cấu hình Background Data Engine 2.0 để Widget Extension tự gọi API ngầm (REST, Custom Headers,
+     * Cache TTL, ETag/304, Retry/Backoff, Timeout, Multiple Sources, Data Transform, Schema Validation,
+     * Auth Token Refresh & Error State) kể cả khi App chính đã bị đóng hoàn toàn.
+     *
+     * Lưu ý hệ điều hành: Apple WidgetKit quản lý ngân sách reload động (~40–70 lần/ngày tùy mức sử dụng,
+     * `refreshIntervalMinutes` chỉ là mốc sớm nhất đề xuất chứ không cam kết chạy đúng mỗi 15 phút khi app đóng);
+     * Android cũng áp dụng Doze Mode / App Standby cho background task.
      *
      * Hỗ trợ gọi linh hoạt:
-     * - `Widget.setRemoteConfig('main', { url, refreshIntervalMinutes }, appGroup?)`
-     * - `Widget.setRemoteConfig({ url, intervalMinutes }, appGroup?)` (tự động gán widgetKey = 'main')
+     * - `Widget.setRemoteConfig('main', config, appGroup?)`
+     * - `Widget.setRemoteConfig(config, appGroup?)` (tự động gán widgetKey = 'main')
      */
     setRemoteConfig: (widgetKeyOrConfig: string | WidgetRemoteConfig, remoteConfigOrAppGroup?: WidgetRemoteConfig | string, maybeAppGroup?: string) => Promise<boolean>;
+    /**
+     * Đẩy dữ liệu có cấu trúc (Structured Data Binding) từ JS/TS xuống Native Shared Storage
+     * để Home Screen Widget cập nhật tức thì mà không cần dựng lại toàn bộ cây layout.
+     *
+     * Hỗ trợ gọi linh hoạt:
+     * - `Widget.setData('main', data, appGroup?)`
+     * - `Widget.setData(data, appGroup?)` (tự động gán widgetKey = 'main')
+     */
+    setData: (widgetKeyOrData: string | Record<string, any>, dataOrAppGroup?: Record<string, any> | string, maybeAppGroup?: string) => Promise<boolean>;
+    /**
+     * Tạo Proxy Data Binding có cấu trúc & gợi ý kiểu TypeScript cho JSX/DSL Widget (`data.user.name`, `data.attendance.progress.divide(100)`).
+     */
+    createDataBinding: typeof createDataBinding;
+    /**
+     * Tạo chuỗi token binding (`{{path|pipe}}`) cho hệ thống Background Data Engine 2.0.
+     */
+    bind: (path: string, pipes?: import("./types").WidgetDataPipeOptions) => string;
     /** Đăng ký lắng nghe tương tác nút bấm từ Widget theo `actionId` */
     registerAction: typeof registerAction;
     /** Đăng ký lắng nghe toàn cục tất cả tương tác nút bấm từ Widget (alias) */
@@ -171,6 +210,14 @@ export declare const Widget: {
      */
     getCapabilities: () => Promise<WidgetCapabilities>;
     /**
+     * 🎛️ Cấu hình Control Widget (iOS 18+ Control Center / Lock Screen Controls / Action Button & Android Quick Settings).
+     */
+    setControl: (controlId: string, config: ControlWidgetConfig, appGroup?: string) => Promise<boolean>;
+    /**
+     * Đọc cấu hình và trạng thái hiện tại của Control Widget từ Shared Storage.
+     */
+    getControlState: (controlId: string, appGroup?: string) => Promise<ControlWidgetConfig | null>;
+    /**
      * 🌲 Biên dịch cây DSL sang UI Intermediate Representation (IR & Semantic Tree - Phase 2).
      */
     compileIR: (layout: any) => WidgetIR;
@@ -178,6 +225,22 @@ export declare const Widget: {
      * 🔍 Phân tích và in ra bản đồ kiến trúc IR, Semantic Tree và Kế hoạch phân bổ Renderer Planner.
      */
     inspectIR: (layout: any) => string;
+};
+/**
+ * 🎛️ Namespace cấu hình & quản lý Control Widget đa nền tảng
+ * (iOS 18+ Control Center / Lock Screen Controls / Action Button & Android Quick Settings Tile).
+ */
+export declare const ControlWidget: {
+    set: (controlId: string, config: ControlWidgetConfig, appGroup?: string) => Promise<boolean>;
+    getState: (controlId: string, appGroup?: string) => Promise<ControlWidgetConfig | null>;
+    button: (options: Omit<ControlWidgetConfig, "type" | "actionId"> & {
+        actionId?: string;
+        onPress?: (payload?: any) => Promise<any> | any;
+    }) => ControlWidgetConfig;
+    toggle: (options: Omit<ControlWidgetConfig, "type" | "actionId"> & {
+        actionId?: string;
+        onPress?: (payload?: any) => Promise<any> | any;
+    }) => ControlWidgetConfig;
 };
 export declare const SharedStorage: {
     /**
@@ -236,4 +299,14 @@ export * from './builder';
 export * from './ir';
 export { StyleSheet } from './builder';
 export * from './hooks';
+/**
+ * Định nghĩa cấu hình các Widget cho ứng dụng với đầy đủ Type Safety và gợi ý thuộc tính IDE.
+ * Cấu hình này được công cụ Codegen (`npx react-native-live-widgets codegen`) đọc
+ * để tự động tạo file LiveWidgetsBundle.swift cho iOS WidgetKit.
+ */
+export declare function defineWidgetsConfig<T extends import('./types').WidgetsProjectConfig>(config: T): T;
+/**
+ * Alias cho `defineWidgetsConfig` (hỗ trợ cả dạng số ít và số nhiều)
+ */
+export declare const defineWidgetConfig: typeof defineWidgetsConfig;
 //# sourceMappingURL=index.d.ts.map

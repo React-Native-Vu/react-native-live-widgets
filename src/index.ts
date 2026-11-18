@@ -2,8 +2,10 @@ import React from 'react';
 import { AppRegistry, NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import {
   ActiveActivityInfo,
+  ControlWidgetConfig,
   EndActivityOptions,
   LiveActivityPushTokens,
+  LiveActivityStateEvent,
   StartActivityOptions,
   UpdateActivityOptions,
   WidgetCapabilities,
@@ -14,6 +16,7 @@ import {
   WidgetIR,
 } from './types';
 import { compileToIR, inspectIR } from './ir';
+import { UI, createDataBinding, flattenDataObject, resolveTemplateString } from './builder';
 
 declare const __DEV__: boolean | undefined;
 
@@ -34,6 +37,7 @@ const DEVICE_TOKEN_CHANGED_EVENT = 'DevicePushTokenChanged';
 const TOKEN_CHANGED_EVENT = 'LiveActivityTokenChanged';
 const UPDATE_TOKEN_CHANGED_EVENT = 'LiveActivityUpdateTokenChanged';
 const ACTION_CLICKED_EVENT = 'LiveActivityActionClicked';
+const STATE_CHANGED_EVENT = 'LiveActivityStateChanged';
 
 import {
   ActionHandler,
@@ -63,22 +67,123 @@ if (liveActivityEmitter) {
   liveActivityEmitter.addListener(ACTION_CLICKED_EVENT, async (event: any) => {
     const actionId = event?.actionId || '';
     const activityId = event?.activityId || '';
+    const payload = { ...(event || {}), actionId, activityId };
     const handler = actionHandlers.get(actionId);
     if (handler) {
       try {
-        await handler({ actionId, activityId });
+        await handler(payload);
       } catch (e) {
         console.warn(`[react-native-live-widgets] Error executing action '${actionId}':`, e);
       }
     }
     for (const globalHandler of globalActionHandlers) {
       try {
-        await globalHandler(actionId, { actionId, activityId });
+        await globalHandler(actionId, payload);
       } catch (e) {
         console.warn(`[react-native-live-widgets] Error in global action handler for '${actionId}':`, e);
       }
     }
   });
+}
+
+function convertIfJsx(node: any): any {
+  if (!node) return node;
+  if (React.isValidElement(node) || (node as any)?.$$typeof || typeof (node as any)?.type === 'function') {
+    return renderToWidget(node);
+  }
+  return node;
+}
+
+function normalizeDynamicIsland(island: any): any {
+  if (!island || typeof island !== 'object') return island;
+  const normalized: any = { ...island };
+  if (normalized.compactLeading) normalized.compactLeading = convertIfJsx(normalized.compactLeading);
+  if (normalized.compactTrailing) normalized.compactTrailing = convertIfJsx(normalized.compactTrailing);
+  if (normalized.minimal) normalized.minimal = convertIfJsx(normalized.minimal);
+  if (normalized.expanded && typeof normalized.expanded === 'object') {
+    normalized.expanded = {
+      ...normalized.expanded,
+      leading: convertIfJsx(normalized.expanded.leading),
+      trailing: convertIfJsx(normalized.expanded.trailing),
+      center: convertIfJsx(normalized.expanded.center),
+      bottom: convertIfJsx(normalized.expanded.bottom),
+    };
+  }
+  return normalized;
+}
+
+function normalizeActivityPayload(options: any): any {
+  const opts: any = { ...options };
+  if (opts.lockScreen) opts.lockScreen = convertIfJsx(opts.lockScreen);
+  if (opts.staleLockScreen) opts.staleLockScreen = convertIfJsx(opts.staleLockScreen);
+  if (opts.expiredLockScreen) opts.expiredLockScreen = convertIfJsx(opts.expiredLockScreen);
+  if (opts.dynamicIsland) opts.dynamicIsland = normalizeDynamicIsland(opts.dynamicIsland);
+  if (opts.staleDynamicIsland) opts.staleDynamicIsland = normalizeDynamicIsland(opts.staleDynamicIsland);
+
+  if (opts.alertConfig && typeof opts.alertConfig === 'object') {
+    if (opts.alertConfig.title && !opts.alertTitle) opts.alertTitle = opts.alertConfig.title;
+    if (opts.alertConfig.body && !opts.alertBody) opts.alertBody = opts.alertConfig.body;
+    if (opts.alertConfig.sound && !opts.alertSound) opts.alertSound = opts.alertConfig.sound;
+  }
+
+  if (typeof opts.autoEndAfterSeconds === 'number' && opts.autoEndAfterSeconds > 0 && !opts.scheduledEndTimestamp) {
+    opts.scheduledEndTimestamp = Date.now() / 1000.0 + opts.autoEndAfterSeconds;
+  }
+  return opts;
+}
+
+function normalizeSinglePageConfig(cfg: any): any {
+  if (!cfg || typeof cfg !== 'object') return cfg;
+  return {
+    ...cfg,
+    small: convertIfJsx(cfg.small),
+    medium: convertIfJsx(cfg.medium),
+    large: convertIfJsx(cfg.large),
+    extraLarge: convertIfJsx(cfg.extraLarge),
+    standBy: convertIfJsx(cfg.standBy),
+    accessoryRectangular: convertIfJsx(cfg.accessoryRectangular),
+    accessoryCircular: convertIfJsx(cfg.accessoryCircular),
+    accessoryInline: convertIfJsx(cfg.accessoryInline),
+  };
+}
+
+function normalizeWidgetLayoutConfig(layoutConfig: any): any {
+  let finalLayout: any = layoutConfig;
+  if (
+    React.isValidElement(finalLayout) ||
+    (finalLayout as any)?.$$typeof ||
+    typeof (finalLayout as any)?.type === 'function'
+  ) {
+    finalLayout = { medium: renderToWidget(finalLayout) };
+  } else if (finalLayout && typeof finalLayout === 'object') {
+    const c = normalizeSinglePageConfig(finalLayout);
+    if (c.pages && typeof c.pages === 'object') {
+      const convertedPages: Record<string, any> = {};
+      for (const [pageKey, pageCfg] of Object.entries(c.pages)) {
+        convertedPages[pageKey] = normalizeSinglePageConfig(pageCfg);
+      }
+      c.pages = convertedPages;
+    }
+    finalLayout = c;
+  }
+  return finalLayout;
+}
+
+function resolveLayoutObjectTemplates(value: any, flatVars: Record<string, string>): any {
+  if (typeof value === 'string') {
+    return resolveTemplateString(value, flatVars);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => resolveLayoutObjectTemplates(item, flatVars));
+  }
+  if (value && typeof value === 'object') {
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = resolveLayoutObjectTemplates(v, flatVars);
+    }
+    return out;
+  }
+  return value;
 }
 
 // ─── 1. LIVE ACTIVITY & LIVE UPDATE ──────────────────────────────────────────
@@ -90,11 +195,7 @@ export const LiveActivity = {
   start: async (options: StartActivityOptions): Promise<boolean> => {
     if (!LiveActivityModule?.start) return false;
     try {
-      const opts = { ...options } as any;
-      if (React.isValidElement(opts.lockScreen)) {
-        opts.lockScreen = renderToWidget(opts.lockScreen);
-      }
-      const payload = JSON.stringify(opts);
+      const payload = JSON.stringify(normalizeActivityPayload(options));
       return await LiveActivityModule.start(options.activityId, payload);
     } catch (error) {
       console.warn('[react-native-live-widgets] start error:', error);
@@ -108,11 +209,7 @@ export const LiveActivity = {
   update: async (options: UpdateActivityOptions): Promise<boolean> => {
     if (!LiveActivityModule?.update) return false;
     try {
-      const opts = { ...options } as any;
-      if (React.isValidElement(opts.lockScreen)) {
-        opts.lockScreen = renderToWidget(opts.lockScreen);
-      }
-      const payload = JSON.stringify(opts);
+      const payload = JSON.stringify(normalizeActivityPayload(options));
       return await LiveActivityModule.update(options.activityId, payload);
     } catch (error) {
       console.warn('[react-native-live-widgets] update error:', error);
@@ -126,11 +223,13 @@ export const LiveActivity = {
   end: async (activityId: string, options?: EndActivityOptions): Promise<boolean> => {
     try {
       if (options && (LiveActivityModule?.endWithOptions || LiveActivityModule?.endActivity)) {
-        const payloadJson = options.finalLockScreen || options.finalDynamicIsland
+        const finalLock = options.finalLockScreen ? convertIfJsx(options.finalLockScreen) : undefined;
+        const finalIsland = options.finalDynamicIsland ? normalizeDynamicIsland(options.finalDynamicIsland) : undefined;
+        const payloadJson = finalLock || finalIsland
           ? JSON.stringify({
               activityId,
-              lockScreen: options.finalLockScreen,
-              dynamicIsland: options.finalDynamicIsland,
+              lockScreen: finalLock,
+              dynamicIsland: finalIsland,
             })
           : null;
         const nativeOptions = {
@@ -303,7 +402,7 @@ export const LiveActivity = {
   },
 
   /**
-   * Lấy danh sách các phiên Live Activity đang chạy trên thiết bị (ID và Push Token).
+   * Lấy danh sách các phiên Live Activity đang chạy trên thiết bị (kèm trạng thái Stale, RelevanceScore, ScheduledEnd và Push Token).
    * Giúp ứng dụng khôi phục lại trạng thái giao diện khi mở lại App.
    */
   getActiveActivities: async (): Promise<ActiveActivityInfo[]> => {
@@ -314,12 +413,73 @@ export const LiveActivity = {
       const list = await LiveActivityModule.getActiveActivities();
       return (list || []).map((item: any) => ({
         activityId: item.activityId || '',
+        systemActivityId: item.systemActivityId,
+        activityState: item.activityState,
+        isStale: Boolean(item.isStale ?? item.activityState === 'stale'),
+        relevanceScore: typeof item.relevanceScore === 'number' ? item.relevanceScore : undefined,
+        staleTimestamp: typeof item.staleTimestamp === 'number' ? item.staleTimestamp : undefined,
+        scheduledEndTimestamp: typeof item.scheduledEndTimestamp === 'number' ? item.scheduledEndTimestamp : undefined,
         pushToken: item.pushToken,
       }));
     } catch (e) {
       console.warn('[react-native-live-widgets] getActiveActivities error:', e);
       return [];
     }
+  },
+
+  /**
+   * Lấy thông tin chi tiết của một Live Activity cụ thể theo activityId.
+   */
+  get: async (activityId: string): Promise<ActiveActivityInfo | null> => {
+    const list = await LiveActivity.getActiveActivities();
+    return list.find((a) => a.activityId === activityId || a.systemActivityId === activityId) ?? null;
+  },
+
+  /**
+   * Kiểm tra nhanh xem một Live Activity cụ thể có đang chạy trên thiết bị hay không.
+   */
+  isActive: async (activityId: string): Promise<boolean> => {
+    const info = await LiveActivity.get(activityId);
+    return Boolean(info && info.activityState !== 'ended' && info.activityState !== 'dismissed' && info.activityState !== 'expired');
+  },
+
+  /**
+   * Lắng nghe sự kiện chuyển đổi vòng đời Live Activity (`active`, `started_by_push`, `stale`, `expired`, `ended`, `dismissed`).
+   */
+  onStateChange: (listener: (event: LiveActivityStateEvent) => void): (() => void) => {
+    if (!liveActivityEmitter) return () => {};
+    const sub = liveActivityEmitter.addListener(STATE_CHANGED_EVENT, (event: any) => {
+      if (!event) return;
+      listener({
+        activityId: event.activityId || '',
+        systemActivityId: event.systemActivityId,
+        state: event.state || 'active',
+        timestamp: typeof event.timestamp === 'number' ? event.timestamp : Date.now() / 1000.0,
+        pushToken: event.pushToken,
+      });
+    });
+    return () => sub.remove();
+  },
+
+  /**
+   * Kiểm tra và tự động kết thúc các Live Activity đã quá hạn `scheduledEndTimestamp` (dọn dẹp các phiên bị kẹt).
+   * Trả về danh sách các `activityId` đã được dọn dẹp.
+   */
+  cleanupExpired: async (): Promise<string[]> => {
+    const list = await LiveActivity.getActiveActivities();
+    const nowSec = Date.now() / 1000.0;
+    const cleaned: string[] = [];
+    for (const item of list) {
+      const endTs = item.scheduledEndTimestamp;
+      if (typeof endTs === 'number' && endTs > 0) {
+        const normalizedEnd = endTs > 10_000_000_000 ? endTs / 1000.0 : endTs;
+        if (nowSec >= normalizedEnd) {
+          await LiveActivity.end(item.activityId, { dismissalPolicy: 'immediate' });
+          cleaned.push(item.activityId);
+        }
+      }
+    }
+    return cleaned;
   },
 
   /**
@@ -463,27 +623,7 @@ export const Widget = {
         appGroup = typeof layoutConfigOrAppGroup === 'string' ? layoutConfigOrAppGroup : undefined;
       }
 
-      let finalLayout: any = layoutConfig;
-      const convertIfJsx = (node: any) => {
-        if (!node) return node;
-        if (React.isValidElement(node) || (node as any)?.$$typeof || typeof (node as any)?.type === 'function') {
-          return renderToWidget(node);
-        }
-        return node;
-      };
-
-      if (React.isValidElement(finalLayout) || (finalLayout as any)?.$$typeof || typeof (finalLayout as any)?.type === 'function') {
-        finalLayout = { medium: renderToWidget(finalLayout) };
-      } else if (finalLayout && typeof finalLayout === 'object') {
-        const c = { ...finalLayout };
-        c.small = convertIfJsx(c.small);
-        c.medium = convertIfJsx(c.medium);
-        c.large = convertIfJsx(c.large);
-        c.accessoryRectangular = convertIfJsx(c.accessoryRectangular);
-        c.accessoryCircular = convertIfJsx(c.accessoryCircular);
-        c.accessoryInline = convertIfJsx(c.accessoryInline);
-        finalLayout = c;
-      }
+      const finalLayout = normalizeWidgetLayoutConfig(layoutConfig);
 
       const saved = await SharedStorage.set(`widget_layout_${widgetKey}`, finalLayout, appGroup);
       if (!saved) return false;
@@ -516,15 +656,22 @@ export const Widget = {
     appGroup?: string
   ): Promise<boolean> => {
     try {
-      const formattedEntries = timelineConfig.entries.map((entry) => ({
-        date:
-          typeof entry.date === 'string'
-            ? new Date(entry.date).getTime() / 1000.0
-            : entry.date > 10000000000
-            ? entry.date / 1000.0
-            : entry.date,
-        layout: entry.layout,
-      }));
+      const formattedEntries = timelineConfig.entries.map((entry) => {
+        let entryLayout = normalizeWidgetLayoutConfig(entry.layout);
+        if (entry.data && typeof entry.data === 'object') {
+          const flatVars = flattenDataObject(entry.data);
+          entryLayout = resolveLayoutObjectTemplates(entryLayout, flatVars);
+        }
+        return {
+          date:
+            typeof entry.date === 'string'
+              ? new Date(entry.date).getTime() / 1000.0
+              : entry.date > 10000000000
+              ? entry.date / 1000.0
+              : entry.date,
+          layout: entryLayout,
+        };
+      });
       const formattedConfig = {
         entries: formattedEntries,
         policy: timelineConfig.policy || 'atEnd',
@@ -589,13 +736,17 @@ export const Widget = {
   },
 
   /**
-   * Cấu hình Endpoint API để bản thân Widget Extension tự chạy ngầm lấy dữ liệu mới
-   * theo chu kỳ (`getTimeline`) hoặc khi bấm nút `actionId: 'refresh'` trên mặt Widget,
-   * kể cả khi người dùng đã vuốt tắt (Kill) hoàn toàn ứng dụng chính!
+   * Cấu hình Background Data Engine 2.0 để Widget Extension tự gọi API ngầm (REST, Custom Headers,
+   * Cache TTL, ETag/304, Retry/Backoff, Timeout, Multiple Sources, Data Transform, Schema Validation,
+   * Auth Token Refresh & Error State) kể cả khi App chính đã bị đóng hoàn toàn.
+   *
+   * Lưu ý hệ điều hành: Apple WidgetKit quản lý ngân sách reload động (~40–70 lần/ngày tùy mức sử dụng,
+   * `refreshIntervalMinutes` chỉ là mốc sớm nhất đề xuất chứ không cam kết chạy đúng mỗi 15 phút khi app đóng);
+   * Android cũng áp dụng Doze Mode / App Standby cho background task.
    *
    * Hỗ trợ gọi linh hoạt:
-   * - `Widget.setRemoteConfig('main', { url, refreshIntervalMinutes }, appGroup?)`
-   * - `Widget.setRemoteConfig({ url, intervalMinutes }, appGroup?)` (tự động gán widgetKey = 'main')
+   * - `Widget.setRemoteConfig('main', config, appGroup?)`
+   * - `Widget.setRemoteConfig(config, appGroup?)` (tự động gán widgetKey = 'main')
    */
   setRemoteConfig: async (
     widgetKeyOrConfig: string | WidgetRemoteConfig,
@@ -616,15 +767,25 @@ export const Widget = {
         appGroup = typeof remoteConfigOrAppGroup === 'string' ? remoteConfigOrAppGroup : undefined;
       }
 
-      if (remoteConfig.intervalMinutes !== undefined && remoteConfig.refreshIntervalMinutes === undefined) {
-        remoteConfig.refreshIntervalMinutes = remoteConfig.intervalMinutes;
-      } else if (remoteConfig.refreshIntervalMinutes !== undefined && remoteConfig.intervalMinutes === undefined) {
-        remoteConfig.intervalMinutes = remoteConfig.refreshIntervalMinutes;
+      const finalConfig: WidgetRemoteConfig = { ...remoteConfig };
+      if (
+        finalConfig.intervalMinutes !== undefined &&
+        finalConfig.refreshIntervalMinutes === undefined
+      ) {
+        finalConfig.refreshIntervalMinutes = finalConfig.intervalMinutes;
+      } else if (
+        finalConfig.refreshIntervalMinutes !== undefined &&
+        finalConfig.intervalMinutes === undefined
+      ) {
+        finalConfig.intervalMinutes = finalConfig.refreshIntervalMinutes;
+      }
+      if (finalConfig.errorFallback) {
+        finalConfig.errorFallback = convertIfJsx(finalConfig.errorFallback);
       }
 
       const saved = await SharedStorage.set(
         `widget_remote_config_${widgetKey}`,
-        remoteConfig,
+        finalConfig,
         appGroup
       );
       if (!saved) return false;
@@ -634,6 +795,53 @@ export const Widget = {
       return false;
     }
   },
+
+  /**
+   * Đẩy dữ liệu có cấu trúc (Structured Data Binding) từ JS/TS xuống Native Shared Storage
+   * để Home Screen Widget cập nhật tức thì mà không cần dựng lại toàn bộ cây layout.
+   *
+   * Hỗ trợ gọi linh hoạt:
+   * - `Widget.setData('main', data, appGroup?)`
+   * - `Widget.setData(data, appGroup?)` (tự động gán widgetKey = 'main')
+   */
+  setData: async (
+    widgetKeyOrData: string | Record<string, any>,
+    dataOrAppGroup?: Record<string, any> | string,
+    maybeAppGroup?: string
+  ): Promise<boolean> => {
+    try {
+      let widgetKey = 'main';
+      let dataObj: Record<string, any>;
+      let appGroup: string | undefined;
+
+      if (typeof widgetKeyOrData === 'string') {
+        widgetKey = widgetKeyOrData;
+        dataObj = (dataOrAppGroup as Record<string, any>) || {};
+        appGroup = maybeAppGroup;
+      } else {
+        dataObj = widgetKeyOrData || {};
+        appGroup = typeof dataOrAppGroup === 'string' ? dataOrAppGroup : undefined;
+      }
+
+      const flattened = flattenDataObject(dataObj);
+      const saved = await SharedStorage.set(`widget_bound_data_${widgetKey}`, flattened, appGroup);
+      if (!saved) return false;
+      return await Widget.reloadAll();
+    } catch (error) {
+      console.warn('[react-native-live-widgets] setData error:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Tạo Proxy Data Binding có cấu trúc & gợi ý kiểu TypeScript cho JSX/DSL Widget (`data.user.name`, `data.attendance.progress.divide(100)`).
+   */
+  createDataBinding,
+
+  /**
+   * Tạo chuỗi token binding (`{{path|pipe}}`) cho hệ thống Background Data Engine 2.0.
+   */
+  bind: UI.bind,
 
   /** Đăng ký lắng nghe tương tác nút bấm từ Widget theo `actionId` */
   registerAction: registerAction,
@@ -710,6 +918,36 @@ export const Widget = {
   },
 
   /**
+   * 🎛️ Cấu hình Control Widget (iOS 18+ Control Center / Lock Screen Controls / Action Button & Android Quick Settings).
+   */
+  setControl: async (
+    controlId: string,
+    config: ControlWidgetConfig,
+    appGroup?: string
+  ): Promise<boolean> => {
+    try {
+      return await SharedStorage.set(`widget_control_${controlId}`, config, appGroup);
+    } catch (error) {
+      console.warn('[react-native-live-widgets] setControl error:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Đọc cấu hình và trạng thái hiện tại của Control Widget từ Shared Storage.
+   */
+  getControlState: async (
+    controlId: string,
+    appGroup?: string
+  ): Promise<ControlWidgetConfig | null> => {
+    try {
+      return await SharedStorage.get<ControlWidgetConfig>(`widget_control_${controlId}`, appGroup);
+    } catch {
+      return null;
+    }
+  },
+
+  /**
    * 🌲 Biên dịch cây DSL sang UI Intermediate Representation (IR & Semantic Tree - Phase 2).
    */
   compileIR: (layout: any): WidgetIR => {
@@ -722,6 +960,17 @@ export const Widget = {
   inspectIR: (layout: any): string => {
     return inspectIR(layout);
   },
+};
+
+/**
+ * 🎛️ Namespace cấu hình & quản lý Control Widget đa nền tảng
+ * (iOS 18+ Control Center / Lock Screen Controls / Action Button & Android Quick Settings Tile).
+ */
+export const ControlWidget = {
+  set: Widget.setControl,
+  getState: Widget.getControlState,
+  button: UI.ControlButton,
+  toggle: UI.ControlToggle,
 };
 
 // ─── 3. SHARED STORAGE (App Groups & SharedPreferences) ─────────────────────
@@ -876,3 +1125,17 @@ export * from './builder';
 export * from './ir';
 export { StyleSheet } from './builder';
 export * from './hooks';
+
+/**
+ * Định nghĩa cấu hình các Widget cho ứng dụng với đầy đủ Type Safety và gợi ý thuộc tính IDE.
+ * Cấu hình này được công cụ Codegen (`npx react-native-live-widgets codegen`) đọc
+ * để tự động tạo file LiveWidgetsBundle.swift cho iOS WidgetKit.
+ */
+export function defineWidgetsConfig<T extends import('./types').WidgetsProjectConfig>(config: T): T {
+  return config;
+}
+
+/**
+ * Alias cho `defineWidgetsConfig` (hỗ trợ cả dạng số ít và số nhiều)
+ */
+export const defineWidgetConfig = defineWidgetsConfig;

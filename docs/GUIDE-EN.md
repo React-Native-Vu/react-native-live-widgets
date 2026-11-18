@@ -40,6 +40,7 @@ Comprehensive guide covering installation, native setup (iOS & Android), and bui
 11. [Server Push Payload Structure (APNs & FCM)](#10-server-push-payload-structure-apns--fcm)
 12. [Troubleshooting](#11-troubleshooting)
 13. [Advanced Styling Modifiers, UI IR, Exact Hit Layer & Platform Matrix (v1.2.1)](#12-advanced-styling-modifiers--platform-capability-matrix)
+14. [TypeScript-Driven Swift Codegen & Automated i18n Sync (`widgets.config.ts`)](#14-typescript-driven-swift-codegen--automated-i18n-sync-widgetsconfigts)
 
 ---
 
@@ -77,32 +78,47 @@ npx expo run:ios # or npx expo run:android
 
 ## 3. Installation & Project Setup
 
-### For Expo Projects
-If you are using **Expo**, the library provides an **Expo Config Plugin (`app.plugin.js`)** and **CLI Wizard** out of the box.
-👉 **See the dedicated step-by-step guide: [Expo Integration Guide (EXPO-GUIDE-EN.md)](./EXPO-GUIDE-EN.md)**
+### 📋 CLI Command Cheat Sheet
+
+| Command | Purpose | When to use |
+| :--- | :--- | :--- |
+| `npx react-native-live-widgets init` | **All-in-One Automated Setup**: Configures `app.json` (Expo), Xcode Extension target, Entitlements, App Groups, Podfile, `pod install`, Android permissions, default `widgets.config.ts`, SF Symbols/Material Icons sync, and Swift bundle codegen. | First time setting up the library in your project |
+| `npx react-native-live-widgets codegen` | **Sync & Re-generate**: Re-reads `widgets.config.ts` and syncs `LiveWidgetsBundle.swift`, iOS `Localizable.xcstrings`, Android `strings.xml`, and type definitions. | Whenever you edit `widgets.config.ts` or add new widgets/locales |
+| `npx react-native-live-widgets init --group <name>` | **Custom App Group**: Explicitly specify your App Group identifier (e.g. `group.com.mycompany.app`). | If you prefer a custom group instead of auto-detection |
+
+---
+
+### Option A: For Expo Projects (Managed / CNG)
 
 ```bash
 # 1. Install package
 npx expo install react-native-live-widgets
 
-# 2. Add plugin to app.json & generate native projects
-npx expo prebuild
+# 2. Automated one-command setup (updates app.json, creates widgets.config.ts, syncs icons & bundle)
+npx react-native-live-widgets init
 
-# 3. Automatically link and configure Widget Extension
-npx react-native-live-widgets init --group group.com.yourcompany.app
+# 3. Launch on Simulator / Emulator
+npx expo run:ios
+# or: npx expo run:android
 ```
+
+> 👉 **See the dedicated step-by-step guide: [Expo Integration Guide (EXPO-GUIDE-EN.md)](./EXPO-GUIDE-EN.md)**
 
 ---
 
-### Package Installation (Bare React Native CLI)
-From the root directory of your React Native project:
-```bash
-npm install react-native-live-widgets
-# or
-yarn add react-native-live-widgets
+### Option B: For Bare React Native CLI
 
-# Automatically configure Info.plist, Entitlements, AndroidManifest & Widget templates
-npx react-native-live-widgets init --group group.com.yourcompany.app
+```bash
+# 1. Install package
+npm install react-native-live-widgets
+# or: yarn add react-native-live-widgets
+
+# 2. Automated one-command setup (links Xcode target, Podfile, pod install, Android permissions, widgets.config.ts, codegen)
+npx react-native-live-widgets init
+
+# 3. Launch on Simulator / Emulator
+npx react-native run-ios
+# or: npx react-native run-android
 ```
 
 ---
@@ -537,14 +553,37 @@ UI.Image({
   cornerRadius: 8,
 })
 
-// 3. System Icon (SF Symbols on iOS / Vector Mapping on Android)
+// 3. Cross-Platform System Icons (Apple SF Symbols + Google Material Icons)
+// Option A: Automatically mapped on both platforms
 UI.Image({
-  systemName: 'bicycle',
-  tintColor: '#FB923C',
-  width: 18,
-  height: 18,
+  systemName: 'bolt',
+  tintColor: '#10B981',
+  width: 20,
+  height: 20,
 })
+
+// Option B: Explicitly specify platform-dedicated icons (with 9,500+ SF Symbols & 3,800+ Material Icons Auto-Complete types)
+UI.Image({
+  systemNameIos: 'bolt.horizontal.fill', // 9,500+ Apple SF Symbols
+  systemNameAndroid: 'bolt',              // 3,800+ Google Material Icons (supports snake_case and kebab-case)
+  tintColor: '#10B981',
+  width: 24,
+  height: 24,
+})
+
+// Or using React JSX Component syntax:
+<Image
+  systemNameIos="person.crop.circle.badge.checkmark"
+  systemNameAndroid="verified_user"
+  tintColor="#10B981"
+  width={24}
+  height={24}
+/>
 ```
+
+> 💡 **Official Icon Catalogs & Galleriy Links:**
+> - 🍏 **Apple SF Symbols (9,500+ Icons)**: Browse and preview symbols at [Apple SF Symbols Official Website](https://developer.apple.com/sf-symbols/). Fully typed via `KnownSFSymbol` auto-complete.
+> - 🤖 **Google Material Icons (3,800+ Icons)**: Browse icon names at [Google Fonts Icons / Material Symbols](https://fonts.google.com/icons). Fully typed via `KnownMaterialIcon`, supporting both `snake_case` (e.g. `battery_charging_full`) and `kebab-case` (`battery-charging-full`).
 
 ### `UI.Button` (Interactive Widget Buttons)
 Lets users interact directly on the Widget surface (via iOS 17+ `AppIntents` and Android `PendingIntent` hit zones) **without opening the app**:
@@ -1183,6 +1222,140 @@ Version **v1.2.1** addresses critical real-world interaction challenges on physi
   - Encapsulated `Font` resolution in `renderText()` within self-invoking closures `{ ... }()`.
   - Refactored `DynamicNodeAccessibilityModifier` procedural assignments into a dedicated `buildAccessibilityView(content:) -> AnyView` helper method.
   - Added fallback `else { EmptyView() }` branches to `backgroundView` and `borderOverlay` in `ContainerStyleModifier`.
+
+---
+
+### 12.8. 📱 Extended Widget Families (`extraLarge`, `standBy`, `ControlWidget`) & Complete Live Activity Lifecycle
+
+#### 1. Extended Widget Families
+Beyond `small`, `medium`, `large`, and Lock Screen (`accessoryRectangular`, `accessoryCircular`, `accessoryInline`) layouts:
+- **`extraLarge?: LayoutNode`**: Targets iPadOS (`systemExtraLarge`) and Android tablets (`widgetHeightDp >= 280dp`). Supported in `<WidgetPreview size="extraLarge">`.
+- **`standBy?: LayoutNode`**: Automatically activated in iOS 17+ StandBy Mode (`family == .systemSmall && !showsWidgetContainerBackground`), alongside `.applyStandByMargins()` and `widgetAccentable` support on `Text`, `Progress`, `Gauge`, and `Image`. Supported in `<WidgetPreview size="standBy">`.
+- **iOS 18+ Control Widgets & Android Quick Settings Tile (`ControlWidget` / `Widget.setControl`)**: Configure iOS 18 Control Center, Lock Screen controls, and Action Button widgets natively via `ios/Widgets/DynamicControlWidget.swift` (`DynamicControlWidget` & `DynamicControlToggleWidget`) and Android Quick Settings Tiles via `DynamicQuickSettingsTileService.kt`, connected directly to `DynamicWidgetStateStore` and `useWidgetAction`:
+  ```typescript
+  import { ControlWidget, UI, WidgetPreview } from 'react-native-live-widgets';
+
+  const shiftControl = ControlWidget.toggle({
+    title: 'Work Shift',
+    subtitle: 'Tap to clock in',
+    checkedTitle: 'On Shift',
+    checkedSubtitle: 'Tap to clock out',
+    systemName: 'clock.badge.checkmark.fill',
+    checked: true,
+    actionId: 'toggle:attendance',
+  });
+
+  await ControlWidget.set('toggle', shiftControl);
+  // Also supports UI.ControlButton({ ... }) and Widget.setControl('main', ...)
+  // Preview in-app: <WidgetPreview size="control" controlConfig={shiftControl} />
+  ```
+
+#### 2. Complete Live Activity Lifecycle API
+- **Multi-Activity Management**: `LiveActivity.getActiveActivities()`, `LiveActivity.get(activityId)`, `LiveActivity.isActive(activityId)`, and `LiveActivity.endAll()` return user-assigned `activityId`, `systemActivityId`, state flags, and tokens.
+- **Stale State (`staleTimestamp`, `staleLockScreen`, `staleDynamicIsland`)**: Automatically transitions UI to fallback views when stale (`context.isStale` on iOS 16.2+ / timestamp check on Android).
+- **Relevance Score (`relevanceScore`)**: Prioritizes ordering in Dynamic Island / Lock Screen (`ActivityContent.relevanceScore`) and Android Notification Shade (`setSortKey`).
+- **Alert Configuration (`alertConfig`)**: Supports `{ title, body, sound }` via iOS 16.2+ `AlertConfiguration` and Android notification alerts on updates.
+- **Scheduled End & Auto-Expiration (`scheduledEndTimestamp`, `autoEndAfterSeconds`, `expiredLockScreen`, `expiredDismissalPolicy`)**: Automatically updates or dismisses activities on expiration, plus `LiveActivity.cleanupExpired()` and `LiveActivity.onStateChange((ev) => ...)` emitting `'active' | 'started_by_push' | 'stale' | 'expired' | 'ended' | 'dismissed'`.
+- **Upgraded `useLiveActivity()` Hook**: Exposes `activities`, `lifecycleState`, `isStale`, `refreshActivities`, and `cleanupExpired`.
+
+---
+
+### 12.9. 🔄 Background Data Engine 2.0 & Structured Data Binding
+
+`Widget.setRemoteConfig` and `Widget.createDataBinding<T>()` provide a complete native background data engine on both iOS WidgetKit Extension and Android even after the main app is force-killed:
+
+| Category | Native Capabilities (iOS SwiftUI + Android) |
+| :--- | :--- |
+| **REST & Auth** | `url`, `method` (`GET`/`POST`/`PUT`), JSON `body`, custom `headers`, and **`authRefresh`** (automatically refreshes tokens on HTTP `401` and retries) |
+| **Network & Cache** | **`cacheTtlSeconds`** to avoid redundant fetches across timeline reloads, **`enableETag`** (`If-None-Match`/`If-Modified-Since` + HTTP `304 Not Modified`), **`timeoutMs`**, and **`maxRetries` + `retryDelayMs`** (Exponential Backoff) |
+| **Multi-Source & Transform** | **`sources`** to fetch & namespace multiple APIs (`<sourceKey>.<nested.path>`), recursive JSON Flattener (`user.name`, `items.0.title`), declarative **`mapping`**, and **`schema`** validation (`requiredKeys`, `types`, `defaults`) |
+| **Error State** | System tokens `{{_syncStatus}}` (`ok` / `partial` / `error`), `{{_syncError}}`, `{{_httpStatus}}`, plus **`errorFallback`** `LayoutNode` while preserving valid cached data on failures |
+| **Structured Data Binding** | `Widget.createDataBinding<T>()` & `UI.bind(path, pipes)` supporting nested paths & Native Pipes (`default`, `divide`, `multiply`, `add`, `round`, `upper`, `lower`, `currency`, `percent`, `if`) |
+
+```tsx
+const data = Widget.createDataBinding<{
+  user: { name: string };
+  attendance: { progress: number };
+}>({
+  defaults: { user: { name: 'Employee' }, attendance: { progress: 0 } },
+});
+
+await Widget.setLayout('main', {
+  medium: (
+    <VStack padding={14} spacing={6}>
+      <Text>{data.user.name}</Text>
+      <Text>{data.attendance.progress}%</Text>
+      <Progress value={data.attendance.progress.divide(100)} />
+    </VStack>
+  ),
+});
+
+await Widget.setRemoteConfig('main', {
+  cacheTtlSeconds: 300,
+  timeoutMs: 6000,
+  enableETag: true,
+  maxRetries: 2,
+  retryDelayMs: 500,
+  sources: {
+    user: { url: 'https://api.yourapp.com/me' },
+    attendance: { url: 'https://api.yourapp.com/attendance/today' },
+  },
+  schema: { requiredKeys: ['user.name', 'attendance.progress'], types: { 'attendance.progress': 'number' } },
+  authRefresh: { url: 'https://api.yourapp.com/auth/refresh', method: 'POST', tokenPath: 'accessToken' },
+  errorFallback: <Text color="#F87171">Sync error ({{_httpStatus}}): {{_syncError}}</Text>,
+  refreshIntervalMinutes: 15,
+});
+```
+
+> ⚠️ **Important OS Reload Budget Disclaimer:** Exact 15-minute background intervals are **not guaranteed** when the app is terminated. **Apple WidgetKit** enforces a dynamic daily reload budget (typically ~**40–70 reloads/day** depending on user engagement; `refreshIntervalMinutes` maps to `TimelineReloadPolicy.after(...)` as an earliest hint, not an exact cron guarantee). **Android** likewise enforces Doze Mode and App Standby Buckets. For real-time second-by-second updates, pair widgets with server pushes (APNs / FCM).
+
+---
+
+## 14. TypeScript-Driven Swift Codegen & Automated i18n Sync (`widgets.config.ts`)
+
+Starting from version 1.2.1, you don't need to manually modify Swift bundle source files (`LiveWidgetsBundle.swift`) or configure localization files in Xcode. The entire configuration is defined in **100% TypeScript** via `widgets.config.ts` in your project root.
+
+### 1. Sample `widgets.config.ts`:
+```typescript
+import { defineWidgetConfig } from 'react-native-live-widgets';
+
+export default defineWidgetConfig({
+  bundleName: 'LiveWidgetsBundle',
+  liveActivity: true,       // Enable/disable Live Activity Widget
+  controlWidgets: true,     // Enable Control Center Widget (iOS 18+)
+  defaultLocale: 'en',
+  locales: {
+    en: {
+      'widgets.main.title': 'Live Widgets Utility',
+      'widgets.main.desc': 'Visual KPI and attendance tracking',
+    },
+    vi: {
+      'widgets.main.title': 'Tiện ích Live Widgets',
+      'widgets.main.desc': 'Theo dõi KPI và chấm công trực quan',
+    },
+  },
+  widgets: [
+    {
+      key: 'main',
+      kind: 'LiveWidget_main',
+      displayName: 'widgets.main.title',
+      description: 'widgets.main.desc',
+      supportedFamilies: ['systemSmall', 'systemMedium', 'systemLarge'],
+    },
+  ],
+});
+```
+
+### 2. Execute Codegen CLI:
+```bash
+npx react-native-live-widgets codegen
+```
+
+This CLI command automatically:
+1. **Syncs System Icons**: Automatically extracts **9,500+ Apple SF Symbols** from macOS and **3,800+ Google Material Icons** into auto-complete type definition files (`sf-symbols.generated.ts` & `material-icons.generated.ts`), providing full TypeScript IntelliSense.
+2. **Generates Swift Source Bundle**: Creates `ios/LiveWidgetsExtension/LiveWidgetsBundle.swift` registering all configured Widgets and Control Center widgets.
+3. **Synchronizes iOS Localization**: Generates modern Apple String Catalog `ios/LiveWidgetsExtension/Localizable.xcstrings` for all defined languages.
+4. **Synchronizes Android Localization**: Automatically updates `android/app/src/main/res/values/strings.xml` (default locale) and `values-{lang}/strings.xml` for Android AppWidget localized names.
 
 ---
 

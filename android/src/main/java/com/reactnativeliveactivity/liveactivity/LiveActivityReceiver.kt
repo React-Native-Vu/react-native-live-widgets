@@ -43,7 +43,7 @@ class LiveActivityReceiver : BroadcastReceiver() {
                             val wKey = if (actionId.startsWith("refresh:")) {
                                 actionId.removePrefix("refresh:")
                             } else "main"
-                            DynamicWidgetStateStore.performRemoteSync(context, wKey)
+                            DynamicWidgetStateStore.performRemoteSync(context, wKey, forceRefresh = true)
                         } else {
                             DynamicWidgetStateStore.handleAction(context, actionId)
                         }

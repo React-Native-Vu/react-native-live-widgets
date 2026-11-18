@@ -91,6 +91,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             val family = when {
                 widgetWidthDp < 245f -> "small"
                 widgetHeightDp < 195f -> "medium"
+                widgetHeightDp >= 280f -> "extraLarge"
                 else -> "large"
             }
 
@@ -206,7 +207,8 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             return when (family) {
                 "small" -> obj.optJSONObject("small") ?: obj.optJSONObject("medium") ?: obj.optJSONObject("large")
                 "medium" -> obj.optJSONObject("medium") ?: obj.optJSONObject("large") ?: obj.optJSONObject("small")
-                else -> obj.optJSONObject("large") ?: obj.optJSONObject("medium") ?: obj.optJSONObject("small")
+                "extraLarge" -> obj.optJSONObject("extraLarge") ?: obj.optJSONObject("large") ?: obj.optJSONObject("medium") ?: obj.optJSONObject("small")
+                else -> obj.optJSONObject("large") ?: obj.optJSONObject("extraLarge") ?: obj.optJSONObject("medium") ?: obj.optJSONObject("small")
             }
         }
 

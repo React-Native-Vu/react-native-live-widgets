@@ -25,8 +25,44 @@ import {
   LinkProps,
   EqualizerProps,
   StyleProp,
+  DataBindingField,
 } from './types';
-import { UI, flattenStyle } from './builder';
+import { UI, flattenStyle, isDataBinding, resolveBindingValue } from './builder';
+
+type WidgetTextChild =
+  | React.ReactNode
+  | DataBindingField<any>
+  | Array<React.ReactNode | DataBindingField<any>>;
+
+function flattenTextChildren(children: any): string {
+  if (children === undefined || children === null || typeof children === 'boolean') {
+    return '';
+  }
+  if (isDataBinding(children)) {
+    return children.toToken();
+  }
+  if (typeof children === 'string' || typeof children === 'number') {
+    return String(children);
+  }
+  if (Array.isArray(children)) {
+    return children.map(flattenTextChildren).join('');
+  }
+  return '';
+}
+
+function collectChildElements(children: any, out: any[] = []): any[] {
+  if (children === undefined || children === null || typeof children === 'boolean') {
+    return out;
+  }
+  if (Array.isArray(children)) {
+    for (const item of children) {
+      collectChildElements(item, out);
+    }
+    return out;
+  }
+  out.push(children);
+  return out;
+}
 
 // ─── 1. JSX COMPONENT DEFINITIONS ────────────────────────────────────────────
 
@@ -67,22 +103,24 @@ export const Grid: React.FC<GridJSXProps> = () => null;
 Grid.displayName = 'Grid';
 
 export interface TextJSXProps extends TextStyle {
-  children?: React.ReactNode;
-  text?: string;
+  children?: WidgetTextChild;
+  text?: string | DataBindingField<any>;
   style?: StyleProp<TextStyle>;
 }
 export const Text: React.FC<TextJSXProps> = () => null;
 Text.displayName = 'Text';
 
-export type ButtonJSXProps = ButtonNode['props'] & {
-  children?: React.ReactNode;
+export type ButtonJSXProps = Omit<ButtonNode['props'], 'title'> & {
+  title?: string | DataBindingField<any>;
+  children?: WidgetTextChild;
   style?: StyleProp<ButtonNode['props']>;
 };
 export const Button: React.FC<ButtonJSXProps> = () => null;
 Button.displayName = 'Button';
 
-export type BadgeJSXProps = BadgeNode['props'] & {
-  children?: React.ReactNode;
+export type BadgeJSXProps = Omit<BadgeNode['props'], 'text'> & {
+  text?: string | DataBindingField<any>;
+  children?: WidgetTextChild;
   style?: StyleProp<BadgeNode['props']>;
 };
 export const Badge: React.FC<BadgeJSXProps> = () => null;
@@ -164,6 +202,9 @@ export function renderToWidget(element: any): LayoutNode | null {
   if (element == null || typeof element === 'boolean') {
     return null;
   }
+  if (isDataBinding(element)) {
+    return UI.Text(element.toToken());
+  }
   if (typeof element === 'string' || typeof element === 'number') {
     return UI.Text(String(element));
   }
@@ -187,12 +228,12 @@ export function renderToWidget(element: any): LayoutNode | null {
 
   const parsedChildren: LayoutNode[] = [];
   if (children !== undefined && children !== null) {
-    React.Children.forEach(children, (child: any) => {
+    for (const child of collectChildElements(children)) {
       const parsed = renderToWidget(child);
       if (parsed) {
         parsedChildren.push(parsed);
       }
-    });
+    }
   }
 
   // Trường hợp Component là Function
@@ -213,20 +254,18 @@ export function renderToWidget(element: any): LayoutNode | null {
       return UI.Grid(restProps, ...parsedChildren);
     }
     if (isComp(Text, 'Text')) {
-      const textContent =
-        typeof children === 'string' || typeof children === 'number'
-          ? String(children)
-          : restProps.text || '';
+      const childText = flattenTextChildren(children);
+      const textContent = childText || String(resolveBindingValue(restProps.text) ?? '');
       return UI.Text(textContent, restProps);
     }
     if (isComp(Button, 'Button')) {
       const title =
-        restProps.title || (typeof children === 'string' ? children : '');
+        String(resolveBindingValue(restProps.title) || '') || flattenTextChildren(children);
       return UI.Button({ ...restProps, title });
     }
     if (isComp(Badge, 'Badge')) {
       const text =
-        restProps.text || (typeof children === 'string' ? children : '');
+        String(resolveBindingValue(restProps.text) || '') || flattenTextChildren(children);
       return UI.Badge({ ...restProps, text });
     }
     if (isComp(Progress, 'Progress')) {
@@ -237,7 +276,16 @@ export function renderToWidget(element: any): LayoutNode | null {
     }
     if (isComp(Image, 'Image')) {
       return UI.Image(
-        restProps.url || restProps.base64 || restProps.systemName || restProps.source || '',
+        restProps.url ||
+          restProps.base64 ||
+          restProps.iosSystemName ||
+          restProps.systemNameIos ||
+          restProps.androidSystemName ||
+          restProps.systemNameAndroid ||
+          restProps.materialName ||
+          restProps.systemName ||
+          restProps.source ||
+          '',
         restProps
       );
     }
@@ -286,20 +334,20 @@ export function renderToWidget(element: any): LayoutNode | null {
         return UI.ZStack(restProps, ...parsedChildren);
       case 'Text': {
         const textContent =
-          typeof children === 'string' || typeof children === 'number'
-            ? String(children)
-            : restProps.text || '';
+          flattenTextChildren(children) || String(resolveBindingValue(restProps.text) ?? '');
         return UI.Text(textContent, restProps);
       }
       case 'Button':
         return UI.Button({
           ...restProps,
-          title: restProps.title || (typeof children === 'string' ? children : ''),
+          title:
+            String(resolveBindingValue(restProps.title) || '') || flattenTextChildren(children),
         });
       case 'Badge':
         return UI.Badge({
           ...restProps,
-          text: restProps.text || (typeof children === 'string' ? children : ''),
+          text:
+            String(resolveBindingValue(restProps.text) || '') || flattenTextChildren(children),
         });
       case 'Progress':
         return UI.Progress(restProps.value ?? 0, restProps);

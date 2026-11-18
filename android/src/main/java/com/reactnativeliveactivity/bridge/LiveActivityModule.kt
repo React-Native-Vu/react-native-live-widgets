@@ -64,6 +64,21 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
                     .emit("DevicePushTokenChanged", token)
             }
         }
+
+        @JvmStatic
+        fun emitStateChanged(activityId: String, state: String, pushToken: String? = null) {
+            val ctx = currentReactContext ?: return
+            if (!ctx.hasActiveReactInstance()) return
+            val map = Arguments.createMap().apply {
+                putString("activityId", activityId)
+                putString("state", state)
+                putDouble("timestamp", System.currentTimeMillis() / 1000.0)
+                val tok = pushToken ?: activityUpdateTokens[activityId]
+                if (tok != null) putString("pushToken", tok)
+            }
+            ctx.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                .emit("LiveActivityStateChanged", map)
+        }
     }
 
     @ReactMethod
@@ -88,6 +103,7 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
                     putString("activityId", activityId)
                     putString("token", tok)
                 })
+                emitStateChanged(activityId, "active", tok)
             }.onSuccess {
                 promise.resolve(true)
             }.onFailure {
@@ -112,6 +128,7 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun end(activityId: String, promise: Promise) {
         LiveActivityNotifier.end(reactContext, activityId)
+        emitStateChanged(activityId, "ended")
         activityUpdateTokens.remove(activityId)
         promise.resolve(true)
     }
@@ -128,6 +145,7 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
         if (seconds > 0) {
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 LiveActivityNotifier.end(reactContext, activityId)
+                emitStateChanged(activityId, "ended")
                 activityUpdateTokens.remove(activityId)
             }, seconds * 1000)
             promise.resolve(true)
@@ -138,7 +156,11 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun endAll(promise: Promise) {
+        val activeIds = LiveActivityNotifier.getActiveIds(reactContext)
         LiveActivityNotifier.endAll(reactContext)
+        for (id in activeIds) {
+            emitStateChanged(id, "ended")
+        }
         activityUpdateTokens.clear()
         promise.resolve(true)
     }
@@ -155,9 +177,14 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
         val activeIds = LiveActivityNotifier.getActiveIds(reactContext)
         val array = Arguments.createArray()
         for (id in activeIds) {
+            val meta = LiveActivityNotifier.getActivityMetadata(reactContext, id)
             val map = Arguments.createMap().apply {
                 putString("activityId", id)
-                putString("activityState", "active")
+                putString("activityState", if (meta.isStale) "stale" else "active")
+                putBoolean("isStale", meta.isStale)
+                meta.relevanceScore?.let { putDouble("relevanceScore", it) }
+                meta.staleTimestamp?.let { putDouble("staleTimestamp", it) }
+                meta.scheduledEndTimestamp?.let { putDouble("scheduledEndTimestamp", it) }
                 activityUpdateTokens[id]?.let { putString("pushToken", it) }
             }
             array.pushMap(map)
@@ -285,8 +312,36 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
                     DynamicWidgetStateStore.initializeFromLayoutJson(reactContext, value)
                 }
 
+                if (key.startsWith("widget_bound_data_")) {
+                    val wKey = key.removePrefix("widget_bound_data_")
+                    DynamicWidgetStateStore.getPrefs(reactContext, appGroup)
+                        .edit()
+                        .remove("widget_remote_config_$wKey")
+                        .apply()
+                    runCatching {
+                        val state = DynamicWidgetStateStore.loadState(reactContext)
+                        val jsonObj = JSONObject(value)
+                        DynamicWidgetStateStore.flattenJson(jsonObj, "", state.remoteVariables)
+                        val syncTime = state.remoteVariables["_lastSyncTime"]
+                        if (!syncTime.isNullOrEmpty()) {
+                            state.lastSyncTime = syncTime
+                        }
+                        val status = state.remoteVariables["_syncStatus"]?.takeIf { it.isNotEmpty() } ?: "ok"
+                        state.syncStatus = status
+                        state.remoteVariables["_syncStatus"] = status
+                        state.lastSyncError = null
+                        state.remoteVariables["_syncError"] = ""
+                        state.updatedAt = System.currentTimeMillis()
+                        DynamicWidgetStateStore.saveState(reactContext, state)
+                    }
+                }
+
                 if (key.startsWith("widget_remote_config_")) {
                     val wKey = key.removePrefix("widget_remote_config_")
+                    DynamicWidgetStateStore.getPrefs(reactContext, appGroup)
+                        .edit()
+                        .remove("widget_bound_data_$wKey")
+                        .apply()
                     runCatching {
                         val cfg = JSONObject(value)
                         val mins = if (cfg.has("refreshIntervalMinutes")) {
@@ -296,6 +351,11 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
                         }.coerceAtLeast(1)
                         DynamicWidgetStateStore.scheduleBackgroundWidgetSync(reactContext, wKey, mins)
                     }
+                    DynamicWidgetStateStore.performRemoteSync(reactContext, wKey, forceRefresh = true)
+                }
+
+                if (key.startsWith("widget_control_")) {
+                    DynamicQuickSettingsTileService.requestTileUpdate(reactContext)
                 }
 
                 DynamicWidgetImageCache.prefetchUrlsSync(reactContext, value)

@@ -2,7 +2,34 @@
 
 All notable changes to `react-native-live-widgets` will be documented in this file.
 
+## [1.2.2] - 2026-11-18
+### Added
+- **All-in-One Automated Setup Integration**: `npx react-native-live-widgets init` now automatically runs the entire icon extraction and codegen pipeline out of the box (syncing 9,500+ Apple SF Symbols and 3,800+ Google Material Icons into TypeScript auto-complete, generating `LiveWidgetsBundle.swift`, and synchronizing string catalogs).
+- **Auto-Generated `app.json` & Smart Project Detection**:
+  - Automatically creates `app.json` with `name` and `displayName` if missing, or completes missing fields.
+  - Accurately distinguishes between Bare React Native projects (plain `app.json`) and Expo projects (detecting `"expo"` configuration object or `package.json` dependency), avoiding incorrect Expo plugin injection on pure React Native CLI projects.
+- **Automated Entrypoint Injection (`index.js` / `index.ts` / `index.tsx`)**:
+  - Automatically inspects the project's root entry file and safely registers `LiveActivity.registerBackgroundActionHandler()` before `AppRegistry.registerComponent` or `registerRootComponent`.
+  - Automatically injects `import { name as appName } from './app.json';` when referenced by `AppRegistry` if the import statement is missing.
+- **Resilient Auto-Generation for Missing Native Files**:
+  - Automatically regenerates `LiveWidgetsExtension/Info.plist` if missing (resolving Xcode build error 65).
+  - Automatically generates `widgets.config.ts` with complete English JSDoc documentation if not found in project root.
+- **Type Aliases & API Ergonomics**: Exported `defineWidgetConfig` (singular) alongside `defineWidgetsConfig` (plural) in `src/index.ts`.
+- **Expo Android Prebuild Trigger**: Enhanced Expo Config Plugin (`app.plugin.js`) with an Android `withDangerousMod` hook to automatically sync Android `res/values-*/strings.xml` during `npx expo prebuild`.
+
+### Changed & Improved
+- **100% English CLI Experience**: Standardized all terminal logs, banners, prompts, and completion messages in `cli/setup.js` and `cli/codegen.js` to clean, professional English.
+- **Streamlined Documentation & Official Icon Galleries**:
+  - Rewrote the **Quick Start (3-step setup)** and added a CLI cheat sheet across `README.md`, `docs/GUIDE-VI.md`, `docs/GUIDE-EN.md`, `docs/EXPO-GUIDE-VI.md`, and `docs/EXPO-GUIDE-EN.md`.
+  - Updated `docs/index.html` with official links to Apple SF Symbols and Google Material Icons galleries, alongside a dynamic language switcher (EN / VI).
+  - Updated `docs/llms.txt` and `docs/llms-full.txt` with latest setup commands.
+
 ## [1.2.1] - 2026-11-17
+### Added
+- **Cross-Platform System Icons (SF Symbols & Material Icons)**: Dedicated `systemNameIos` and `systemNameAndroid` props with full TypeScript autocomplete for 9,500+ Apple SF Symbols (`KnownSFSymbol`) and 3,800+ Google Material Icons (`KnownMaterialIcon`), automatically rendered across iOS WidgetKit and Android Canvas.
+- **TypeScript-Driven Swift Codegen CLI (`npx react-native-live-widgets codegen`)**: Configured via `widgets.config.ts` to automatically generate `LiveWidgetsBundle.swift`, sync Apple String Catalogs (`Localizable.xcstrings`), generate Android `res/values-*/strings.xml`, and automatically ensure/generate missing `LiveWidgetsExtension/Info.plist`.
+- **English CLI Output**: Standardized all Codegen CLI and icon generation terminal logs to clean, professional English.
+
 ### Fixed
 - **iOS Swift 6 Compatibility**: Resolved `@ViewBuilder` type inference and closure encapsulation for `renderText()`, `DynamicNodeAccessibilityModifier`, and `ContainerStyleModifier` to prevent `type '()' cannot conform to 'View'` compiler error.
 - **Android Exact Hit Layer**: Replaced fixed grid layout with dynamic `FrameLayout` hit zones (`rn_hit_layer`), accurately mapping bitmap coordinates with launcher aspect ratio letterboxing to eliminate touch offsets and misclicks.

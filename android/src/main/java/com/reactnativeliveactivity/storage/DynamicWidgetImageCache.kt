@@ -105,7 +105,60 @@ object DynamicWidgetImageCache {
             }
         }
 
+        val systemName = props.optString("systemName", "")
+        if (systemName.isNotEmpty()) {
+            resolveSystemNameBitmap(context, systemName)?.let { return it }
+        }
+
         return null
+    }
+
+    fun resolveSystemNameBitmap(context: Context, systemName: String): Bitmap? {
+        val clean = systemName.replace('.', '_').replace('-', '_').lowercase()
+        // 1. Thử tìm drawable trong res/drawable của ứng dụng
+        val appResId = context.resources.getIdentifier(clean, "drawable", context.packageName)
+        if (appResId != 0) {
+            decodeResourceToBitmap(context, appResId)?.let { return it }
+        }
+
+        // 2. Thử ánh xạ sang biểu tượng hệ thống Android (android.R.drawable)
+        val sysResId = when {
+            clean.contains("check") -> android.R.drawable.checkbox_on_background
+            clean.contains("sync") || clean.contains("clockwise") -> android.R.drawable.ic_popup_sync
+            clean.contains("play") -> android.R.drawable.ic_media_play
+            clean.contains("pause") -> android.R.drawable.ic_media_pause
+            clean.contains("star") -> android.R.drawable.btn_star_big_on
+            clean.contains("bell") -> android.R.drawable.ic_popup_reminder
+            clean.contains("lock") -> android.R.drawable.ic_lock_idle_lock
+            clean.contains("trash") || clean.contains("delete") -> android.R.drawable.ic_menu_delete
+            clean.contains("camera") -> android.R.drawable.ic_menu_camera
+            clean.contains("phone") -> android.R.drawable.stat_sys_phone_call
+            else -> 0
+        }
+        if (sysResId != 0) {
+            decodeResourceToBitmap(context, sysResId)?.let { return it }
+        }
+
+        return null
+    }
+
+    private fun decodeResourceToBitmap(context: Context, resId: Int): Bitmap? {
+        return try {
+            val drawable = androidx.core.content.ContextCompat.getDrawable(context, resId) ?: return null
+            if (drawable is android.graphics.drawable.BitmapDrawable) {
+                drawable.bitmap
+            } else {
+                val w = drawable.intrinsicWidth.takeIf { it > 0 } ?: 64
+                val h = drawable.intrinsicHeight.takeIf { it > 0 } ?: 64
+                val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(bmp)
+                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                drawable.draw(canvas)
+                bmp
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun downscaleBitmap(bmp: Bitmap, maxDimension: Int): Bitmap {

@@ -12,18 +12,22 @@ Write 100% Declarative TypeScript (`UI.*`) in your React Native code. Automatica
 - `SharedStorage`: Fast synchronous App Group (iOS) and SharedPreferences (Android) key-value bridge.
 - `UI`: Declarative DSL builder (`UI.VStack`, `UI.HStack`, `UI.ZStack`, `UI.Text`, `UI.Button`, `UI.Progress`, `UI.Timer`, `UI.Equalizer`, `UI.Image`, `UI.Gauge`, `UI.Chart`).
 
-### Installation & Scaffolding
-- **Expo (SDK 50, 51, 52, 58+)**:
+### Installation & Scaffolding (Essential Commands)
+- **Expo (SDK 50, 51, 52, 58+ CNG & EAS Build)**:
   ```bash
   npx expo install react-native-live-widgets
-  # Add plugin in app.json with appGroup, enableLiveActivities
-  npx expo prebuild
-  npx react-native-live-widgets init --group group.com.yourcompany.app
+  npx react-native-live-widgets init # 1-command: auto updates app.json, creates widgets.config.ts, syncs icons & Swift
+  npx expo run:ios # or: npx expo run:android
   ```
 - **Bare React Native CLI**:
   ```bash
   npm install react-native-live-widgets
-  npx react-native-live-widgets init --group group.com.yourcompany.app
+  npx react-native-live-widgets init # 1-command: auto links Xcode target, Podfile, pod install, Android permissions, codegen
+  npx react-native run-ios # or: npx react-native run-android
+  ```
+- **Updating widgets.config.ts**:
+  ```bash
+  npx react-native-live-widgets codegen # Re-syncs Swift bundle, iOS xcstrings, Android strings.xml & icon types
   ```
 
 ### Dual UI Authoring Syntax: JSX Components & Functional DSL
@@ -79,13 +83,16 @@ const unsubscribe = Widget.onWidgetAction((actionId, payload) => {
 - **Android Native Live Chronometer**: Realtime 1s countdowns driven by native `android.widget.Chronometer` without Canvas bitmap redraws.
 - **Dynamic Template Variable Interpolation**: Resolves `{{id}}`, `{{title}}`, and counter values dynamically, with initial `defaultChecked` persistence in `DynamicWidgetStateStore`.
 - **Swift 6 Compatibility**: Full compliance with Swift 6 language mode and `@ViewBuilder` closure encapsulation on iOS Xcode.
+- **Extended Widget Families**: Supports `extraLarge` (iPadOS/Tablet), `standBy` (iOS 17+ StandBy Mode with `.applyStandByMargins()` & `widgetAccentable` on `Text`, `Progress`, `Gauge`), and iOS 18+ Control Widgets + Android Quick Settings Tiles (`ControlWidget.set`, `ControlWidget.getState`, `ControlWidget.button` / `UI.ControlButton`, `ControlWidget.toggle` / `UI.ControlToggle`, `ios/Widgets/DynamicControlWidget.swift`, Android `DynamicQuickSettingsTileService.kt`, and `<WidgetPreview size="control" controlConfig={...} />`).
+- **Background Data Engine 2.0 & Structured Data Binding**: `Widget.setRemoteConfig` supports REST `body`, `headers`, `timeoutMs`, `cacheTtlSeconds`, `enableETag` (304 Not Modified), `maxRetries`/`retryDelayMs`, `sources` (multi-API namespacing), `mapping`, `schema` validation, `authRefresh` (401 refresh + retry), and `errorFallback` (`{{_syncStatus}}`, `{{_syncError}}`, `{{_httpStatus}}`). `Widget.createDataBinding<T>()` & `UI.bind()` support nested dot paths and native pipes (`default`, `divide`, `multiply`, `add`, `round`, `upper`, `lower`, `currency`, `percent`, `if`) in JSX (`<Text>{data.user.name}</Text>`, `<Progress value={data.attendance.progress.divide(100)} />`).
+- **Complete Live Activity Lifecycle**: Supports simultaneous multi-activity inspection (`LiveActivity.get`, `LiveActivity.isActive`), `staleLockScreen`/`staleDynamicIsland`, `relevanceScore`, `alertConfig`, `scheduledEndTimestamp`/`autoEndAfterSeconds` with `expiredLockScreen`, `LiveActivity.cleanupExpired()`, and `LiveActivity.onStateChange` (`active`, `started_by_push`, `stale`, `expired`, `ended`, `dismissed`).
 
 ### Golden Rules for AI Agents
 1. **Never write Swift or Kotlin files manually** when a declarative `UI.*` node exists.
 2. **App Groups**: Both iOS app and Widget Extension MUST share the identical App Group name (e.g. `group.<bundle_id>`).
 3. **Dynamic Island**: Always configure `compactLeading`, `compactTrailing`, `minimal`, and `expanded` (`leading`, `trailing`, `bottom`, `center`).
 4. **App Termination (Force-Kill)**: When the app is force-killed on iOS, JS runtime stops. Design mission-critical actions (like employee attendance check-ins) using native `SharedStorage` queue rather than expecting live JS callbacks while killed.
-5. **Background Sync**: `Widget.setRemoteConfig` allows native widgets to fetch fresh JSON from a REST endpoint without requiring server-side APNs push infrastructure.
+5. **Background Sync & OS Budgets**: `Widget.setRemoteConfig` allows native widgets to fetch fresh JSON from REST endpoints without APNs push, but never promise fixed 15-minute intervals when killed — Apple WidgetKit enforces a dynamic budget (~40–70 reloads/day based on usage) and Android enforces Doze Mode / App Standby limits.
 
 ## Documentation Links
 - [Official Interactive Web Docs & Simulator](https://react-native-vu.github.io/react-native-live-widgets/)

@@ -200,6 +200,8 @@ export interface TextStyle extends ShadowProps, AccessibilityProps {
   redacted?: boolean;
   /** Hiệu ứng cuộn lật số mượt mà kiểu Odometer (iOS 16+ numericText animation) khi số liệu thay đổi */
   numericAnimation?: boolean;
+  /** Cho phép text tự đổi màu theo chế độ StandBy / Tinted iOS 17+ / iOS 18 */
+  widgetAccentable?: boolean;
 }
 
 export type StyleProp<T> = T | null | undefined | false | StyleProp<T>[];
@@ -248,8 +250,8 @@ export interface ProgressNode extends BaseNode {
     startTimestamp?: number;
     /** Mốc kết thúc (epoch giây) */
     targetTimestamp?: number;
-    /** Giá trị cố định từ 0.0 đến 1.0 (nếu không dùng timer) */
-    value?: number;
+    /** Giá trị cố định từ 0.0 đến 1.0 hoặc biểu thức binding (vd '{{attendance.progress|divide:100}}') */
+    value?: number | string | DataBindingField<any>;
 
     // ── 2. Kiểu dáng hiển thị (Style & Shape) ───────────────────
     /** 'bar': thanh liền mạch | 'segmented': thanh nhiều chặng | 'circular': vòng tròn % */
@@ -296,8 +298,26 @@ export interface ProgressNode extends BaseNode {
     /** Có hiển thị chữ phần trăm ở góc không (ví dụ "75%") */
     showPercentage?: boolean;
     percentageColor?: DynamicColor;
+    /** Cho phép thanh tiến trình đổi màu theo StandBy / Tinted iOS 17+ / iOS 18 */
+    widgetAccentable?: boolean;
   };
 }
+
+import type { KnownSFSymbol } from './sf-symbols.generated';
+import type { KnownMaterialIcon } from './material-icons.generated';
+
+/**
+ * Biểu tượng hệ thống SF Symbols trên iOS (tự động đồng bộ từ Apple Xcode/SF Symbols).
+ * Hỗ trợ Auto-Complete hơn 9,500+ biểu tượng chuẩn và cho phép nhập chuỗi tùy ý nhờ `(string & {})`.
+ */
+export type SFSymbolName = KnownSFSymbol | (string & {});
+
+/**
+ * Danh sách gợi ý toàn bộ hơn 3,800+ biểu tượng Google Material Symbols & Icons chính thức trên Android.
+ * Tự động kích hoạt gợi ý Auto-Complete / IntelliSense trong IDE (VS Code, Cursor, WebStorm)
+ * và vẫn cho phép nhập bất kỳ tên Material Symbol nào khác nhờ `(string & {})`.
+ */
+export type MaterialIconName = KnownMaterialIcon | (string & {});
 
 export interface ImageNode extends BaseNode {
   type: 'Image';
@@ -308,12 +328,26 @@ export interface ImageNode extends BaseNode {
     base64?: string;
     /** Tên ảnh trong Xcode Assets.xcassets hoặc Android drawable */
     assetName?: string;
+    /** Tên ảnh riêng cho iOS trong Assets.xcassets */
+    iosAssetName?: string;
+    /** Tên ảnh riêng cho Android trong res/drawable */
+    androidAssetName?: string;
     /** Tên icon hệ thống SF Symbols trên iOS (ví dụ 'person.crop.circle.fill', 'flame.fill', 'cart.fill') */
-    systemName?: string;
+    systemName?: SFSymbolName;
+    /** Tên icon SF Symbol riêng biệt cho iOS (ưu tiên cao hơn systemName trên iOS) */
+    iosSystemName?: SFSymbolName;
+    /** Alias cho iosSystemName */
+    systemNameIos?: SFSymbolName;
+    /** Tên icon Google Material Symbols riêng biệt cho Android (ưu tiên cao hơn systemName trên Android) */
+    androidSystemName?: MaterialIconName;
+    /** Alias cho androidSystemName */
+    systemNameAndroid?: MaterialIconName;
+    /** Tên icon Google Material Symbols (tương đương androidSystemName) */
+    materialName?: MaterialIconName;
     /** Đường dẫn file cục bộ trong máy */
     filePath?: string;
     /** Icon SF Symbol dự phòng khi ảnh mạng chưa tải xong hoặc lỗi */
-    fallbackSystemName?: string;
+    fallbackSystemName?: SFSymbolName;
     width?: number;
     height?: number;
     /** 'fill': phủ kín khung ảnh (crop) | 'fit': vừa khung ảnh */
@@ -434,8 +468,8 @@ export interface DividerNode extends BaseNode {
 export interface GaugeNode extends BaseNode {
   type: 'Gauge';
   props: AccessibilityProps & {
-    /** Giá trị tiến độ từ 0.0 đến 1.0 */
-    value: number;
+    /** Giá trị tiến độ từ 0.0 đến 1.0 hoặc biểu thức binding */
+    value: number | string | DataBindingField<any>;
     /** Chuỗi hiển thị chính giữa đồng hồ (vd "85%", "120 km/h", "420") */
     valueText?: string;
     /** Nhãn phụ bên dưới đồng hồ (vd "KPI", "Kcal", "AQI") */
@@ -454,6 +488,8 @@ export interface GaugeNode extends BaseNode {
     strokeWidth?: number;
     /** Tự động ẩn hoặc làm mờ đồng hồ khi màn hình khóa */
     privacySensitive?: boolean;
+    /** Cho phép đồng hồ đổi màu theo StandBy / Tinted iOS 17+ / iOS 18 */
+    widgetAccentable?: boolean;
   };
 }
 
@@ -501,7 +537,12 @@ export interface BadgeNode extends BaseNode {
   type: 'Badge';
   props: {
     text: string;
-    systemName?: string;
+    systemName?: SFSymbolName;
+    iosSystemName?: SFSymbolName;
+    androidSystemName?: MaterialIconName;
+    systemNameIos?: SFSymbolName;
+    systemNameAndroid?: MaterialIconName;
+    materialName?: MaterialIconName;
     backgroundColor?: string;
     textColor?: string;
     borderColor?: string;
@@ -586,14 +627,14 @@ export type LayoutNode =
   | CustomNode;
 
 export interface DynamicIslandConfig {
-  compactLeading: LayoutNode;
-  compactTrailing: LayoutNode;
-  minimal?: LayoutNode;
+  compactLeading: LayoutNode | React.ReactNode;
+  compactTrailing: LayoutNode | React.ReactNode;
+  minimal?: LayoutNode | React.ReactNode;
   expanded?: {
-    leading?: LayoutNode;
-    trailing?: LayoutNode;
-    bottom?: LayoutNode;
-    center?: LayoutNode;
+    leading?: LayoutNode | React.ReactNode;
+    trailing?: LayoutNode | React.ReactNode;
+    bottom?: LayoutNode | React.ReactNode;
+    center?: LayoutNode | React.ReactNode;
   };
 }
 
@@ -605,14 +646,53 @@ export interface PhaseConfig {
   alertBody?: string;
 }
 
+export interface AlertConfig {
+  title: string;
+  body: string;
+  sound?: 'default' | string;
+}
+
+export type LiveActivityLifecycleState =
+  | 'active'
+  | 'started_by_push'
+  | 'stale'
+  | 'expired'
+  | 'ended'
+  | 'dismissed';
+
+export interface LiveActivityStateEvent {
+  activityId: string;
+  systemActivityId?: string;
+  state: LiveActivityLifecycleState;
+  timestamp: number;
+  pushToken?: string;
+}
+
 export interface StartActivityOptions {
   activityId: string;
   lockScreen: LayoutNode;
   dynamicIsland?: DynamicIslandConfig;
   phases?: PhaseConfig[];
+  /** Epoch timestamp (giây hoặc ms) mà từ thời điểm đó Activity bị coi là cũ (Stale) */
   staleTimestamp?: number;
+  /** Giao diện Lock Screen dự phòng hiển thị khi Activity chuyển sang trạng thái Stale */
+  staleLockScreen?: LayoutNode;
+  /** Giao diện Dynamic Island dự phòng hiển thị khi Activity chuyển sang trạng thái Stale */
+  staleDynamicIsland?: DynamicIslandConfig;
+  /** Điểm ưu tiên hiển thị trên Lock Screen & Dynamic Island khi có nhiều Live Activity (0.0 -> 100.0) */
+  relevanceScore?: number;
+  /** Cấu hình cảnh báo chuông / banner khi khởi chạy hoặc cập nhật */
+  alertConfig?: AlertConfig;
   alertTitle?: string;
   alertBody?: string;
+  /** Epoch timestamp (giây hoặc ms) tự động kết thúc Activity khi đến hạn */
+  scheduledEndTimestamp?: number;
+  /** Hoặc số giây tự động kết thúc tính từ lúc gọi start() */
+  autoEndAfterSeconds?: number;
+  /** Giao diện Lock Screen tổng kết tự động hiển thị khi Activity hết hạn (Scheduled End) */
+  expiredLockScreen?: LayoutNode;
+  /** Chính sách dọn dẹp sau khi hết hạn tự động */
+  expiredDismissalPolicy?: 'immediate' | 'default' | 'afterDate';
 }
 
 export interface UpdateActivityOptions {
@@ -620,8 +700,16 @@ export interface UpdateActivityOptions {
   lockScreen?: LayoutNode;
   dynamicIsland?: DynamicIslandConfig;
   staleTimestamp?: number;
+  staleLockScreen?: LayoutNode;
+  staleDynamicIsland?: DynamicIslandConfig;
+  relevanceScore?: number;
+  alertConfig?: AlertConfig;
   alertTitle?: string;
   alertBody?: string;
+  scheduledEndTimestamp?: number;
+  autoEndAfterSeconds?: number;
+  expiredLockScreen?: LayoutNode;
+  expiredDismissalPolicy?: 'immediate' | 'default' | 'afterDate';
 }
 
 export interface EndActivityOptions {
@@ -644,12 +732,30 @@ export interface WidgetSinglePageConfig {
   small?: LayoutNode;
   medium?: LayoutNode;
   large?: LayoutNode;
+  /** Tiện ích cỡ cực đại cho iPadOS / Tablet (systemExtraLarge) & Android 4x4+ */
+  extraLarge?: LayoutNode;
+  /** Chế độ iOS 17+ StandBy Mode (hiển thị chữ/số lớn khi đặt ngang sạc pin đầu giường) */
+  standBy?: LayoutNode;
   /** Màn hình khóa iOS 16+: Tiện ích hình chữ nhật bo góc dưới đồng hồ */
   accessoryRectangular?: LayoutNode;
   /** Màn hình khóa iOS 16+: Tiện ích ô tròn nhỏ dưới đồng hồ (Gauge / Circular Progress / Icon) */
   accessoryCircular?: LayoutNode;
   /** Màn hình khóa iOS 16+: Tiện ích 1 dòng chữ nhỏ trên đồng hồ */
   accessoryInline?: LayoutNode;
+}
+
+/** Cấu hình Control Widget (iOS 18+ Control Center / Action Button & Android Quick Settings Tile) */
+export interface ControlWidgetConfig {
+  type?: 'button' | 'toggle';
+  title: string;
+  subtitle?: string;
+  checkedTitle?: string;
+  checkedSubtitle?: string;
+  systemName?: SFSymbolName;
+  tintColor?: string;
+  checked?: boolean;
+  actionId: string;
+  deepLink?: string;
 }
 
 export interface WidgetLayoutConfig extends WidgetSinglePageConfig {
@@ -681,6 +787,8 @@ export interface WidgetTimelineEntry {
   date: number | string;
   /** Cấu hình layout tại mốc thời gian tương ứng */
   layout: WidgetLayoutConfig;
+  /** Dữ liệu Data Binding (tùy chọn) để nội suy sẵn vào layout tại mốc thời gian này */
+  data?: Record<string, any>;
 }
 
 export interface WidgetTimelineConfig {
@@ -704,18 +812,120 @@ export interface WidgetConfigOption {
   icon?: string;
 }
 
-export interface WidgetRemoteConfig {
-  /** URL API mà Widget Extension sẽ tự gọi ngầm (kể cả khi người dùng đã kill App chính) */
+export interface WidgetDataSchema {
+  /** Danh sách các key bắt buộc phải có trong dữ liệu sau khi flatten (vd ['user.name', 'attendance.progress']) */
+  requiredKeys?: string[];
+  /** Kiểm tra kiểu giá trị cơ bản của các key */
+  types?: Record<string, 'string' | 'number' | 'boolean'>;
+  /** Giá trị mặc định bù vào nếu key bị thiếu hoặc null */
+  defaults?: Record<string, string | number | boolean>;
+}
+
+export interface WidgetAuthRefreshConfig {
+  /** Endpoint cấp lại Access Token khi request chính gặp HTTP 401 */
   url: string;
+  method?: 'POST' | 'GET';
+  headers?: Record<string, string>;
+  body?: string | Record<string, any>;
+  /** Đường dẫn JSON lấy token mới từ phản hồi (mặc định 'accessToken' hoặc 'token') */
+  tokenPath?: string;
+  /** Tên header gắn token mới (mặc định 'Authorization') */
+  headerName?: string;
+  /** Tiền tố giá trị header (mặc định 'Bearer ') */
+  headerPrefix?: string;
+}
+
+export interface WidgetRemoteSourceConfig {
+  url: string;
+  method?: 'GET' | 'POST' | 'PUT';
+  headers?: Record<string, string>;
+  body?: string | Record<string, any>;
+  timeoutMs?: number;
+  enableETag?: boolean;
+}
+
+export interface WidgetRemoteConfig {
+  /** URL API chính mà Widget Extension sẽ tự gọi ngầm (kể cả khi App chính đã bị kill) */
+  url?: string;
   /** HTTP Method (mặc định 'GET') */
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PUT';
+  /** Payload gửi kèm cho POST / PUT */
+  body?: string | Record<string, any>;
   /** Headers xác thực (ví dụ { Authorization: 'Bearer ...' }) */
   headers?: Record<string, string>;
-  /** Chu kỳ tự động gọi lại API tính bằng phút (mặc định 15 phút) */
+  /** Thời gian chờ phản hồi mạng tính bằng mili-giây (mặc định 8000ms) */
+  timeoutMs?: number;
+  /** Thời gian sống của cache (giây) để tránh gọi API liên tục khi OS reload timeline */
+  cacheTtlSeconds?: number;
+  /** Bật Conditional Request qua header If-None-Match / If-Modified-Since & HTTP 304 */
+  enableETag?: boolean;
+  /** Số lần thử lại tối đa khi lỗi mạng hoặc HTTP 5xx (mặc định 0, exponential backoff) */
+  maxRetries?: number;
+  /** Độ trễ gốc (ms) cho lần retry đầu tiên (mặc định 500ms) */
+  retryDelayMs?: number;
+  /** Gọi đồng thời nhiều nguồn API, biến được gộp theo tiền tố `<sourceKey>.<path>` */
+  sources?: Record<string, WidgetRemoteSourceConfig>;
+  /** Ánh xạ tên biến đích: { targetKey: 'source.path|pipe' } */
+  mapping?: Record<string, string>;
+  /** Kiểm định dữ liệu trước khi cập nhật biến hiển thị trên Widget */
+  schema?: WidgetDataSchema;
+  /** Cấu hình tự động làm mới token nếu API trả HTTP 401 */
+  authRefresh?: WidgetAuthRefreshConfig;
+  /** Layout hiển thị dự phòng khi đồng bộ lỗi (hoặc dùng biến `{{_syncStatus}}`, `{{_syncError}}`, `{{_httpStatus}}`) */
+  errorFallback?: LayoutNode;
+  /**
+   * Mốc thời gian đề xuất sớm nhất (phút) cho OS tải lại timeline.
+   * Lưu ý: iOS WidgetKit dùng ngân sách động (~40–70 lần/ngày) và Android có Doze Mode,
+   * nên đây không phải cam kết đồng bộ chính xác từng phút khi app đóng.
+   */
   refreshIntervalMinutes?: number;
   /** Alias ngắn gọn cho refreshIntervalMinutes */
   intervalMinutes?: number;
 }
+
+// ─── 13B. STRUCTURED DATA BINDING ────────────────────────────────────────────
+
+export interface WidgetDataPipeOptions {
+  default?: string | number | boolean;
+  divide?: number;
+  multiply?: number;
+  add?: number;
+  round?: number;
+  upper?: boolean;
+  lower?: boolean;
+  currency?: string;
+  percent?: number;
+  ifTruthy?: [string | number, (string | number)?];
+}
+
+export interface DataBindingMethods<V = any> {
+  readonly __isDataBinding: true;
+  readonly __bindingPath: string;
+  readonly __bindingPipes: string[];
+  toToken(): string;
+  toString(): string;
+  valueOf(): string;
+  toJSON(): string;
+  default(fallback: string | number | boolean): DataBindingField<V>;
+  divide(divisor: number): DataBindingField<number>;
+  multiply(factor: number): DataBindingField<number>;
+  add(offset: number): DataBindingField<number>;
+  round(decimals?: number): DataBindingField<number>;
+  upper(): DataBindingField<string>;
+  lower(): DataBindingField<string>;
+  currency(symbol?: string): DataBindingField<string>;
+  percent(decimals?: number): DataBindingField<string>;
+  ifTruthy(thenValue: string | number, elseValue?: string | number): DataBindingField<string>;
+}
+
+export type DataBindingField<T = any> = DataBindingMethods<T> &
+  (T extends Array<infer U>
+    ? { readonly [index: number]: DataBindingField<U> }
+    : T extends object
+    ? { readonly [K in keyof T]-?: DataBindingField<T[K]> }
+    : unknown);
+
+export type DataBindingProxy<T = Record<string, any>> = DataBindingField<T>;
 
 export interface LiveActivityPushTokens {
   /** Token APNs của thiết bị (Device Token 64-hex chars) dùng cho Push Notification / Silent Push */
@@ -730,6 +940,12 @@ export interface LiveActivityPushTokens {
 
 export interface ActiveActivityInfo {
   activityId: string;
+  systemActivityId?: string;
+  activityState?: 'active' | 'stale' | 'ended' | 'dismissed' | 'expired' | string;
+  isStale?: boolean;
+  relevanceScore?: number;
+  staleTimestamp?: number;
+  scheduledEndTimestamp?: number;
   pushToken?: string;
 }
 
@@ -840,4 +1056,118 @@ export interface WidgetIR {
     nodes: Record<string, NodeRenderPlan>;
   };
   stateBindings: StateBinding[];
+}
+
+/**
+ * Danh sách kích thước Widget Family được WidgetKit hỗ trợ trên iOS:
+ */
+export type WidgetFamily =
+  | 'systemSmall'
+  | 'systemMedium'
+  | 'systemLarge'
+  | 'systemExtraLarge'
+  | 'accessoryCircular'
+  | 'accessoryRectangular'
+  | 'accessoryInline';
+
+/**
+ * Cấu hình hệ thống đa ngôn ngữ (i18n) cho Widgets.
+ * Tự động đồng bộ các bản dịch JSON (i18next) sang Apple String Catalog (Localizable.xcstrings / Localizable.strings).
+ */
+export interface WidgetsI18nConfig {
+  /**
+   * Đường dẫn tới thư mục chứa các file ngôn ngữ (ví dụ: './src/locales' hoặc './locales').
+   * Hệ thống sẽ tự động quét các file .json như vi.json, en.json, ja.json...
+   */
+  localesDir?: string;
+
+  /**
+   * Ngôn ngữ nguồn / mặc định (mặc định: 'vi')
+   */
+  defaultLocale?: string;
+
+  /**
+   * Khai báo bản đồ dịch trực tiếp (inline translations) thay cho hoặc bổ trợ cho file JSON.
+   * Ví dụ: { vi: { 'widgets.title': 'Tiêu đề' }, en: { 'widgets.title': 'Title' } }
+   */
+  translations?: Record<string, Record<string, any>>;
+}
+
+/**
+ * Kiểu chuỗi bản địa hóa đa ngôn ngữ: có thể là 1 string đơn, 1 i18n key hoặc 1 object đa ngôn ngữ.
+ */
+export type LocalizedString = string | Record<string, string>;
+
+/**
+ * Cấu hình một Widget trên Màn hình chính (Home Screen Widget)
+ */
+export interface WidgetDefinition {
+  /**
+   * Tên định danh Struct trong Swift (ví dụ: 'DynamicHomeScreenWidget', 'ShiftAttendanceHomeScreenWidget')
+   * Nếu không chỉ định, sẽ tự động sinh từ key (ví dụ: 'shift' -> 'ShiftHomeScreenWidget')
+   */
+  kind?: string;
+
+  /**
+   * Khóa định danh phân vùng dữ liệu / state của Widget (ví dụ: 'main', 'counter', 'shift', 'pro', 'workspace')
+   * Mặc định là 'main'
+   */
+  key?: string;
+
+  /**
+   * Tên hiển thị của Widget trong thư viện Widget trên iOS / Android.
+   * Có thể truyền:
+   * - Một i18n key (ví dụ: 'widgets.counter.title')
+   * - Hoặc chuỗi hiển thị trực tiếp
+   * - Hoặc Object đa ngôn ngữ: { vi: '...', en: '...', ja: '...' }
+   */
+  displayName: LocalizedString;
+
+  /**
+   * Mô tả tính năng của Widget hiển thị cho người dùng khi chọn thêm vào Màn hình chính.
+   * Có thể truyền key i18n, chuỗi trực tiếp hoặc Object đa ngôn ngữ.
+   */
+  description?: LocalizedString;
+
+  /**
+   * Các kích thước Widget được phép thêm (mặc định hỗ trợ tất cả các cỡ system + accessory)
+   */
+  supportedFamilies?: WidgetFamily[];
+
+  /**
+   * Có hỗ trợ căn lề StandBy Mode (iOS 17+) không (tự che viền khi ở chế độ cắm sạc ban đêm)
+   */
+  standbyMargins?: boolean;
+}
+
+/**
+ * Cấu hình toàn bộ hệ thống Widgets cho ứng dụng (dùng trong widgets.config.ts)
+ */
+export interface WidgetsProjectConfig {
+  /**
+   * Tên bundle Swift (mặc định: 'LiveWidgetsBundle')
+   */
+  bundleName?: string;
+
+  /**
+   * Cấu hình đa ngôn ngữ i18n (tự động đồng bộ với i18next JSON hoặc Object đa ngôn ngữ)
+   */
+  i18n?: WidgetsI18nConfig;
+
+  /**
+   * Bật tiện ích Live Activity & Dynamic Island (iOS 16.1+)
+   * Mặc định: true
+   */
+  liveActivity?: boolean;
+
+  /**
+   * Bật tiện ích Điều khiển Trung tâm Control Center (iOS 18.0+)
+   * Mặc định: true
+   */
+  controlWidgets?: boolean;
+
+  /**
+   * Danh sách các Widget trên Màn hình chính (Home Screen Widgets)
+   */
+  widgets: WidgetDefinition[];
 }

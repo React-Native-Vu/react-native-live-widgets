@@ -34,24 +34,88 @@ data class NotificationButtonData(
     val actionId: String
 )
 
+data class ActivityMetadata(
+    val isStale: Boolean,
+    val relevanceScore: Double?,
+    val staleTimestamp: Double?,
+    val scheduledEndTimestamp: Double?
+)
+
 object LiveActivityNotifier {
     const val CHANNEL_ID = "live_activity_channel"
     private const val PREFS = "rn_live_widgets_prefs"
     private const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
     private const val TICK_MILLIS = 30_000L
 
+    private fun normalizeEpochSeconds(ts: Double?): Double? {
+        if (ts == null || ts <= 0.0 || ts.isNaN()) return null
+        return if (ts > 10_000_000_000.0) ts / 1000.0 else ts
+    }
+
+    private fun enrichPayloadWithResolvedTimestamps(payloadJson: String): String {
+        return runCatching {
+            val json = JSONObject(payloadJson)
+            val now = System.currentTimeMillis() / 1000.0
+            if (json.has("scheduledEndTimestamp")) {
+                normalizeEpochSeconds(json.optDouble("scheduledEndTimestamp", -1.0))?.let {
+                    json.put("__resolvedScheduledEnd", it)
+                }
+            } else if (json.has("autoEndAfterSeconds")) {
+                val secs = json.optDouble("autoEndAfterSeconds", -1.0)
+                if (secs > 0.0 && !secs.isNaN()) {
+                    json.put("__resolvedScheduledEnd", now + secs)
+                }
+            }
+            if (json.has("staleTimestamp")) {
+                normalizeEpochSeconds(json.optDouble("staleTimestamp", -1.0))?.let {
+                    json.put("__resolvedStaleTimestamp", it)
+                }
+            }
+            json.toString()
+        }.getOrElse { payloadJson }
+    }
+
+    fun getActivityMetadata(context: Context, activityId: String): ActivityMetadata {
+        val raw = prefs(context).getString(activityId, null)
+            ?: return ActivityMetadata(false, null, null, null)
+        return runCatching {
+            val json = JSONObject(raw)
+            val now = System.currentTimeMillis() / 1000.0
+            val staleTs = if (json.has("__resolvedStaleTimestamp")) {
+                json.optDouble("__resolvedStaleTimestamp", -1.0).takeIf { it > 0 }
+            } else if (json.has("staleTimestamp")) {
+                normalizeEpochSeconds(json.optDouble("staleTimestamp", -1.0))
+            } else null
+            val schedEndTs = if (json.has("__resolvedScheduledEnd")) {
+                json.optDouble("__resolvedScheduledEnd", -1.0).takeIf { it > 0 }
+            } else if (json.has("scheduledEndTimestamp")) {
+                normalizeEpochSeconds(json.optDouble("scheduledEndTimestamp", -1.0))
+            } else null
+            val score = if (json.has("relevanceScore")) json.optDouble("relevanceScore") else null
+            val isStale = staleTs != null && now >= staleTs
+            ActivityMetadata(
+                isStale = isStale,
+                relevanceScore = score,
+                staleTimestamp = staleTs,
+                scheduledEndTimestamp = schedEndTs
+            )
+        }.getOrElse { ActivityMetadata(false, null, null, null) }
+    }
+
     fun start(context: Context, activityId: String, payloadJson: String) {
-        prefs(context).edit().putString(activityId, payloadJson).apply()
-        DynamicWidgetImageCache.prefetchUrlsSync(context, payloadJson)
-        showNotification(context, activityId, payloadJson)
-        scheduleNextRefresh(context, activityId, payloadJson)
+        val enriched = enrichPayloadWithResolvedTimestamps(payloadJson)
+        prefs(context).edit().putString(activityId, enriched).apply()
+        DynamicWidgetImageCache.prefetchUrlsSync(context, enriched)
+        showNotification(context, activityId, enriched, isUpdate = false)
+        scheduleNextRefresh(context, activityId, enriched)
     }
 
     fun update(context: Context, activityId: String, payloadJson: String) {
-        prefs(context).edit().putString(activityId, payloadJson).apply()
-        DynamicWidgetImageCache.prefetchUrlsSync(context, payloadJson)
-        showNotification(context, activityId, payloadJson)
-        scheduleNextRefresh(context, activityId, payloadJson)
+        val enriched = enrichPayloadWithResolvedTimestamps(payloadJson)
+        prefs(context).edit().putString(activityId, enriched).apply()
+        DynamicWidgetImageCache.prefetchUrlsSync(context, enriched)
+        showNotification(context, activityId, enriched, isUpdate = true)
+        scheduleNextRefresh(context, activityId, enriched)
     }
 
     fun end(context: Context, activityId: String) {
@@ -75,7 +139,7 @@ object LiveActivityNotifier {
 
     fun refresh(context: Context, activityId: String) {
         val json = prefs(context).getString(activityId, null) ?: return
-        showNotification(context, activityId, json)
+        showNotification(context, activityId, json, isUpdate = false)
         scheduleNextRefresh(context, activityId, json)
     }
 
@@ -83,18 +147,60 @@ object LiveActivityNotifier {
         val all = prefs(context).all
         for ((actId, value) in all) {
             val json = value as? String ?: continue
-            showNotification(context, actId, json)
+            showNotification(context, actId, json, isUpdate = false)
         }
     }
 
-    private fun showNotification(context: Context, activityId: String, payloadJson: String) {
+    private fun showNotification(
+        context: Context,
+        activityId: String,
+        payloadJson: String,
+        isUpdate: Boolean = false
+    ) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         ensureChannel(manager)
 
         val json = JSONObject(payloadJson)
-        val lockScreen = json.optJSONObject("lockScreen")
-        val alertTitle = json.optString("alertTitle", "")
-        val alertBody = json.optString("alertBody", "")
+        val now = System.currentTimeMillis() / 1000.0
+
+        val resolvedEnd = if (json.has("__resolvedScheduledEnd")) {
+            json.optDouble("__resolvedScheduledEnd", -1.0).takeIf { it > 0 }
+        } else if (json.has("scheduledEndTimestamp")) {
+            normalizeEpochSeconds(json.optDouble("scheduledEndTimestamp", -1.0))
+        } else null
+
+        val isExpired = resolvedEnd != null && now >= resolvedEnd
+        if (isExpired) {
+            val dismissal = json.optString("expiredDismissalPolicy", "immediate")
+            val expiredNode = json.optJSONObject("expiredLockScreen")
+            LiveActivityModule.emitStateChanged(activityId, "expired")
+            if (expiredNode == null || dismissal == "immediate") {
+                end(context, activityId)
+                return
+            }
+        }
+
+        val resolvedStale = if (json.has("__resolvedStaleTimestamp")) {
+            json.optDouble("__resolvedStaleTimestamp", -1.0).takeIf { it > 0 }
+        } else if (json.has("staleTimestamp")) {
+            normalizeEpochSeconds(json.optDouble("staleTimestamp", -1.0))
+        } else null
+        val isStale = resolvedStale != null && now >= resolvedStale
+        if (isStale && !isExpired) {
+            LiveActivityModule.emitStateChanged(activityId, "stale")
+        }
+
+        val lockScreen = when {
+            isExpired && json.has("expiredLockScreen") -> json.optJSONObject("expiredLockScreen")
+            isStale && json.has("staleLockScreen") -> json.optJSONObject("staleLockScreen")
+            else -> json.optJSONObject("lockScreen")
+        }
+
+        val alertObj = json.optJSONObject("alertConfig")
+        val alertTitle = alertObj?.optString("title", "")?.ifEmpty { null }
+            ?: json.optString("alertTitle", "")
+        val alertBody = alertObj?.optString("body", "")?.ifEmpty { null }
+            ?: json.optString("alertBody", "")
 
         val textLines = mutableListOf<String>()
         var targetTimestamp: Double? = null
@@ -134,13 +240,21 @@ object LiveActivityNotifier {
             )
         } else null
 
+        val shouldAlertOnUpdate = isUpdate && (alertTitle.isNotEmpty() || alertBody.isNotEmpty())
+
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(context.applicationInfo.icon)
             .setContentTitle(titleText)
             .setContentText(bodyText)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
+            .setOngoing(!isExpired)
+            .setOnlyAlertOnce(!shouldAlertOnUpdate)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+
+        if (json.has("relevanceScore")) {
+            val score = json.optDouble("relevanceScore", 0.0).coerceIn(0.0, 1000.0)
+            val invertedKey = (100000.0 - score * 100.0).toInt().coerceAtLeast(0)
+            builder.setSortKey(String.format("%06d", invertedKey))
+        }
 
         if (bodyText.length > 42) {
             builder.setStyle(NotificationCompat.BigTextStyle().bigText(bodyText))
@@ -164,7 +278,6 @@ object LiveActivityNotifier {
         }
 
         // 2. Xử lý thanh tiến trình đa dạng (UI.Progress)
-        val now = System.currentTimeMillis() / 1000.0
         if (progressData != null) {
             applyProgressToNotification(builder, progressData!!, now)
             progressData?.tintColor?.let { hex ->
@@ -196,6 +309,11 @@ object LiveActivityNotifier {
         }
 
         manager.notify(activityId.hashCode(), builder.build())
+
+        if (isExpired) {
+            prefs(context).edit().remove(activityId).apply()
+            cancelRefresh(context, activityId)
+        }
     }
 
     private fun applyProgressToNotification(
@@ -246,6 +364,24 @@ object LiveActivityNotifier {
                         nextTrigger = trigger
                     }
                 }
+            }
+        }
+
+        val resolvedStale = if (json.has("__resolvedStaleTimestamp")) {
+            json.optDouble("__resolvedStaleTimestamp", -1.0).takeIf { it > 0 }
+        } else normalizeEpochSeconds(json.optDouble("staleTimestamp", -1.0).takeIf { it > 0 })
+        if (resolvedStale != null && resolvedStale > now) {
+            if (nextTrigger == null || resolvedStale < nextTrigger) {
+                nextTrigger = resolvedStale
+            }
+        }
+
+        val resolvedEnd = if (json.has("__resolvedScheduledEnd")) {
+            json.optDouble("__resolvedScheduledEnd", -1.0).takeIf { it > 0 }
+        } else normalizeEpochSeconds(json.optDouble("scheduledEndTimestamp", -1.0).takeIf { it > 0 })
+        if (resolvedEnd != null && resolvedEnd > now) {
+            if (nextTrigger == null || resolvedEnd < nextTrigger) {
+                nextTrigger = resolvedEnd
             }
         }
 

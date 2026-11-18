@@ -1,3 +1,4 @@
+import ActivityKit
 import AppIntents
 import WidgetKit
 
@@ -22,9 +23,26 @@ public struct DynamicWidgetActionIntent: AppIntent {
   public func perform() async throws -> some IntentResult {
     if actionId == "refresh" || actionId.hasPrefix("refresh:") {
       let key = actionId.hasPrefix("refresh:") ? String(actionId.dropFirst(8)) : "main"
-      await DynamicWidgetStateStore.performRemoteSync(widgetKey: key)
+      await DynamicWidgetStateStore.performRemoteSync(widgetKey: key, forceRefresh: true)
     } else {
-      DynamicWidgetStateStore.handleAction(actionId)
+      let updatedState = DynamicWidgetStateStore.handleAction(actionId)
+      if DynamicWidgetStateStore.isCounterAction(actionId),
+         let newCounter = updatedState.remoteVariables?["counter"] {
+        for activity in Activity<DynamicActivityAttributes>.activities {
+          let oldJson = activity.content.state.payloadJson
+          let updatedJson = DynamicWidgetStateStore.applyCounterReplacement(in: oldJson, counterValue: newCounter)
+          if updatedJson != oldJson {
+            let nextContentState = DynamicActivityAttributes.ContentState(payloadJson: updatedJson)
+            await activity.update(
+              ActivityContent(
+                state: nextContentState,
+                staleDate: activity.content.staleDate,
+                relevanceScore: activity.content.relevanceScore
+              )
+            )
+          }
+        }
+      }
     }
 
     // Thông báo cho Main App nếu đang chạy ngầm hoặc nền
@@ -32,6 +50,43 @@ public struct DynamicWidgetActionIntent: AppIntent {
     CFNotificationCenterPostNotification(center, CFNotificationName("rn_live_widgets_action_clicked" as CFString), nil, nil, true)
 
     WidgetCenter.shared.reloadAllTimelines()
+    if #available(iOS 18.0, *) {
+      ControlCenter.shared.reloadAllControls()
+    }
+    return .result()
+  }
+}
+
+@available(iOS 18.0, *)
+public struct DynamicControlToggleIntent: SetValueIntent {
+  public static var title: LocalizedStringResource = "Toggle Control Widget"
+  public static var description = IntentDescription("Toggle interactive Control Center widget state.")
+
+  @Parameter(title: "Action ID")
+  public var actionId: String
+
+  @Parameter(title: "Value")
+  public var value: Bool
+
+  public init() {
+    self.actionId = ""
+    self.value = false
+  }
+
+  public init(actionId: String, value: Bool = false) {
+    self.actionId = actionId
+    self.value = value
+  }
+
+  public func perform() async throws -> some IntentResult {
+    let key = actionId.hasPrefix("toggle:") ? String(actionId.dropFirst(7)) : actionId
+    DynamicWidgetStateStore.setToggle(key, value: value)
+
+    let center = CFNotificationCenterGetDarwinNotifyCenter()
+    CFNotificationCenterPostNotification(center, CFNotificationName("rn_live_widgets_action_clicked" as CFString), nil, nil, true)
+
+    WidgetCenter.shared.reloadAllTimelines()
+    ControlCenter.shared.reloadAllControls()
     return .result()
   }
 }

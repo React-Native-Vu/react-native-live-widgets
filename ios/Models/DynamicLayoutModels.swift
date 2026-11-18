@@ -21,17 +21,47 @@ public struct DynamicPayloadDTO: Codable {
   public let lockScreen: LayoutNodeDTO?
   public let dynamicIsland: DynamicIslandDTO?
   public let staleTimestamp: Double?
+  public let staleLockScreen: LayoutNodeDTO?
+  public let staleDynamicIsland: DynamicIslandDTO?
+  public let expiredLockScreen: LayoutNodeDTO?
+  public let relevanceScore: Double?
+  public let scheduledEndTimestamp: Double?
+  public let autoEndAfterSeconds: Double?
+  public let expiredDismissalPolicy: String?
+  public let alertTitle: String?
+  public let alertBody: String?
+  public let alertSound: String?
 
   public init(
     activityId: String? = nil,
     lockScreen: LayoutNodeDTO? = nil,
     dynamicIsland: DynamicIslandDTO? = nil,
-    staleTimestamp: Double? = nil
+    staleTimestamp: Double? = nil,
+    staleLockScreen: LayoutNodeDTO? = nil,
+    staleDynamicIsland: DynamicIslandDTO? = nil,
+    expiredLockScreen: LayoutNodeDTO? = nil,
+    relevanceScore: Double? = nil,
+    scheduledEndTimestamp: Double? = nil,
+    autoEndAfterSeconds: Double? = nil,
+    expiredDismissalPolicy: String? = nil,
+    alertTitle: String? = nil,
+    alertBody: String? = nil,
+    alertSound: String? = nil
   ) {
     self.activityId = activityId
     self.lockScreen = lockScreen
     self.dynamicIsland = dynamicIsland
     self.staleTimestamp = staleTimestamp
+    self.staleLockScreen = staleLockScreen
+    self.staleDynamicIsland = staleDynamicIsland
+    self.expiredLockScreen = expiredLockScreen
+    self.relevanceScore = relevanceScore
+    self.scheduledEndTimestamp = scheduledEndTimestamp
+    self.autoEndAfterSeconds = autoEndAfterSeconds
+    self.expiredDismissalPolicy = expiredDismissalPolicy
+    self.alertTitle = alertTitle
+    self.alertBody = alertBody
+    self.alertSound = alertSound
   }
 }
 
@@ -79,6 +109,8 @@ public struct WidgetSinglePageDTO: Codable {
   public let small: LayoutNodeDTO?
   public let medium: LayoutNodeDTO?
   public let large: LayoutNodeDTO?
+  public let extraLarge: LayoutNodeDTO?
+  public let standBy: LayoutNodeDTO?
   public let accessoryRectangular: LayoutNodeDTO?
   public let accessoryCircular: LayoutNodeDTO?
   public let accessoryInline: LayoutNodeDTO?
@@ -91,6 +123,8 @@ public struct WidgetMultiPagePayloadDTO: Codable {
   public let small: LayoutNodeDTO?
   public let medium: LayoutNodeDTO?
   public let large: LayoutNodeDTO?
+  public let extraLarge: LayoutNodeDTO?
+  public let standBy: LayoutNodeDTO?
   public let accessoryRectangular: LayoutNodeDTO?
   public let accessoryCircular: LayoutNodeDTO?
   public let accessoryInline: LayoutNodeDTO?
@@ -99,6 +133,19 @@ public struct WidgetMultiPagePayloadDTO: Codable {
   public let initialPage: String?
   public let rootDeepLink: String?
   public let containerBackground: WidgetContainerBackgroundDTO?
+}
+
+public struct ControlWidgetConfigDTO: Codable {
+  public let type: String?
+  public let title: String
+  public let subtitle: String?
+  public let checkedTitle: String?
+  public let checkedSubtitle: String?
+  public let systemName: String?
+  public let tintColor: String?
+  public let checked: Bool?
+  public let actionId: String
+  public let deepLink: String?
 }
 
 public struct WidgetContainerBackgroundDTO: Codable {
@@ -119,10 +166,46 @@ public struct WidgetTimelineConfigDTO: Codable {
   public let afterDate: Double?
 }
 
-public struct WidgetRemoteConfigDTO: Codable {
+public struct WidgetDataSchemaDTO: Codable {
+  public let requiredKeys: [String]?
+  public let types: [String: String]?
+  public let defaults: [String: AnyCodable]?
+}
+
+public struct WidgetAuthRefreshConfigDTO: Codable {
   public let url: String
   public let method: String?
   public let headers: [String: String]?
+  public let body: AnyCodable?
+  public let tokenPath: String?
+  public let headerName: String?
+  public let headerPrefix: String?
+}
+
+public struct WidgetRemoteSourceConfigDTO: Codable {
+  public let url: String
+  public let method: String?
+  public let headers: [String: String]?
+  public let body: AnyCodable?
+  public let timeoutMs: Int?
+  public let enableETag: Bool?
+}
+
+public struct WidgetRemoteConfigDTO: Codable {
+  public let url: String?
+  public let method: String?
+  public let headers: [String: String]?
+  public let body: AnyCodable?
+  public let timeoutMs: Int?
+  public let cacheTtlSeconds: Int?
+  public let enableETag: Bool?
+  public let maxRetries: Int?
+  public let retryDelayMs: Int?
+  public let sources: [String: WidgetRemoteSourceConfigDTO]?
+  public let mapping: [String: String]?
+  public let schema: WidgetDataSchemaDTO?
+  public let authRefresh: WidgetAuthRefreshConfigDTO?
+  public let errorFallback: LayoutNodeDTO?
   public let refreshIntervalMinutes: Int?
   public let intervalMinutes: Int?
 
@@ -136,26 +219,47 @@ public struct InteractiveWidgetState: Codable {
   public var pageOrder: [String]?
   public var toggledItems: [String: Bool]
   public var lastActionId: String?
+  public var actionUpdatedAt: Double?
   public var lastSyncTime: String?
   public var remoteVariables: [String: String]?
   public var updatedAt: Double
+  public var etags: [String: String]?
+  public var lastModified: [String: String]?
+  public var syncStatus: String?
+  public var lastSyncError: String?
+  public var lastHttpStatus: Int?
+  public var accessToken: String?
 
   public init(
     activePage: String? = nil,
     pageOrder: [String]? = nil,
     toggledItems: [String: Bool] = [:],
     lastActionId: String? = nil,
+    actionUpdatedAt: Double? = nil,
     lastSyncTime: String? = nil,
     remoteVariables: [String: String]? = nil,
-    updatedAt: Double = Date().timeIntervalSince1970
+    updatedAt: Double = Date().timeIntervalSince1970,
+    etags: [String: String]? = nil,
+    lastModified: [String: String]? = nil,
+    syncStatus: String? = nil,
+    lastSyncError: String? = nil,
+    lastHttpStatus: Int? = nil,
+    accessToken: String? = nil
   ) {
     self.activePage = activePage
     self.pageOrder = pageOrder
     self.toggledItems = toggledItems
     self.lastActionId = lastActionId
+    self.actionUpdatedAt = actionUpdatedAt
     self.lastSyncTime = lastSyncTime
     self.remoteVariables = remoteVariables
     self.updatedAt = updatedAt
+    self.etags = etags
+    self.lastModified = lastModified
+    self.syncStatus = syncStatus
+    self.lastSyncError = lastSyncError
+    self.lastHttpStatus = lastHttpStatus
+    self.accessToken = accessToken
   }
 }
 
@@ -228,7 +332,13 @@ public struct AnyCodable: Codable {
   }
 
   public var stringValue: String? { value as? String }
-  public var doubleValue: Double? { value as? Double }
+  public var doubleValue: Double? {
+    if let d = value as? Double { return d }
+    if let i = value as? Int { return Double(i) }
+    if let n = value as? NSNumber { return n.doubleValue }
+    if let s = value as? String { return Double(s.trimmingCharacters(in: .whitespaces)) }
+    return nil
+  }
   public var boolValue: Bool? { value as? Bool }
   public var arrayValue: [Any]? { value as? [Any] }
   public var doubleArrayValue: [Double]? {
