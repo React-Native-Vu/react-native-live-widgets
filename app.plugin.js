@@ -99,19 +99,33 @@ try {
    * Tự động chạy TypeScript-driven Widget Codegen & i18n Sync trong quá trình expo prebuild
    */
   const withLiveWidgetsCodegen = (config, options = {}) => {
-    return withDangerousMod(config, [
+    config = withDangerousMod(config, [
       'ios',
       async (modConfig) => {
         const projectRoot = modConfig.modRequest.projectRoot;
         try {
           runCodegen(projectRoot, options.configPath);
         } catch (error) {
-          // Nếu chưa có file widgets.config.ts thì chỉ thông báo log, không làm fail build prebuild
           console.log(`ℹ️ [Expo Plugin] LiveWidgets Codegen: ${error.message}`);
         }
         return modConfig;
       },
     ]);
+
+    config = withDangerousMod(config, [
+      'android',
+      async (modConfig) => {
+        const projectRoot = modConfig.modRequest.projectRoot;
+        try {
+          runCodegen(projectRoot, options.configPath);
+        } catch (error) {
+          console.log(`ℹ️ [Expo Plugin] LiveWidgets Codegen: ${error.message}`);
+        }
+        return modConfig;
+      },
+    ]);
+
+    return config;
   };
 
   /**
