@@ -60,18 +60,49 @@ if (fs.existsSync(packageJsonPath)) {
   } catch (_e) {}
 }
 
-let appGroup = customAppGroup || `group.com.${pkgName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+let detectedAppName = pkgName;
+if (fs.existsSync(iosDir)) {
+  try {
+    const xcodeProjects = fs.readdirSync(iosDir).filter((file) => file.endsWith('.xcodeproj'));
+    if (xcodeProjects.length > 0) {
+      detectedAppName = xcodeProjects[0].replace('.xcodeproj', '');
+    }
+  } catch (_e) {}
+}
+
+let appGroup = customAppGroup || `group.com.${detectedAppName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
 console.log(`📦 App Group configured: ${appGroup}`);
 
-// 2. Handle Expo project (app.json with "expo" property or "expo" dependency)
+// 2. Ensure app.json exists and contains "name" and "displayName"
 let isExpo = false;
 let appJson = null;
 
-if (fs.existsSync(appJsonPath)) {
+if (!fs.existsSync(appJsonPath)) {
+  appJson = {
+    name: detectedAppName,
+    displayName: detectedAppName,
+  };
+  fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + '\n', 'utf8');
+  console.log(`✅ Created app.json with name: "${detectedAppName}"`);
+} else {
   try {
     appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
     if (appJson && typeof appJson.expo === 'object') {
       isExpo = true;
+    }
+
+    let appJsonChanged = false;
+    if (!appJson.name) {
+      appJson.name = detectedAppName;
+      appJsonChanged = true;
+    }
+    if (!appJson.displayName) {
+      appJson.displayName = appJson.name || detectedAppName;
+      appJsonChanged = true;
+    }
+    if (appJsonChanged) {
+      fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + '\n', 'utf8');
+      console.log(`✅ Updated app.json with name: "${appJson.name}"`);
     }
   } catch (_e) {}
 }
@@ -120,7 +151,83 @@ if (isExpo && appJson) {
   }
 }
 
-// 3. Configure iOS Native Project (if ios/ folder exists)
+// 3. Configure Entrypoint file (index.js / index.ts / index.tsx)
+const entryCandidates = ['index.js', 'index.ts', 'index.tsx', 'index.jsx'];
+let entryFile = null;
+for (const cand of entryCandidates) {
+  const full = path.join(projectRoot, cand);
+  if (fs.existsSync(full)) {
+    entryFile = full;
+    break;
+  }
+}
+
+if (entryFile) {
+  try {
+    let content = fs.readFileSync(entryFile, 'utf8');
+    let entryModified = false;
+
+    // Check if AppRegistry uses appName and import from app.json is missing
+    const hasAppJsonImport = /from\s+['"]\.\/app(?:\.json)?['"]/.test(content);
+    const usesAppName = /\bappName\b/.test(content);
+    if (usesAppName && !hasAppJsonImport) {
+      content = "import { name as appName } from './app.json';\n" + content;
+      entryModified = true;
+    }
+
+    // Check if LiveActivity.registerBackgroundActionHandler() is already called
+    const hasBackgroundHandler = content.includes('registerBackgroundActionHandler');
+    if (!hasBackgroundHandler) {
+      const liveWidgetsImportRegex = /from\s+['"]react-native-live-widgets['"]/;
+      if (!liveWidgetsImportRegex.test(content)) {
+        const lines = content.split('\n');
+        let lastImportLineIdx = -1;
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].trim().startsWith('import ')) {
+            lastImportLineIdx = i;
+          }
+        }
+
+        const importLine = "import { LiveActivity } from 'react-native-live-widgets';";
+        if (lastImportLineIdx !== -1) {
+          lines.splice(lastImportLineIdx + 1, 0, importLine);
+        } else {
+          lines.unshift(importLine);
+        }
+        content = lines.join('\n');
+      } else if (!/import\s+[^;]*\bLiveActivity\b[^;]*from\s+['"]react-native-live-widgets['"]/.test(content)) {
+        content = content.replace(
+          /(import\s*\{)([^}]*)(\}\s*from\s*['"]react-native-live-widgets['"])/,
+          '$1 LiveActivity, $2$3'
+        );
+      }
+
+      // Add LiveActivity.registerBackgroundActionHandler(); before AppRegistry.registerComponent or registerRootComponent
+      const handlerCall = '\nLiveActivity.registerBackgroundActionHandler();\n';
+      const mountIndex = content.indexOf('AppRegistry.registerComponent') !== -1
+        ? content.indexOf('AppRegistry.registerComponent')
+        : content.indexOf('registerRootComponent');
+
+      if (mountIndex !== -1) {
+        content = content.slice(0, mountIndex) + handlerCall + content.slice(mountIndex);
+      } else {
+        content += handlerCall;
+      }
+      entryModified = true;
+    }
+
+    if (entryModified) {
+      fs.writeFileSync(entryFile, content, 'utf8');
+      console.log(`✅ Configured ${path.basename(entryFile)} with LiveActivity.registerBackgroundActionHandler()`);
+    } else {
+      console.log(`ℹ️ Entrypoint ${path.basename(entryFile)} is already properly configured`);
+    }
+  } catch (err) {
+    console.warn(`⚠️ Failed to inspect/update entrypoint:`, err.message);
+  }
+}
+
+// 4. Configure iOS Native Project (if ios/ folder exists)
 if (fs.existsSync(iosDir)) {
   console.log('\n🍎 Configuring iOS (Info.plist, Entitlements, WidgetExtension Target)...');
 
@@ -493,7 +600,7 @@ private var commonFamilies: [WidgetFamily] {
   console.log('👉 npx react-native-live-widgets init (to link Xcode target automatically)');
 }
 
-// 4. Configure Android Native Project (if android/ folder exists)
+// 5. Configure Android Native Project (if android/ folder exists)
 if (fs.existsSync(androidDir)) {
   console.log('\n🤖 Verifying Android configuration...');
   const manifestPath = path.join(androidDir, 'app', 'src', 'main', 'AndroidManifest.xml');
@@ -526,7 +633,7 @@ if (fs.existsSync(androidDir)) {
   }
 }
 
-// 5. Ensure widgets.config.ts exists
+// 6. Ensure widgets.config.ts exists
 const configCandidates = [
   'widgets.config.ts',
   'widgets.config.js',
@@ -624,7 +731,7 @@ export default defineWidgetConfig({
   console.log('✅ Created default configuration: widgets.config.ts');
 }
 
-// 6. Automatically run Codegen to generate icons, localizations, and LiveWidgetsBundle.swift
+// 7. Automatically run Codegen to generate icons, localizations, and LiveWidgetsBundle.swift
 try {
   const { runCodegen } = require('./codegen');
   runCodegen(projectRoot);
