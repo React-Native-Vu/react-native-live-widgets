@@ -11,7 +11,9 @@ appId: com.livewidgetsexample
     element:
       text: ".*Timeline Entries.*"
     direction: DOWN
-    timeout: 20000
+    timeout: 25000
+    speed: 60
+    visibilityPercentage: 40
 
 - tapOn:
     text: ".*Timeline Entries.*"
@@ -19,12 +21,14 @@ appId: com.livewidgetsexample
 # 2. Bật chế độ tự động đổi dữ liệu Auto-Cycle
 - scrollUntilVisible:
     element:
-      text: ".*(Bật Auto|Tắt tự động).*"
+      text: ".*(Bật tự động|Đang chạy Auto).*"
     direction: DOWN
-    timeout: 15000
+    timeout: 25000
+    speed: 60
+    visibilityPercentage: 40
 
 - tapOn:
-    text: ".*(Bật Auto|Tắt tự động).*"
+    text: ".*(Bật tự động|Đang chạy Auto).*"
 
 # 3. Ra màn hình Home kiểm tra timeline đang chạy
 - pressKey: Home
