@@ -14,4 +14,4 @@ appId: com.livewidgetsexample
 - tapOn: "Cập nhật Widget"
 
 # Trở về màn hình chính Home Screen để hiển thị Widget
-- pressHome
+- pressKey: Home

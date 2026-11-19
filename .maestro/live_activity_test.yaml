@@ -14,12 +14,11 @@ appId: com.livewidgetsexample
 - tapOn: "Bật Live Activity"
 
 # Ra màn hình Home để kiểm tra Dynamic Island / Lock Screen
-- pressHome
+- pressKey: Home
 
 # Vuốt thanh thông báo / Notification Center xuống để kiểm tra Live Activity
 - swipe:
-    start: 50%, 0%
-    end: 50%, 60%
+    direction: DOWN
 
 # Quay lại App LiveWidgetsExample
 - launchApp
