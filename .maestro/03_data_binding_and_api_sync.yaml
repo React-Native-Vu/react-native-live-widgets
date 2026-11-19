@@ -1,0 +1,33 @@
+appId: com.livewidgetsexample
+---
+# Flow 3: Declarative Data Binding & Remote API Sync Engine
+- launchApp:
+    clearState: false
+
+- assertVisible: "REACT NATIVE LIVE WIDGETS"
+
+# 1. Cuộn đến bảng ApiSyncPanel
+- scrollUntilVisible:
+    element:
+      text: ".*Đổi & Đồng bộ Data Binding.*"
+    direction: DOWN
+    timeout: 20000
+
+# 2. Đổi mẫu dữ liệu động (Data Binding cycle)
+- tapOn:
+    text: ".*Đổi & Đồng bộ Data Binding.*"
+
+# 3. Nạp cấu hình đồng bộ ngầm khi app force-kill (Remote Config 2.0)
+- tapOn:
+    text: ".*Nạp Remote Config.*"
+
+# 4. Bấm gọi API trực tiếp đồng bộ ra Widget
+- tapOn:
+    text: ".*Gọi API & Cập nhật Widget.*"
+
+# 5. Thoát ra màn hình Home kiểm tra Widget đã cập nhật dữ liệu mới
+- pressKey: Home
+
+# 6. Quay lại app
+- launchApp:
+    stopApp: false

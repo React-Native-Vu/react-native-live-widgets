@@ -1,0 +1,35 @@
+appId: com.livewidgetsexample
+---
+# Flow 6: Control Widgets (iOS 18+ / Android Quick Settings) & Live Activity Alerts
+- launchApp:
+    clearState: false
+
+- assertVisible: "REACT NATIVE LIVE WIDGETS"
+
+# 1. Cấu hình Control Toggle
+- scrollUntilVisible:
+    element:
+      text: ".*Set Control Toggle.*"
+    direction: DOWN
+    timeout: 20000
+
+- tapOn:
+    text: ".*Set Control Toggle.*"
+
+# 2. Cấu hình Control Button
+- tapOn:
+    text: ".*Set Control Button.*"
+
+# 3. Kích hoạt Alert Update (gửi thông báo cập nhật độ ưu tiên cao)
+- scrollUntilVisible:
+    element:
+      text: ".*Alert Update.*"
+    direction: DOWN
+    timeout: 15000
+
+- tapOn:
+    text: ".*Alert Update.*"
+
+# 4. Cleanup expired activities
+- tapOn:
+    text: ".*Cleanup.*"

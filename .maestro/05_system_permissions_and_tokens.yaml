@@ -1,0 +1,36 @@
+appId: com.livewidgetsexample
+---
+# Flow 5: System Permissions & APNs Push Tokens Inspection
+- launchApp:
+    clearState: false
+
+- assertVisible: "REACT NATIVE LIVE WIDGETS"
+
+# 1. Bấm Kiểm tra Quyền hệ thống
+- scrollUntilVisible:
+    element:
+      text: ".*Kiểm tra Quyền.*"
+    direction: DOWN
+    timeout: 15000
+
+- tapOn:
+    text: ".*Kiểm tra Quyền.*"
+
+# 2. Bấm Soát lỗi ngầm
+- tapOn:
+    text: ".*Soát lỗi ngầm.*"
+
+# 3. Mở rộng xem mã APNs Push Token
+- scrollUntilVisible:
+    element:
+      text: ".*MÃ TOKEN ĐẨY APNS.*"
+    direction: DOWN
+    timeout: 15000
+
+- tapOn:
+    text: ".*MÃ TOKEN ĐẨY APNS.*"
+
+# 4. Bấm Làm mới token
+- tapOn:
+    text: ".*Làm mới.*"
+    optional: true

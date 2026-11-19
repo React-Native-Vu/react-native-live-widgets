@@ -1,0 +1,9 @@
+# Maestro Test Suite: React Native Live Widgets End-to-End Test Suite
+# Chạy toàn bộ 7 kịch bản kiểm thử tự động của thư viện
+- runFlow: 01_live_activity_lifecycle.yaml
+- runFlow: 02_interactive_counter.yaml
+- runFlow: 03_data_binding_and_api_sync.yaml
+- runFlow: 04_timeline_and_auto_cycle.yaml
+- runFlow: 05_system_permissions_and_tokens.yaml
+- runFlow: 06_control_widget_and_lifecycle_suite.yaml
+- runFlow: 07_preset_switching_gallery.yaml

@@ -1,0 +1,43 @@
+appId: com.livewidgetsexample
+---
+# Flow 1: Live Activities & Dynamic Island Lifecycle
+- launchApp:
+    clearState: false
+
+- assertVisible: "REACT NATIVE LIVE WIDGETS"
+
+# 1. Bật Live Activity từ Preset đầu tiên
+- scrollUntilVisible:
+    element:
+      text: ".*(Bật|Đổi) Live Activity.*"
+    direction: DOWN
+    timeout: 30000
+    speed: 60
+    visibilityPercentage: 40
+
+- tapOn:
+    text: ".*(Bật|Đổi) Live Activity.*"
+
+# 2. Ra màn hình Home để thấy Dynamic Island
+- pressKey: Home
+
+# 3. Vuốt Notification Center xuống để kiểm tra banner màn hình khóa
+- swipe:
+    direction: DOWN
+
+# 4. Quay lại app mà không mất state
+- launchApp:
+    stopApp: false
+
+# 5. Kết thúc Live Activity
+- scrollUntilVisible:
+    element:
+      text: ".*(Kết thúc Live Activity|DANH SÁCH).*"
+    direction: DOWN
+    timeout: 15000
+    speed: 60
+    visibilityPercentage: 40
+
+- tapOn:
+    text: ".*Kết thúc Live Activity.*"
+    optional: true

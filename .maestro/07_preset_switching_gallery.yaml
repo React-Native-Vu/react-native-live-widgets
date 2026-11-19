@@ -1,0 +1,26 @@
+appId: com.livewidgetsexample
+---
+# Flow 7: Widget Gallery Presets Switching & Multi-Slot Layouts
+- launchApp:
+    clearState: false
+
+- assertVisible: "REACT NATIVE LIVE WIDGETS"
+
+# 1. Cuộn đến danh sách mẫu giao diện
+- scrollUntilVisible:
+    element:
+      text: "DANH SÁCH MẪU GIAO DIỆN"
+    direction: DOWN
+    timeout: 30000
+    speed: 60
+
+# 2. Bấm Cập nhật Widget trên thẻ Preset đầu tiên
+- tapOn:
+    text: ".*(Cập nhật Widget|Đang áp dụng).*"
+
+# 3. Trở về màn hình chính Home Screen để kiểm tra widget đã đổi giao diện
+- pressKey: Home
+
+# 4. Mở lại app
+- launchApp:
+    stopApp: false
