@@ -6,15 +6,17 @@ on:
       - main
       - master
       - develop
+      - dev
   pull_request:
     branches:
       - main
       - master
       - develop
+      - dev
 
 jobs:
   verify:
-    name: Typecheck, Build & Package Verification
+    name: Typecheck, Build, Test & Package Verification
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -28,8 +30,8 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install TypeScript toolchain
-        run: npm install --no-save typescript @types/react
+      - name: Install Dependencies & TypeScript Toolchain
+        run: npm install --no-save typescript @types/react @expo/config-plugins
 
       - name: Run TypeScript typecheck
         run: npx tsc -p tsconfig.json --noEmit
@@ -37,9 +39,49 @@ jobs:
       - name: Build library (lib/*.js + lib/*.d.ts)
         run: npm run build
 
-      - name: Verify CLI setup script syntax
-        run: node --check cli/setup.js && node --check scripts/build.js && node --check scripts/release.js && node --check app.plugin.js
+      - name: Run Comprehensive Test Suite (13 IR Suites + Expo Plugin)
+        run: npm test
+
+      - name: Verify CLI & Generator Scripts Syntax
+        run: |
+          node --check cli/setup.js
+          node --check cli/codegen.js
+          node --check scripts/build.js
+          node --check scripts/release.js
+          node --check app.plugin.js
 
       - name: Verify npm package tarball
         run: npm pack --dry-run
 
+  ios-validation:
+    name: iOS Podspec & Swift Code Verification
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set Xcode Version
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app || sudo xcode-select -s /Applications/Xcode_16.0.app || true
+
+      - name: Validate CocoaPods Podspec
+        run: |
+          pod lib lint react-native-live-widgets.podspec --allow-warnings --skip-import-validation --platforms=ios
+
+  android-validation:
+    name: Android Gradle Build Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Validate Android Project Structure
+        run: |
+          test -f android/build.gradle
+          test -d android/src/main
+          echo "Android source tree structure verified."

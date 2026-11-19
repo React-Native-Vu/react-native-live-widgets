@@ -1,0 +1,28 @@
+appId: com.livewidgetsexample
+---
+# Flow 1: Live Activity & Dynamic Island Lifecycle E2E Test
+- launchApp:
+    clearState: true
+
+- assertVisible: "React Native Live Widgets"
+
+# Tap to start Live Activity
+- tapOn: "Start Delivery Activity"
+
+# Go to home screen to inspect Dynamic Island and Lock Screen
+- pressHome
+
+# Pull notification center down on Simulator
+- swipe:
+    start: 50%, 0%
+    end: 50%, 60%
+
+# Assert glanceable Live Activity banner exists
+- assertVisible: "Order On The Way"
+
+# Return to app and update state
+- launchApp
+- tapOn: "Update Activity: Arriving"
+
+# End activity
+- tapOn: "End Activity"

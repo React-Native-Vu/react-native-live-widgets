@@ -14,7 +14,7 @@
 
 *Write 100% Declarative TypeScript. Render dynamically to Native SwiftUI (WidgetKit) & Android 2D Canvas without touching Xcode or Android Studio.*
 
-[🌐 Docs Website](https://react-native-vu.github.io/react-native-live-widgets/) • [🤖 llms.txt](https://react-native-vu.github.io/react-native-live-widgets/llms.txt) • [🧠 AI Agent Skill](skills/react-native-live-widgets/SKILL.md) • [📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Hướng dẫn Tiếng Việt](docs/GUIDE-VI.md) • [⚡ Expo Guide](docs/EXPO-GUIDE-VI.md) • [📱 Bare RN Demo](https://github.com/React-Native-Vu/LiveWidgetsExample) • [⚡ Expo Demo](https://github.com/React-Native-Vu/LiveWidgetsExampleExpo)
+[🌐 Docs Website](https://react-native-vu.github.io/react-native-live-widgets/) • [📋 Compatibility Matrix](docs/COMPATIBILITY.md) • [📊 Benchmarks](docs/BENCHMARKS.md) • [🔄 Migration](docs/MIGRATION.md) • [🎭 E2E Tests](.maestro/README.md) • [🤖 llms.txt](https://react-native-vu.github.io/react-native-live-widgets/llms.txt) • [📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Tiếng Việt](docs/GUIDE-VI.md)
 
 ---
 
@@ -98,6 +98,24 @@ Until now, adding **Live Activities** or **Home Screen Widgets** to a React Nati
 - 🔄 **Realtime Data Sync (`SharedStorage`)**: Single source of truth across Main App, Lock Screen, and Home Screen.
 - 🌐 **Silent Background Remote API Sync**: Automatically fetch REST APIs and update Widgets even when the App is **Force-Killed**.
 - 🤖 **Android Parity**: Supports Android 16+ Promoted Live Notifications and Home Screen AppWidgets.
+
+---
+
+## 📋 Compatibility Matrix & Stability
+
+| Library Version | React Native | Expo SDK | iOS Minimum | Android Minimum | Architecture | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :---: |
+| **`v1.2.x` (Latest)** | **0.72 – 0.77+** | **SDK 50, 51, 52** | **iOS 16.1+** *(17.0+ interactive)* | **Android 12 (API 31)+** | **Old Arch & New Arch** | 🟢 Production Ready |
+| **`v1.1.x`** | 0.70 – 0.74 | SDK 49, 50 | iOS 16.1+ | Android 10 (API 29)+ | Old Arch | 🟡 Maintenance |
+
+👉 Read our full **[Version Compatibility Matrix](docs/COMPATIBILITY.md)**, **[Semantic Versioning & Migration Policy](docs/MIGRATION.md)**, and **[Hardware Benchmark Proof](docs/BENCHMARKS.md)**.
+
+### 📚 Capability Guides:
+- 📱 **[Live Activities & Dynamic Island Guide](docs/capabilities/live-activities.md)**
+- ⚡ **[Interactive Home Screen Widgets Guide](docs/capabilities/interactive-widgets.md)**
+- ⏱️ **[Zero-Battery Hardware Timers Guide](docs/capabilities/zero-battery-timers.md)**
+- 🌐 **[Force-Killed Background Remote Sync Guide](docs/capabilities/background-remote-sync.md)**
+- 🎭 **[Maestro E2E Testing Framework](.maestro/README.md)**
 
 ---
 
