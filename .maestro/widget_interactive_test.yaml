@@ -1,0 +1,20 @@
+appId: com.livewidgetsexample
+---
+# Flow 2: 2-Way Interactive Home Screen Widget Click Test
+- launchApp:
+    clearState: false
+
+- assertVisible: "React Native Live Widgets"
+
+# Ensure initial counter is rendered
+- assertVisible: "Counter:"
+
+# Exit to Home Screen
+- pressHome
+
+# Tap Plus button directly on the Home Screen Widget
+- tapOn: "➕"
+
+# Re-open app to assert state was received by useWidgetAction hook
+- launchApp
+- assertVisible: "Counter: 1"
