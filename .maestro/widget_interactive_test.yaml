@@ -8,10 +8,15 @@ appId: com.livewidgetsexample
 
 # Cuộn tìm và bấm "Cập nhật Widget"
 - scrollUntilVisible:
-    element: "Cập nhật Widget"
+    element:
+      text: ".*(Cập nhật Widget|Đang áp dụng).*"
     direction: DOWN
+    timeout: 30000
+    speed: 60
+    visibilityPercentage: 40
 
-- tapOn: "Cập nhật Widget"
+- tapOn:
+    text: ".*(Cập nhật Widget|Đang áp dụng).*"
 
 # Trở về màn hình chính Home Screen để hiển thị Widget
 - pressKey: Home

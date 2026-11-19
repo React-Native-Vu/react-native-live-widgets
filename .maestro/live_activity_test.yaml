@@ -6,12 +6,17 @@ appId: com.livewidgetsexample
 
 - assertVisible: "REACT NATIVE LIVE WIDGETS"
 
-# Cuộn tìm và bấm nút "Bật Live Activity" trên thẻ preset đầu tiên
+# Cuộn tìm và bấm nút bật/đổi Live Activity trên thẻ Preset
 - scrollUntilVisible:
-    element: "Bật Live Activity"
+    element:
+      text: ".*(Bật|Đổi) Live Activity.*"
     direction: DOWN
+    timeout: 30000
+    speed: 60
+    visibilityPercentage: 40
 
-- tapOn: "Bật Live Activity"
+- tapOn:
+    text: ".*(Bật|Đổi) Live Activity.*"
 
 # Ra màn hình Home để kiểm tra Dynamic Island / Lock Screen
 - pressKey: Home
@@ -23,9 +28,14 @@ appId: com.livewidgetsexample
 # Quay lại App LiveWidgetsExample
 - launchApp
 
-# Cuộn xuống nút kết thúc Live Activity
+# Cuộn xuống nút kết thúc Live Activity nếu có
 - scrollUntilVisible:
-    element: "Kết thúc Live Activity đang chạy"
+    element:
+      text: ".*Kết thúc.*"
     direction: DOWN
+    timeout: 20000
+    speed: 60
+    visibilityPercentage: 40
 
-- tapOn: "Kết thúc Live Activity đang chạy"
+- tapOn:
+    text: ".*Kết thúc.*"
