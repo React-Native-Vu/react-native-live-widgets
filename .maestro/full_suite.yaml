@@ -1,3 +1,5 @@
+appId: com.livewidgetsexample
+---
 # Maestro Test Suite: React Native Live Widgets End-to-End Test Suite
 # Chạy toàn bộ 7 kịch bản kiểm thử tự động của thư viện
 - runFlow: 01_live_activity_lifecycle.yaml
