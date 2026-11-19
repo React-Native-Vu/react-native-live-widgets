@@ -55,10 +55,18 @@ jobs:
 
   ios-validation:
     name: iOS Podspec & Swift Code Verification
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      - name: Install CocoaPods
+        run: gem install cocoapods --no-document
 
       - name: Validate CocoaPods Podspec Specification
         run: |
