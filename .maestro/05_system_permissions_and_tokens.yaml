@@ -4,21 +4,29 @@ appId: com.livewidgetsexample
 - launchApp:
     clearState: false
 
-- assertVisible: "REACT NATIVE LIVE WIDGETS"
+# Cuộn lên đầu trang nếu flow trước đang ở cuối trang
+- scrollUntilVisible:
+    element: "REACT NATIVE LIVE WIDGETS"
+    direction: UP
+    timeout: 10000
+    speed: 70
+    optional: true
 
-# 1. Bấm Kiểm tra Quyền hệ thống
+# 1. Cuộn đến phần Quyền hệ thống và bấm Kiểm tra
 - scrollUntilVisible:
     element:
-      text: ".*Kiểm tra Quyền.*"
+      text: ".*2\\. Quyền & Cài đặt hệ thống.*"
     direction: DOWN
     timeout: 15000
+    speed: 60
+    visibilityPercentage: 40
 
 - tapOn:
-    text: ".*Kiểm tra Quyền.*"
+    text: "Kiểm tra"
 
-# 2. Bấm Soát lỗi ngầm
+# 2. Bấm Quét DS tiến trình Live Activity
 - tapOn:
-    text: ".*Soát lỗi ngầm.*"
+    text: "Quét DS"
 
 # 3. Mở rộng xem mã APNs Push Token
 - scrollUntilVisible:
@@ -26,6 +34,8 @@ appId: com.livewidgetsexample
       text: ".*MÃ TOKEN ĐẨY APNS.*"
     direction: DOWN
     timeout: 15000
+    speed: 60
+    visibilityPercentage: 40
 
 - tapOn:
     text: ".*MÃ TOKEN ĐẨY APNS.*"
