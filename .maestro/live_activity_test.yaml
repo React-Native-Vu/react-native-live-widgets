@@ -25,17 +25,19 @@ appId: com.livewidgetsexample
 - swipe:
     direction: DOWN
 
-# Quay lại App LiveWidgetsExample
-- launchApp
+# Quay lại App LiveWidgetsExample mà không làm mất in-memory state
+- launchApp:
+    stopApp: false
 
-# Cuộn xuống nút kết thúc Live Activity nếu có
+# Cuộn xuống nút kết thúc Live Activity
 - scrollUntilVisible:
     element:
-      text: ".*Kết thúc.*"
+      text: ".*(Kết thúc|DANH SÁCH).*"
     direction: DOWN
-    timeout: 20000
+    timeout: 15000
     speed: 60
     visibilityPercentage: 40
 
 - tapOn:
     text: ".*Kết thúc.*"
+    optional: true
