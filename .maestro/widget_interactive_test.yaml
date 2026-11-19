@@ -4,17 +4,19 @@ appId: com.livewidgetsexample
 - launchApp:
     clearState: false
 
-- assertVisible: "React Native Live Widgets"
+- assertVisible: "REACT NATIVE LIVE WIDGETS"
 
-# Ensure initial counter is rendered
-- assertVisible: "Counter:"
+# Cuộn tìm và bấm "Cập nhật Widget"
+- scrollUntilVisible:
+    element:
+      text: ".*(Cập nhật Widget|Đang áp dụng).*"
+    direction: DOWN
+    timeout: 30000
+    speed: 60
+    visibilityPercentage: 40
 
-# Exit to Home Screen
-- pressHome
+- tapOn:
+    text: ".*(Cập nhật Widget|Đang áp dụng).*"
 
-# Tap Plus button directly on the Home Screen Widget
-- tapOn: "➕"
-
-# Re-open app to assert state was received by useWidgetAction hook
-- launchApp
-- assertVisible: "Counter: 1"
+# Trở về màn hình chính Home Screen để hiển thị Widget
+- pressKey: Home

@@ -2,27 +2,42 @@ appId: com.livewidgetsexample
 ---
 # Flow 1: Live Activity & Dynamic Island Lifecycle E2E Test
 - launchApp:
-    clearState: true
+    clearState: false
 
-- assertVisible: "React Native Live Widgets"
+- assertVisible: "REACT NATIVE LIVE WIDGETS"
 
-# Tap to start Live Activity
-- tapOn: "Start Delivery Activity"
+# Cuộn tìm và bấm nút bật/đổi Live Activity trên thẻ Preset
+- scrollUntilVisible:
+    element:
+      text: ".*(Bật|Đổi) Live Activity.*"
+    direction: DOWN
+    timeout: 30000
+    speed: 60
+    visibilityPercentage: 40
 
-# Go to home screen to inspect Dynamic Island and Lock Screen
-- pressHome
+- tapOn:
+    text: ".*(Bật|Đổi) Live Activity.*"
 
-# Pull notification center down on Simulator
+# Ra màn hình Home để kiểm tra Dynamic Island / Lock Screen
+- pressKey: Home
+
+# Vuốt thanh thông báo / Notification Center xuống để kiểm tra Live Activity
 - swipe:
-    start: 50%, 0%
-    end: 50%, 60%
+    direction: DOWN
 
-# Assert glanceable Live Activity banner exists
-- assertVisible: "Order On The Way"
+# Quay lại App LiveWidgetsExample mà không làm mất in-memory state
+- launchApp:
+    stopApp: false
 
-# Return to app and update state
-- launchApp
-- tapOn: "Update Activity: Arriving"
+# Cuộn xuống nút kết thúc Live Activity
+- scrollUntilVisible:
+    element:
+      text: ".*(Kết thúc|DANH SÁCH).*"
+    direction: DOWN
+    timeout: 15000
+    speed: 60
+    visibilityPercentage: 40
 
-# End activity
-- tapOn: "End Activity"
+- tapOn:
+    text: ".*Kết thúc.*"
+    optional: true

@@ -1,0 +1,38 @@
+appId: com.livewidgetsexample
+---
+# Flow 4: Timeline Entries & Auto-Cycle Background Scheduler
+- launchApp:
+    clearState: false
+
+- assertVisible: "REACT NATIVE LIVE WIDGETS"
+
+# 1. Bấm thử nghiệm Timeline Entries (Tự đổi sau 2 phút)
+- scrollUntilVisible:
+    element:
+      text: ".*Timeline Entries.*"
+    direction: DOWN
+    timeout: 25000
+    speed: 60
+    visibilityPercentage: 40
+
+- tapOn:
+    text: ".*Timeline Entries.*"
+
+# 2. Bật chế độ tự động đổi dữ liệu Auto-Cycle
+- scrollUntilVisible:
+    element:
+      text: ".*(Bật tự động|Đang chạy Auto).*"
+    direction: DOWN
+    timeout: 25000
+    speed: 60
+    visibilityPercentage: 40
+
+- tapOn:
+    text: ".*(Bật tự động|Đang chạy Auto).*"
+
+# 3. Ra màn hình Home kiểm tra timeline đang chạy
+- pressKey: Home
+
+# 4. Mở lại app
+- launchApp:
+    stopApp: false
