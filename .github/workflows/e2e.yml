@@ -67,7 +67,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Run Maestro Tests on Android Emulator
-        uses: reactive-circus/android-emulator-runner@v2
+        uses: ReactiveCircus/android-emulator-runner@v2
         with:
           api-level: 34
           target: google_apis
