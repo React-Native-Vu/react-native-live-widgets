@@ -156,14 +156,27 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.rn_widget_chronometer, View.GONE)
             }
 
-            // ♿ Gán Accessibility Summary từ IR Semantic Tree (hoặc fallback Canvas extractor)
-            val a11ySummary = if (activeNode?.has("semanticSummary") == true) {
-                activeNode.optString("semanticSummary")
+            // ♿ Native Semantic Accessibility Overlay Layer (Nhóm A - P0):
+            // Dựng các AccessibilityNodeInfo độc lập trên rn_semantic_layer với toạ độ pixel khớp 100% Canvas
+            // để TalkBack focus từng phần tử riêng biệt (Heading, Text, Progress, Group, StateDescription, FocusOrder, RTL).
+            val semanticNodes = DynamicWidgetCanvasRenderer.lastSemanticNodes.toList()
+            val isRtl = activeNode?.optJSONObject("props")?.optString("layoutDirection", "ltr") == "rtl" ||
+                context.resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL
+
+            if (semanticNodes.isNotEmpty()) {
+                // Tắt mô tả gộp trên Canvas để TalkBack duyệt từng node độc lập thay vì đọc 1 cục khổng lồ
+                views.setContentDescription(R.id.rn_widget_canvas, null)
+                bindSemanticNodes(context, views, semanticNodes, mapping, isRtl)
             } else {
-                DynamicWidgetCanvasRenderer.extractAccessibilitySummary(activeNode)
-            }
-            if (a11ySummary.isNotEmpty()) {
-                views.setContentDescription(R.id.rn_widget_canvas, a11ySummary)
+                views.removeAllViews(R.id.rn_semantic_layer)
+                val a11ySummary = if (activeNode?.has("semanticSummary") == true) {
+                    activeNode.optString("semanticSummary")
+                } else {
+                    DynamicWidgetCanvasRenderer.extractAccessibilitySummary(activeNode)
+                }
+                if (a11ySummary.isNotEmpty()) {
+                    views.setContentDescription(R.id.rn_widget_canvas, a11ySummary)
+                }
             }
 
             bindHitZones(context, views, appWidgetId, bindings, mapping)
@@ -240,6 +253,83 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             val offX = (hostW - bmpW * scale) / 2f
             val offY = (hostH - bmpH * scale) / 2f
             return CanvasMapping(hostW, hostH, bmpW, bmpH, scale, offX, offY)
+        }
+
+        /**
+         * ♿ Dựng lớp phủ Native Semantic Accessibility Nodes (rn_semantic_layer).
+         * Mỗi SemanticNode (Text, Header, Progress, Gauge, Badge, Combined Group) được tạo 1 view trong suốt
+         * đặt chính xác theo toạ độ pixel đã vẽ trên Canvas -> TalkBack focus từng phần tử độc lập.
+         */
+        private fun bindSemanticNodes(
+            context: Context,
+            views: RemoteViews,
+            nodes: List<SemanticNodeOverlay>,
+            mapping: CanvasMapping,
+            isRtl: Boolean
+        ) {
+            views.removeAllViews(R.id.rn_semantic_layer)
+            if (nodes.isEmpty()) return
+
+            // Sắp xếp theo Focus Order tường minh (nếu có); giữ nguyên thứ tự tự nhiên cho phần còn lại
+            // Trong môi trường RTL, các node cùng hàng ngang sẽ đảo thứ tự duyệt từ phải sang trái
+            val sortedNodes = nodes
+                .withIndex()
+                .sortedWith(compareBy<IndexedValue<SemanticNodeOverlay>>(
+                    { it.value.focusOrder ?: Int.MAX_VALUE },
+                    { if (isRtl) -(it.value.leftFraction * 100f).roundToInt() else it.index }
+                ))
+                .map { it.value }
+                .take(24) // Giới hạn tối đa 24 semantic nodes để đảm bảo an toàn Binder transaction < 1MB
+
+            for (node in sortedNodes) {
+                val left = mapping.offX + node.leftFraction * mapping.bmpW * mapping.scale
+                val right = mapping.offX + node.rightFraction * mapping.bmpW * mapping.scale
+                val top = mapping.offY + node.topFraction * mapping.bmpH * mapping.scale
+                val bottom = mapping.offY + node.bottomFraction * mapping.bmpH * mapping.scale
+
+                val padL = left.coerceIn(0f, mapping.hostW).roundToInt()
+                val padT = top.coerceIn(0f, mapping.hostH).roundToInt()
+                val padR = (mapping.hostW - right).coerceIn(0f, mapping.hostW).roundToInt()
+                val padB = (mapping.hostH - bottom).coerceIn(0f, mapping.hostH).roundToInt()
+
+                val semView = RemoteViews(context.packageName, R.layout.rn_live_widget_semantic_node)
+                semView.setViewPadding(R.id.rn_semantic_node_root, padL, padT, padR, padB)
+
+                val descParts = mutableListOf<String>()
+                if (node.label.isNotEmpty()) descParts.add(node.label)
+                if (!node.value.isNullOrEmpty()) descParts.add(node.value)
+                if (!node.hint.isNullOrEmpty()) descParts.add(node.hint)
+                val fullDesc = descParts.joinToString(". ")
+                semView.setContentDescription(R.id.rn_semantic_node, fullDesc)
+
+                // Android 11+ (API 30+): State Description (Checked, Disabled, Expanded, Busy)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !node.stateDescription.isNullOrEmpty()) {
+                    try {
+                        semView.setCharSequence(R.id.rn_semantic_node, "setStateDescription", node.stateDescription)
+                    } catch (_: Exception) {}
+                }
+
+                // Android 9+ (API 28+): Đánh dấu Heading để TalkBack hỗ trợ điều hướng theo tiêu đề
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && node.isHeading) {
+                    try {
+                        semView.setBoolean(R.id.rn_semantic_node, "setAccessibilityHeading", true)
+                    } catch (_: Exception) {}
+                }
+
+                // Dynamic Accessibility Live Region (Polite / Assertive)
+                if (node.liveRegion == "polite" || node.liveRegion == "assertive") {
+                    try {
+                        val regionMode = if (node.liveRegion == "assertive") {
+                            View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE
+                        } else {
+                            View.ACCESSIBILITY_LIVE_REGION_POLITE
+                        }
+                        semView.setInt(R.id.rn_semantic_node, "setAccessibilityLiveRegion", regionMode)
+                    } catch (_: Exception) {}
+                }
+
+                views.addView(R.id.rn_semantic_layer, semView)
+            }
         }
 
         /**

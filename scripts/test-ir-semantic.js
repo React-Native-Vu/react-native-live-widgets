@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Run tests against the compiled lib/
-const { compileToIR, inspectIR } = require('../lib/ir');
+const { compileToIR, inspectIR, inspectAccessibilityTree } = require('../lib/ir');
 const {
   UI,
   createDataBinding,
@@ -311,4 +311,81 @@ try {
   fs.rmSync(tmpTestDir, { recursive: true, force: true });
 }
 
-console.log('\n🎉 [Test Suite] All 13 test suites passed with 100% assertions satisfied!\n');
+// ─── Test 14: Accessibility Focus Order (accessibilityFocusOrder) ───
+console.log('   ✓ Test 14: Verifying Accessibility Focus Order prioritization...');
+const focusLayout = UI.VStack(
+  { padding: 12 },
+  UI.Text('Chi tiết phụ', { accessibilityFocusOrder: 3 }),
+  UI.Text('Cảnh báo khẩn cấp!', { typography: 'headline', accessibilityFocusOrder: 1, accessibilityLiveRegion: 'assertive' }),
+  UI.Button({ title: 'Xác nhận', actionId: 'confirm_alert', accessibilityFocusOrder: 2 })
+);
+const focusIR = compileToIR(focusLayout);
+assert.strictEqual(focusIR.semanticTree.length, 3, 'Should produce 3 focusable semantic nodes');
+assert.strictEqual(focusIR.semanticTree[0].label, 'Cảnh báo khẩn cấp!', 'Focus 1 must be explicit order 1');
+assert.strictEqual(focusIR.semanticTree[0].focusOrder, 1);
+assert.strictEqual(focusIR.semanticTree[0].isHeading, true);
+assert.strictEqual(focusIR.semanticTree[0].liveRegion, 'assertive');
+assert.strictEqual(focusIR.semanticTree[1].label, 'Xác nhận', 'Focus 2 must be explicit order 2');
+assert.strictEqual(focusIR.semanticTree[2].label, 'Chi tiết phụ', 'Focus 3 must be explicit order 3');
+
+// ─── Test 15: Accessibility Grouping (combine) ───
+console.log('   ✓ Test 15: Verifying Accessibility Grouping (combine merges children)...');
+const groupLayout = UI.VStack(
+  { padding: 12 },
+  UI.HStack(
+    { accessibilityGroup: 'combine' },
+    UI.Image('bicycle', { accessible: false }),
+    UI.Text('Tài xế Alex'),
+    UI.Text('Cách 1.2 km')
+  ),
+  UI.Button({ title: 'Gọi ngay', actionId: 'call_driver' })
+);
+const groupIR = compileToIR(groupLayout);
+assert.strictEqual(groupIR.semanticTree.length, 2, 'Combined HStack + Button should yield exactly 2 focus nodes');
+assert.strictEqual(groupIR.semanticTree[0].groupStrategy, 'combine');
+assert(groupIR.semanticTree[0].label.includes('Tài xế Alex') && groupIR.semanticTree[0].label.includes('Cách 1.2 km'));
+assert(groupIR.semanticTree[0].groupedChildIds && groupIR.semanticTree[0].groupedChildIds.length >= 2);
+
+// ─── Test 16: Accessibility State & Adjustable Actions ───
+console.log('   ✓ Test 16: Verifying Accessibility State (checked/disabled/expanded) & Adjustable...');
+const stateLayout = UI.VStack(
+  { padding: 12 },
+  UI.Toggle({
+    label: 'Chế độ im lặng',
+    isChecked: true,
+    actionId: 'toggle:mute',
+    accessibilityState: { checked: true, expanded: false },
+  }),
+  UI.Button({
+    title: 'Bộ đếm',
+    actionId: 'counter:inc',
+    accessibilityState: { disabled: true },
+    accessibilityAdjustable: { incrementActionId: 'counter:inc', decrementActionId: 'counter:dec', min: 0, max: 10 },
+  })
+);
+const stateIR = compileToIR(stateLayout);
+assert(stateIR.semanticTree[0].stateDescription.includes('Đã chọn'));
+assert(stateIR.semanticTree[0].stateDescription.includes('Đang thu gọn'));
+assert.strictEqual(stateIR.semanticTree[1].role, 'adjustable');
+assert(stateIR.semanticTree[1].stateDescription.includes('Vô hiệu hóa'));
+assert.strictEqual(stateIR.semanticTree[1].adjustable.incrementActionId, 'counter:inc');
+
+// ─── Test 17: RTL Accessibility Focus Traversal ───
+console.log('   ✓ Test 17: Verifying RTL Accessibility traversal order in HStack...');
+const rtlLayout = UI.HStack(
+  { layoutDirection: 'rtl' },
+  UI.Text('Trái (Left)'),
+  UI.Text('Phải (Right)')
+);
+const rtlIR = compileToIR(rtlLayout, { rtl: true });
+assert.strictEqual(rtlIR.semanticTree[0].label, 'Phải (Right)', 'RTL HStack must focus rightmost child first');
+assert.strictEqual(rtlIR.semanticTree[1].label, 'Trái (Left)', 'RTL HStack must focus leftmost child second');
+
+// ─── Test 18: Accessibility Test Inspector (inspectAccessibilityTree) ───
+console.log('   ✓ Test 18: Verifying Accessibility Test Inspector ASCII output...');
+const a11yReport = inspectAccessibilityTree(focusLayout);
+assert(a11yReport.includes('Accessibility Node Tree Inspector'), 'Must include Inspector header');
+assert(a11yReport.includes('[Focus 1]'), 'Must display Focus 1 slot');
+assert(a11yReport.includes('LiveRegion: assertive'), 'Must display liveRegion badge');
+
+console.log('\n🎉 [Test Suite] All 18 test suites passed with 100% assertions satisfied!\n');

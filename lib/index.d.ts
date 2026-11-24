@@ -225,6 +225,13 @@ export declare const Widget: {
      * 🔍 Phân tích và in ra bản đồ kiến trúc IR, Semantic Tree và Kế hoạch phân bổ Renderer Planner.
      */
     inspectIR: (layout: any) => string;
+    /**
+     * ♿ Công cụ kiểm tra Cây Trợ Năng thực tế (Accessibility Test Inspector).
+     * Hiển thị rõ thứ tự Focus Order, Grouping, State Description, Adjustable Actions và hướng RTL.
+     */
+    inspectAccessibilityTree: (layout: any, options?: {
+        rtl?: boolean;
+    }) => string;
 };
 /**
  * 🎛️ Namespace cấu hình & quản lý Control Widget đa nền tảng

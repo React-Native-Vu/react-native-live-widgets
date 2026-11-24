@@ -59,7 +59,38 @@ export type FontDesign = 'default' | 'monospaced' | 'rounded' | 'serif';
  * Giúp các công cụ đọc màn hình (TalkBack trên Android, VoiceOver trên iOS, Screen Readers)
  * phát âm chính xác bản chất của phần tử thay vì coi tất cả là hình ảnh raster.
  */
-export type AccessibilityRole = 'none' | 'button' | 'header' | 'text' | 'image' | 'progressbar' | 'timer' | 'switch' | 'checkbox' | 'summary' | 'alert';
+export type AccessibilityRole = 'none' | 'button' | 'header' | 'text' | 'image' | 'progressbar' | 'timer' | 'switch' | 'checkbox' | 'adjustable' | 'summary' | 'alert';
+/**
+ * ♿ Trạng thái Trợ năng (Accessibility State) cho TalkBack / VoiceOver.
+ */
+export interface AccessibilityState {
+    checked?: boolean;
+    disabled?: boolean;
+    expanded?: boolean;
+    selected?: boolean;
+    busy?: boolean;
+}
+/**
+ * ♿ Chiến lược gom nhóm ngữ nghĩa (Accessibility Grouping).
+ * - 'combine': Gộp toàn bộ text/value của các node con thành 1 focus duy nhất.
+ * - 'contain': Nhóm container nhưng vẫn cho phép focus từng phần tử con bên trong.
+ * - 'none': Không nhóm.
+ */
+export type AccessibilityGrouping = 'combine' | 'contain' | 'none';
+/**
+ * ♿ Vùng cập nhật động (Dynamic Accessibility Live Region).
+ */
+export type AccessibilityLiveRegion = 'none' | 'polite' | 'assertive';
+/**
+ * ♿ Hành động tăng/giảm giá trị trực tiếp qua Screen Reader (Swipe Up/Down trên VoiceOver/TalkBack).
+ */
+export interface AccessibilityAdjustable {
+    incrementActionId?: string;
+    decrementActionId?: string;
+    min?: number;
+    max?: number;
+    step?: number;
+}
 /**
  * ♿ Thuộc tính Trợ năng (Accessibility & Semantics Layer).
  * Tách biệt hoàn toàn tầng ngữ nghĩa khỏi tầng vẽ đồ họa (Canvas/SwiftUI),
@@ -72,10 +103,22 @@ export interface AccessibilityProps {
     accessibilityLabel?: string;
     /** Hướng dẫn hành động bổ sung (ví dụ: "Chạm hai lần để xác nhận chấm công") */
     accessibilityHint?: string;
-    /** Vai trò ngữ nghĩa của phần tử (header, button, progressbar, ...) */
+    /** Vai trò ngữ nghĩa của phần tử (header, button, progressbar, adjustable, ...) */
     accessibilityRole?: AccessibilityRole;
     /** Giá trị trạng thái đọc lên (ví dụ: "86%", "Đang vận chuyển", "Đã bật") */
     accessibilityValue?: string | number;
+    /** Thứ tự ưu tiên focus khi duyệt bằng TalkBack/VoiceOver (số nhỏ hơn sẽ được focus trước) */
+    accessibilityFocusOrder?: number;
+    /** Chiến lược gom nhóm ngữ nghĩa cho container ('combine' | 'contain' | 'none') */
+    accessibilityGroup?: AccessibilityGrouping;
+    /** Trạng thái hiện tại của phần tử (checked, disabled, expanded, selected, busy) */
+    accessibilityState?: AccessibilityState;
+    /** Cấu hình tăng/giảm giá trị bằng cử chỉ screen reader (dành cho Counter, Slider, Stepper) */
+    accessibilityAdjustable?: AccessibilityAdjustable;
+    /** Thông báo tự động khi nội dung thay đổi động ('polite' | 'assertive' | 'none') */
+    accessibilityLiveRegion?: AccessibilityLiveRegion;
+    /** Hướng đọc cho Accessibility Focus Traversal ('ltr' | 'rtl') */
+    layoutDirection?: 'ltr' | 'rtl';
 }
 export interface BaseNode {
     type: LayoutNodeType;
@@ -849,6 +892,24 @@ export interface SemanticNode {
     actionId?: string;
     deepLink?: string;
     isDecorative?: boolean;
+    /** Thứ tự focus sau khi chuẩn hóa (1, 2, 3...) */
+    focusOrder?: number;
+    /** Chiến lược gom nhóm ngữ nghĩa */
+    groupStrategy?: AccessibilityGrouping;
+    /** Trạng thái ngữ nghĩa (Checked, Disabled, Expanded, Selected, Busy) */
+    state?: AccessibilityState;
+    /** Chuỗi mô tả trạng thái đã tổng hợp cho TalkBack / VoiceOver */
+    stateDescription?: string;
+    /** Hành động tăng/giảm bằng Screen Reader */
+    adjustable?: AccessibilityAdjustable;
+    /** Vùng cập nhật động Live Region */
+    liveRegion?: AccessibilityLiveRegion;
+    /** Đánh dấu Heading cho điều hướng tiêu đề nhanh */
+    isHeading?: boolean;
+    /** Hướng đọc RTL/LTR */
+    direction?: 'ltr' | 'rtl';
+    /** Danh sách ID của các node con đã được gom nhóm (khi groupStrategy === 'combine') */
+    groupedChildIds?: string[];
 }
 /**
  * Liên kết trạng thái hai chiều giữa UI và Native Store / JavaScript.

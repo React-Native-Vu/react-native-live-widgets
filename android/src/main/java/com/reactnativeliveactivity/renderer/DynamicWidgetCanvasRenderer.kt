@@ -38,14 +38,39 @@ data class ButtonActionBinding(
     val title: String = "",
     val accessibilityLabel: String? = null,
     val accessibilityHint: String? = null,
+    val stateDescription: String? = null,
+    val focusOrder: Int? = null,
     val leftFraction: Float = 0f,
     val rightFraction: Float = 1f,
     val topFraction: Float = 0f,
     val bottomFraction: Float = 1f
 )
 
+/**
+ * ♿ Bản ghi Node Trợ Năng Độc Lập (Native Accessibility Semantic Node)
+ * dùng để dựng lớp phủ rn_semantic_layer giúp TalkBack focus từng phần tử riêng biệt.
+ */
+data class SemanticNodeOverlay(
+    val id: String,
+    val role: String,
+    val label: String,
+    val hint: String? = null,
+    val value: String? = null,
+    val stateDescription: String? = null,
+    val focusOrder: Int? = null,
+    val isHeading: Boolean = false,
+    val liveRegion: String = "none",
+    val leftFraction: Float,
+    val rightFraction: Float,
+    val topFraction: Float,
+    val bottomFraction: Float
+)
+
 object DynamicWidgetCanvasRenderer {
     var activeTimerInfo: WidgetTimerInfo? = null
+    val lastSemanticNodes: MutableList<SemanticNodeOverlay> = mutableListOf()
+    private var lastBitmapWidthPx: Float = 1f
+    private var semanticSuppressDepth: Int = 0
     private var materialTypeface: Typeface? = null
 
     private fun getMaterialTypeface(context: Context): Typeface? {
@@ -232,6 +257,9 @@ object DynamicWidgetCanvasRenderer {
         bindings: MutableList<ButtonActionBinding>
     ): Bitmap {
         activeTimerInfo = null
+        lastSemanticNodes.clear()
+        semanticSuppressDepth = 0
+        lastBitmapWidthPx = widthPx.toFloat().coerceAtLeast(1f)
         val bmp = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG)
@@ -298,7 +326,151 @@ object DynamicWidgetCanvasRenderer {
         return bmp
     }
 
+    private fun buildStateDescription(props: JSONObject?): String? {
+        val stateObj = props?.optJSONObject("accessibilityState") ?: return null
+        val parts = mutableListOf<String>()
+        if (stateObj.has("checked")) {
+            parts.add(if (stateObj.optBoolean("checked")) "Đã chọn" else "Chưa chọn")
+        }
+        if (stateObj.optBoolean("selected", false)) parts.add("Đang được chọn")
+        if (stateObj.has("expanded")) {
+            parts.add(if (stateObj.optBoolean("expanded")) "Đang mở rộng" else "Đang thu gọn")
+        }
+        if (stateObj.optBoolean("disabled", false)) parts.add("Vô hiệu hóa")
+        if (stateObj.optBoolean("busy", false)) parts.add("Đang tải")
+        return if (parts.isNotEmpty()) parts.joinToString(", ") else null
+    }
+
+    private fun recordSemanticOverlay(
+        node: JSONObject,
+        left: Float,
+        top: Float,
+        width: Float,
+        height: Float,
+        totalHeight: Float
+    ) {
+        if (width <= 1f || height <= 1f || totalHeight <= 1f) return
+        val props = node.optJSONObject("props")
+        val accessible = props?.optBoolean("accessible", true) ?: true
+        if (!accessible) return
+
+        val type = node.optString("type", "")
+        val groupStrategy = props?.optString("accessibilityGroup", "") ?: ""
+        val customLabel = props?.optString("accessibilityLabel", "")?.trim() ?: ""
+        val customHint = props?.optString("accessibilityHint", "")?.trim()?.ifEmpty { null }
+        val customValue = props?.optString("accessibilityValue", "")?.trim()?.ifEmpty { null }
+        val customRole = props?.optString("accessibilityRole", "")?.trim() ?: ""
+        val liveRegion = props?.optString("accessibilityLiveRegion", "none") ?: "none"
+        val focusOrder = if (props != null && props.has("accessibilityFocusOrder")) {
+            props.optInt("accessibilityFocusOrder")
+        } else null
+        val stateDesc = buildStateDescription(props)
+
+        var label = customLabel
+        var role = customRole.ifEmpty { "none" }
+        var value = customValue
+        var isHeading = customRole == "header"
+
+        if (groupStrategy == "combine") {
+            label = if (customLabel.isNotEmpty()) customLabel else extractAccessibilitySummary(node)
+            role = customRole.ifEmpty { "summary" }
+        } else {
+            when (type) {
+                "Text" -> {
+                    val text = props?.optString("text", "")?.trim() ?: ""
+                    if (label.isEmpty()) label = text
+                    val typo = props?.optString("typography", "") ?: ""
+                    if (role == "none") {
+                        isHeading = typo.startsWith("title") || typo == "largeTitle" || typo == "headline"
+                        role = if (isHeading) "header" else "text"
+                    }
+                }
+                "Badge" -> {
+                    if (label.isEmpty()) label = props?.optString("text", "")?.trim() ?: ""
+                    if (role == "none") role = "summary"
+                }
+                "Progress" -> {
+                    if (label.isEmpty()) label = "Tiến độ"
+                    if (value == null && props != null && props.has("value")) {
+                        val pct = (props.optDouble("value", 0.0) * 100.0).roundToInt()
+                        value = "$pct%"
+                    }
+                    if (role == "none") role = "progressbar"
+                }
+                "Gauge" -> {
+                    if (label.isEmpty()) label = props?.optString("label", "")?.trim()?.ifEmpty { "Chỉ số" } ?: "Chỉ số"
+                    if (value == null) {
+                        val vt = props?.optString("valueText", "")?.trim() ?: ""
+                        value = if (vt.isNotEmpty()) vt else "${((props?.optDouble("value", 0.0) ?: 0.0) * 100.0).roundToInt()}%"
+                    }
+                    if (role == "none") role = "progressbar"
+                }
+                "Timer" -> {
+                    if (label.isEmpty()) label = "Đồng hồ đếm"
+                    if (role == "none") role = "timer"
+                }
+                "Image" -> {
+                    val sym = props?.optString("systemName", "")?.trim() ?: ""
+                    if (label.isEmpty() && sym.isNotEmpty()) label = "Biểu tượng $sym"
+                    if (role == "none") role = "image"
+                }
+                else -> return
+            }
+        }
+
+        if (label.isEmpty() && value == null) return
+
+        val bmpW = lastBitmapWidthPx.coerceAtLeast(1f)
+        lastSemanticNodes.add(
+            SemanticNodeOverlay(
+                id = node.optString("id", "sem_${lastSemanticNodes.size}"),
+                role = role,
+                label = label,
+                hint = customHint,
+                value = value,
+                stateDescription = stateDesc,
+                focusOrder = focusOrder,
+                isHeading = isHeading,
+                liveRegion = liveRegion,
+                leftFraction = (left / bmpW).coerceIn(0f, 1f),
+                rightFraction = ((left + width) / bmpW).coerceIn(0f, 1f),
+                topFraction = (top / totalHeight).coerceIn(0f, 1f),
+                bottomFraction = ((top + height) / totalHeight).coerceIn(0f, 1f)
+            )
+        )
+    }
+
     private fun drawNode(
+        context: Context,
+        canvas: Canvas,
+        node: JSONObject,
+        left: Float,
+        top: Float,
+        availWidth: Float,
+        availHeight: Float,
+        totalHeight: Float,
+        density: Float,
+        isRoot: Boolean,
+        bindings: MutableList<ButtonActionBinding>
+    ): Float {
+        val props = node.optJSONObject("props")
+        val accessible = props?.optBoolean("accessible", true) ?: true
+        val isCombineGroup = props?.optString("accessibilityGroup", "") == "combine"
+        val shouldSuppressChildren = !accessible || isCombineGroup
+
+        if (shouldSuppressChildren) semanticSuppressDepth++
+        val drawnH = drawNodeInternal(
+            context, canvas, node, left, top, availWidth, availHeight, totalHeight, density, isRoot, bindings
+        )
+        if (shouldSuppressChildren) semanticSuppressDepth--
+
+        if (semanticSuppressDepth == 0 && accessible) {
+            recordSemanticOverlay(node, left, top, availWidth, drawnH, totalHeight)
+        }
+        return drawnH
+    }
+
+    private fun drawNodeInternal(
         context: Context,
         canvas: Canvas,
         node: JSONObject,

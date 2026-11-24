@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ♿ Native Semantic Accessibility Node Overlay.
+    Root FrameLayout không nhận focus (importantForAccessibility="no").
+    Padding (left, top, right, bottom) được set động khớp 100% toạ độ pixel với phần tử trên Canvas,
+    tạo ra AccessibilityNodeInfo độc lập cho TalkBack với contentDescription, stateDescription & heading.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rn_semantic_node_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:importantForAccessibility="no">
+
+    <TextView
+        android:id="@+id/rn_semantic_node"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent"
+        android:clickable="false"
+        android:focusable="true"
+        android:importantForAccessibility="yes" />
+</FrameLayout>

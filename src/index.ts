@@ -15,7 +15,7 @@ import {
   WidgetTimelineConfig,
   WidgetIR,
 } from './types';
-import { compileToIR, inspectIR } from './ir';
+import { compileToIR, inspectIR, inspectAccessibilityTree } from './ir';
 import { UI, createDataBinding, flattenDataObject, resolveTemplateString } from './builder';
 
 declare const __DEV__: boolean | undefined;
@@ -959,6 +959,14 @@ export const Widget = {
    */
   inspectIR: (layout: any): string => {
     return inspectIR(layout);
+  },
+
+  /**
+   * ♿ Công cụ kiểm tra Cây Trợ Năng thực tế (Accessibility Test Inspector).
+   * Hiển thị rõ thứ tự Focus Order, Grouping, State Description, Adjustable Actions và hướng RTL.
+   */
+  inspectAccessibilityTree: (layout: any, options?: { rtl?: boolean }): string => {
+    return inspectAccessibilityTree(layout, options);
   },
 };
 

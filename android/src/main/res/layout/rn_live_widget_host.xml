@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitCenter"
-        android:contentDescription="Live Widget Content" />
+        android:importantForAccessibility="no" />
 
     <!-- Đồng hồ Live Chronometer tự đếm bằng engine native của hệ thống -->
     <Chronometer
@@ -21,6 +21,18 @@
         android:visibility="gone" />
 
     <!--
+        ♿ Lớp Ngữ nghĩa Trợ năng Native (Semantic Accessibility Overlay Layer):
+        Mỗi phần tử Text / Header / Badge / Progress / Gauge / Group đều có 1 node trợ năng
+        độc lập (rn_live_widget_semantic_node.xml) với tọa độ pixel khớp 100% Canvas,
+        hỗ trợ TalkBack focus độc lập, Focus Order, Heading, StateDescription và LiveRegion.
+    -->
+    <FrameLayout
+        android:id="@+id/rn_semantic_layer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no" />
+
+    <!--
         Lớp vùng bấm động (Exact Hit Layer): mỗi Button / Toggle / Link được thêm 1 view riêng
         (rn_live_widget_hit_zone.xml) đặt CHÍNH XÁC theo toạ độ đã vẽ trên Canvas.
         Vùng trống không gắn hành động nào => bấm vào không kích hoạt gì.
@@ -28,5 +40,6 @@
     <FrameLayout
         android:id="@+id/rn_hit_layer"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no" />
 </FrameLayout>

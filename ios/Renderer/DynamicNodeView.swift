@@ -920,7 +920,7 @@ public struct DynamicNodeView: View {
   }
 }
 
-// ♿ Accessibility Semantics & Fallback Modifier (Phase 1)
+// ♿ Accessibility Semantics, Focus Order, Grouping, State, Adjustable & RTL Modifier (Nhóm A - P0)
 struct DynamicNodeAccessibilityModifier: ViewModifier {
   let props: [String: AnyCodable]?
 
@@ -930,29 +930,69 @@ struct DynamicNodeAccessibilityModifier: ViewModifier {
 
   private func buildAccessibilityView(content: Content) -> AnyView {
     let accessible = props?["accessible"]?.boolValue
-    let label = props?["accessibilityLabel"]?.stringValue
-    let hint = props?["accessibilityHint"]?.stringValue
-    let value = props?["accessibilityValue"]?.stringValue
-    let role = props?["accessibilityRole"]?.stringValue
-
     if accessible == false {
       return AnyView(content.accessibilityHidden(true))
     }
 
-    if label == nil && hint == nil && value == nil && role == nil {
-      return AnyView(content)
-    }
+    let label = props?["accessibilityLabel"]?.stringValue
+    let hint = props?["accessibilityHint"]?.stringValue
+    let value = props?["accessibilityValue"]?.stringValue
+    let role = props?["accessibilityRole"]?.stringValue
+    let groupStrategy = props?["accessibilityGroup"]?.stringValue
+    let focusOrder = props?["accessibilityFocusOrder"]?.doubleValue
+    let stateDict = props?["accessibilityState"]?.value as? [String: Any]
+    let layoutDirection = props?["layoutDirection"]?.stringValue
 
     var view = AnyView(content)
+
+    // 1. RTL Layout Direction cho VoiceOver traversal
+    if layoutDirection == "rtl" {
+      view = AnyView(view.environment(\.layoutDirection, .rightToLeft))
+    } else if layoutDirection == "ltr" {
+      view = AnyView(view.environment(\.layoutDirection, .leftToRight))
+    }
+
+    // 2. Accessibility Grouping ('combine' | 'contain')
+    if groupStrategy == "combine" {
+      view = AnyView(view.accessibilityElement(children: .combine))
+    } else if groupStrategy == "contain" {
+      view = AnyView(view.accessibilityElement(children: .contain))
+    }
+
+    // 3. Label, Hint, Value + State Description synthesis
     if let label = label {
       view = AnyView(view.accessibilityLabel(Text(label)))
     }
     if let hint = hint {
       view = AnyView(view.accessibilityHint(Text(hint)))
     }
-    if let value = value {
-      view = AnyView(view.accessibilityValue(Text(value)))
+
+    var valueParts: [String] = []
+    if let value = value, !value.isEmpty {
+      valueParts.append(value)
     }
+    if let stateDict = stateDict {
+      if let checked = stateDict["checked"] as? Bool {
+        valueParts.append(checked ? "Đã chọn" : "Chưa chọn")
+      }
+      if let expanded = stateDict["expanded"] as? Bool {
+        valueParts.append(expanded ? "Đang mở rộng" : "Đang thu gọn")
+      }
+      if (stateDict["busy"] as? Bool) == true {
+        valueParts.append("Đang tải")
+      }
+      if (stateDict["selected"] as? Bool) == true {
+        view = AnyView(view.accessibilityAddTraits(.isSelected))
+      }
+      if (stateDict["disabled"] as? Bool) == true {
+        view = AnyView(view.disabled(true))
+      }
+    }
+    if !valueParts.isEmpty {
+      view = AnyView(view.accessibilityValue(Text(valueParts.joined(separator: ", "))))
+    }
+
+    // 4. Semantic Role Traits
     if let role = role {
       switch role {
       case "header":
@@ -961,10 +1001,20 @@ struct DynamicNodeAccessibilityModifier: ViewModifier {
         view = AnyView(view.accessibilityAddTraits(.isButton))
       case "image":
         view = AnyView(view.accessibilityAddTraits(.isImage))
+      case "summary":
+        view = AnyView(view.accessibilityAddTraits(.isSummaryElement))
+      case "timer":
+        view = AnyView(view.accessibilityAddTraits(.updatesFrequently))
       default:
         break
       }
     }
+
+    // 5. Focus Order (VoiceOver đọc từ priority cao xuống thấp -> đảo dấu focusOrder)
+    if let order = focusOrder {
+      view = AnyView(view.accessibilitySortPriority(1000.0 - order))
+    }
+
     return view
   }
 }
