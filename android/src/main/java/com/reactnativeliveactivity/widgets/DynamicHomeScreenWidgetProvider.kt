@@ -146,7 +146,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                 }
                 DynamicWidgetStateStore.writeSharedString(
                     context,
-                    "widget_profiler_metrics_$widgetKey",
+                    "widget_profiler_metrics_main",
                     profJson.toString()
                 )
             }
