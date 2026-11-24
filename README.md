@@ -116,6 +116,7 @@ Until now, adding **Live Activities** or **Home Screen Widgets** to a React Nati
 - 🔄 **[State Management & Persistent Action Queue Guide](docs/capabilities/state-and-action-queue.md)**
 - ♿ **[Native Accessibility, TalkBack & VoiceOver Guide](docs/capabilities/accessibility-and-talkback.md)**
 - 🔬 **[Visual Inspector, Snapshot Testing, Profiler & Diagnostics](docs/capabilities/devtools-and-debugging.md)**
+- 🎵 **[Native MediaSession, Navigation Live UI, Smart Home & Primitives](docs/capabilities/ecosystem-and-media.md)**
 - ⏱️ **[Zero-Battery Hardware Timers Guide](docs/capabilities/zero-battery-timers.md)**
 - 🌐 **[Force-Killed Background Remote Sync Guide](docs/capabilities/background-remote-sync.md)**
 - 🎭 **[Maestro E2E Testing Framework](.maestro/README.md)**

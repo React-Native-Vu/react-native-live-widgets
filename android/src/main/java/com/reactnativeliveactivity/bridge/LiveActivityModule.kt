@@ -456,6 +456,113 @@ class LiveActivityModule(private val reactContext: ReactApplicationContext) :
         promise.resolve(map)
     }
 
+    // ─── STANDALONE NATIVE MEDIASESSION (ANDROID SYSTEM MEDIA CONTROLS - GROUP E) ─
+
+    private var nativeMediaSession: android.media.session.MediaSession? = null
+
+    private fun ensureMediaSession(): android.media.session.MediaSession {
+        nativeMediaSession?.let { return it }
+        val session = android.media.session.MediaSession(reactContext, "RNLiveWidgetsMediaSession")
+        session.setCallback(object : android.media.session.MediaSession.Callback() {
+            override fun onPlay() {
+                emitEvent("onMediaRemoteCommand", Arguments.createMap().apply { putString("type", "play") })
+            }
+            override fun onPause() {
+                emitEvent("onMediaRemoteCommand", Arguments.createMap().apply { putString("type", "pause") })
+            }
+            override fun onSkipToNext() {
+                emitEvent("onMediaRemoteCommand", Arguments.createMap().apply { putString("type", "next") })
+            }
+            override fun onSkipToPrevious() {
+                emitEvent("onMediaRemoteCommand", Arguments.createMap().apply { putString("type", "previous") })
+            }
+            override fun onSeekTo(pos: Long) {
+                emitEvent("onMediaRemoteCommand", Arguments.createMap().apply {
+                    putString("type", "seek")
+                    putDouble("positionSeconds", pos / 1000.0)
+                })
+            }
+            override fun onStop() {
+                emitEvent("onMediaRemoteCommand", Arguments.createMap().apply { putString("type", "stop") })
+            }
+        })
+        session.isActive = true
+        nativeMediaSession = session
+        return session
+    }
+
+    @ReactMethod
+    fun setMediaMetadata(metadata: ReadableMap, promise: Promise) {
+        try {
+            val session = ensureMediaSession()
+            val builder = android.media.MediaMetadata.Builder()
+            if (metadata.hasKey("title")) {
+                builder.putString(android.media.MediaMetadata.METADATA_KEY_TITLE, metadata.getString("title"))
+            }
+            if (metadata.hasKey("artist")) {
+                builder.putString(android.media.MediaMetadata.METADATA_KEY_ARTIST, metadata.getString("artist"))
+            }
+            if (metadata.hasKey("album")) {
+                builder.putString(android.media.MediaMetadata.METADATA_KEY_ALBUM, metadata.getString("album"))
+            }
+            if (metadata.hasKey("durationSeconds")) {
+                builder.putLong(
+                    android.media.MediaMetadata.METADATA_KEY_DURATION,
+                    (metadata.getDouble("durationSeconds") * 1000.0).toLong()
+                )
+            }
+            session.setMetadata(builder.build())
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.resolve(false)
+        }
+    }
+
+    @ReactMethod
+    fun setMediaPlaybackState(playback: ReadableMap, promise: Promise) {
+        try {
+            val session = ensureMediaSession()
+            val stateStr = if (playback.hasKey("state")) playback.getString("state") else "paused"
+            val stateCode = when (stateStr) {
+                "playing" -> android.media.session.PlaybackState.STATE_PLAYING
+                "buffering" -> android.media.session.PlaybackState.STATE_BUFFERING
+                "stopped" -> android.media.session.PlaybackState.STATE_STOPPED
+                else -> android.media.session.PlaybackState.STATE_PAUSED
+            }
+            val posMs = if (playback.hasKey("positionSeconds")) {
+                (playback.getDouble("positionSeconds") * 1000.0).toLong()
+            } else 0L
+            val rate = if (playback.hasKey("rate")) playback.getDouble("rate").toFloat() else if (stateStr == "playing") 1f else 0f
+            val actions = android.media.session.PlaybackState.ACTION_PLAY or
+                android.media.session.PlaybackState.ACTION_PAUSE or
+                android.media.session.PlaybackState.ACTION_PLAY_PAUSE or
+                android.media.session.PlaybackState.ACTION_SKIP_TO_NEXT or
+                android.media.session.PlaybackState.ACTION_SKIP_TO_PREVIOUS or
+                android.media.session.PlaybackState.ACTION_SEEK_TO or
+                android.media.session.PlaybackState.ACTION_STOP
+            val state = android.media.session.PlaybackState.Builder()
+                .setActions(actions)
+                .setState(stateCode, posMs, rate)
+                .build()
+            session.setPlaybackState(state)
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.resolve(false)
+        }
+    }
+
+    @ReactMethod
+    fun clearMediaSession(promise: Promise) {
+        try {
+            nativeMediaSession?.isActive = false
+            nativeMediaSession?.release()
+            nativeMediaSession = null
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.resolve(false)
+        }
+    }
+
     // ─── HELPERS ─────────────────────────────────────────────────────────────
 
     private fun emitEvent(eventName: String, params: Any?) {

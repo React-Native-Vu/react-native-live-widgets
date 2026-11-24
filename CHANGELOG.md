@@ -4,6 +4,11 @@ All notable changes to `react-native-live-widgets` will be documented in this fi
 
 ## [Unreleased]
 ### Added
+- **Native Feature Expansion & Curated Ecosystem Primitives (Group E — P2)**:
+  - Added standalone **`MediaSession`** API (`setMetadata`, `setPlaybackState`, `clear`, `onRemoteCommand`) wired directly to iOS `MPNowPlayingInfoCenter`/`MPRemoteCommandCenter` and Android `android.media.session.MediaSession`.
+  - Added **`NavigationLive`** turn-by-turn Dynamic Island & Lock Screen Live Activity controller (`start`, `updateManeuver`, `end`, `buildLayout`).
+  - Added **`SmartHomeControl`** builders (`createToggle`, `createSceneButton`) for iOS 18 Control Center & Android Quick Settings.
+  - Added high-ROI primitives & utilities: `createListNode` (RAM-safe `maxItems` cap), `createTimelineNode`, `createDonutChartNode`, `createSparklineNode`, `whenNode`, `responsiveLayout`, `LocaleFormatter`, and `Widget.prefetchImages()`/`clearImageCache()`.
 - **Developer Experience, Visual Inspector, Snapshot Testing, Profiler & Diagnostics (Group D — P1)**:
   - Added `Widget.exportInspectorHTML()` generating a zero-dependency 3-pane DevTools HTML viewer (UI Tree, Dark/Light/Tinted SVG previews, Semantic Focus Tree, Diagnostics).
   - Added `Widget.createSnapshot()`, `Widget.compareSnapshots()`, and `Widget.renderToSVG()` for multi-size & Light/Dark/Tinted/RTL regression testing.

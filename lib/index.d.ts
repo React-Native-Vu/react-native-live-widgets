@@ -3,6 +3,7 @@ import { diagnoseLayout, formatDiagnosticsReport } from './diagnostics';
 import { profileIRCompile, formatProfilerReport } from './profiler';
 import { createWidgetSnapshot, compareWidgetSnapshots, renderLayoutToSVG } from './snapshot';
 import { exportInspectorHTML } from './inspector';
+import { buildNavigationLiveLayout, NavigationLiveState } from './navigationLive';
 import { enqueuePendingAction, getPendingActions, recoverPendingActions, syncPendingActions, clearPendingActions, registerStateSchema, readVersionedState, updateStateAtomic, computeDataDiff, evaluateCacheStatus } from './actionQueue';
 import { createDataBinding } from './builder';
 import { ActionHandler, GlobalActionHandler, registerAction, registerActionHandler, unregisterAction } from './dispatcher';
@@ -283,6 +284,19 @@ export declare const Widget: {
     renderToSVG: typeof renderLayoutToSVG;
     /** 🖥️ Xuất Visual Widget Inspector dạng HTML DevTools tự chứa mở trực tiếp trên trình duyệt */
     exportInspectorHTML: typeof exportInspectorHTML;
+    /** 🖼️ Tải trước & cache ảnh vào Shared Container (iOS/Android) để Widget hiển thị tức thì */
+    prefetchImages: (urls: string[], appGroup?: string) => Promise<boolean>;
+    /** 🧹 Xóa manifest cache ảnh của Widget */
+    clearImageCache: (appGroup?: string) => Promise<boolean>;
+};
+/**
+ * 🗺️ Navigation Live UI Controller (Turn-by-Turn Dynamic Island & Android ProgressStyle).
+ */
+export declare const NavigationLive: {
+    buildLayout: typeof buildNavigationLiveLayout;
+    start: (activityId: string, state: NavigationLiveState) => Promise<boolean>;
+    updateManeuver: (activityId: string, state: NavigationLiveState) => Promise<boolean>;
+    end: (activityId: string) => Promise<boolean>;
 };
 /**
  * 🎛️ Namespace cấu hình & quản lý Control Widget đa nền tảng
@@ -360,6 +374,10 @@ export * from './diagnostics';
 export * from './profiler';
 export * from './snapshot';
 export * from './inspector';
+export * from './mediaSession';
+export * from './navigationLive';
+export * from './smartHome';
+export * from './ecosystem';
 export { StyleSheet } from './builder';
 export * from './hooks';
 /**

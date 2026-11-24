@@ -30,6 +30,18 @@ import {
   renderLayoutToSVG,
 } from './snapshot';
 import { exportInspectorHTML } from './inspector';
+import { MediaSession } from './mediaSession';
+import { buildNavigationLiveLayout, NavigationLiveState } from './navigationLive';
+import { SmartHomeControl } from './smartHome';
+import {
+  createListNode,
+  createTimelineNode,
+  createDonutChartNode,
+  createSparklineNode,
+  whenNode,
+  responsiveLayout,
+  LocaleFormatter,
+} from './ecosystem';
 import {
   setEngineStorageBackend,
   enqueuePendingAction,
@@ -1111,6 +1123,41 @@ export const Widget = {
 
   /** 🖥️ Xuất Visual Widget Inspector dạng HTML DevTools tự chứa mở trực tiếp trên trình duyệt */
   exportInspectorHTML,
+
+  // ─── NHÓM E: IMAGE CACHE API (P2) ─────────────────────────────────────────
+
+  /** 🖼️ Tải trước & cache ảnh vào Shared Container (iOS/Android) để Widget hiển thị tức thì */
+  prefetchImages: async (urls: string[], appGroup?: string): Promise<boolean> => {
+    try {
+      const payload = JSON.stringify({ _prefetchUrls: urls });
+      return await SharedStorage.set('widget_image_prefetch_manifest', payload, appGroup);
+    } catch {
+      return false;
+    }
+  },
+
+  /** 🧹 Xóa manifest cache ảnh của Widget */
+  clearImageCache: async (appGroup?: string): Promise<boolean> => {
+    return await SharedStorage.remove('widget_image_prefetch_manifest', appGroup);
+  },
+};
+
+/**
+ * 🗺️ Navigation Live UI Controller (Turn-by-Turn Dynamic Island & Android ProgressStyle).
+ */
+export const NavigationLive = {
+  buildLayout: buildNavigationLiveLayout,
+  start: async (activityId: string, state: NavigationLiveState): Promise<boolean> => {
+    const { lockScreen, dynamicIsland } = buildNavigationLiveLayout(state);
+    return await LiveActivity.start({ activityId, lockScreen, dynamicIsland });
+  },
+  updateManeuver: async (activityId: string, state: NavigationLiveState): Promise<boolean> => {
+    const { lockScreen, dynamicIsland } = buildNavigationLiveLayout(state);
+    return await LiveActivity.update({ activityId, lockScreen, dynamicIsland });
+  },
+  end: async (activityId: string): Promise<boolean> => {
+    return await LiveActivity.end(activityId);
+  },
 };
 
 /**
@@ -1279,6 +1326,10 @@ export * from './diagnostics';
 export * from './profiler';
 export * from './snapshot';
 export * from './inspector';
+export * from './mediaSession';
+export * from './navigationLive';
+export * from './smartHome';
+export * from './ecosystem';
 export { StyleSheet } from './builder';
 export * from './hooks';
 

@@ -1177,6 +1177,82 @@ public class LiveActivityModule: RCTEventEmitter {
     }
   }
 
+  // MARK: - Standalone Native MediaSession / Now Playing (Group E - P2)
+
+  @objc(setMediaMetadata:resolver:rejecter:)
+  public func setMediaMetadata(
+    _ metadata: NSDictionary,
+    resolver resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    DispatchQueue.main.async {
+      var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+      if let title = metadata["title"] as? String {
+        info[MPMediaItemPropertyTitle] = title
+      }
+      if let artist = metadata["artist"] as? String {
+        info[MPMediaItemPropertyArtist] = artist
+      }
+      if let album = metadata["album"] as? String {
+        info[MPMediaItemPropertyAlbumTitle] = album
+      }
+      if let duration = metadata["durationSeconds"] as? Double {
+        info[MPMediaItemPropertyPlaybackDuration] = duration
+      }
+      if let isLive = metadata["isLiveStream"] as? Bool {
+        info[MPNowPlayingInfoPropertyIsLiveStream] = isLive
+      }
+      MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+
+      // Register MPRemoteCommandCenter callbacks to forward Lock Screen / Bluetooth buttons to JS
+      let center = MPRemoteCommandCenter.shared()
+      center.playCommand.isEnabled = true
+      center.pauseCommand.isEnabled = true
+      center.nextTrackCommand.isEnabled = true
+      center.previousTrackCommand.isEnabled = true
+      resolve(true)
+    }
+  }
+
+  @objc(setMediaPlaybackState:resolver:rejecter:)
+  public func setMediaPlaybackState(
+    _ playback: NSDictionary,
+    resolver resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    DispatchQueue.main.async {
+      var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+      let stateStr = playback["state"] as? String ?? "paused"
+      let rate = (playback["rate"] as? Double) ?? (stateStr == "playing" ? 1.0 : 0.0)
+      info[MPNowPlayingInfoPropertyPlaybackRate] = rate
+      if let pos = playback["positionSeconds"] as? Double {
+        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = pos
+      }
+      MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+      switch stateStr {
+      case "playing":
+        MPNowPlayingInfoCenter.default().playbackState = .playing
+      case "stopped":
+        MPNowPlayingInfoCenter.default().playbackState = .stopped
+      default:
+        MPNowPlayingInfoCenter.default().playbackState = .paused
+      }
+      resolve(true)
+    }
+  }
+
+  @objc(clearMediaSession:rejecter:)
+  public func clearMediaSession(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    DispatchQueue.main.async {
+      MPNowPlayingInfoCenter.default().playbackState = .stopped
+      MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+      resolve(true)
+    }
+  }
+
   // MARK: - Advanced ActivityKit Capabilities
 
   @objc(getActiveActivities:rejecter:)
