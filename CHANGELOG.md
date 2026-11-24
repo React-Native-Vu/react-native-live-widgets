@@ -4,6 +4,11 @@ All notable changes to `react-native-live-widgets` will be documented in this fi
 
 ## [Unreleased]
 ### Added
+- **Developer Experience, Visual Inspector, Snapshot Testing, Profiler & Diagnostics (Group D — P1)**:
+  - Added `Widget.exportInspectorHTML()` generating a zero-dependency 3-pane DevTools HTML viewer (UI Tree, Dark/Light/Tinted SVG previews, Semantic Focus Tree, Diagnostics).
+  - Added `Widget.createSnapshot()`, `Widget.compareSnapshots()`, and `Widget.renderToSVG()` for multi-size & Light/Dark/Tinted/RTL regression testing.
+  - Added `Widget.profileIR()`, `Widget.getProfilerReport()`, `Widget.formatProfilerReport()` + Android native Bitmap RAM / render duration / RemoteViews action telemetry and 24-hour WidgetKit reload budget warnings.
+  - Added `Widget.diagnose()` and `Widget.formatDiagnostics()` catching invalid UI schema, prop typos, platform limits, Canvas fallbacks, and dead-letter queue alerts.
 - **Persistent Action Queue & Atomic State Lifecycle Engine (Group B — P0)**:
   - Added `Widget.enqueueAction`, `Widget.getPendingActions`, `Widget.syncPendingActions`, `Widget.recoverPendingActions`, `Widget.clearPendingActions`, and `usePendingActions()` hook with Idempotency Keys, Deduplication, Exponential/Linear/Fixed Retry Policy, and Dead-Letter handling.
   - Added `Widget.registerStateSchema`, `Widget.getVersionedState`, and `Widget.updateStateAtomic` supporting State Versioning, automatic schema Migration, Conflict Resolution (`last_write_wins`, `server_wins`, `client_wins`, custom merge), and Multi-Instance Isolation.

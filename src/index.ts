@@ -16,6 +16,20 @@ import {
   WidgetIR,
 } from './types';
 import { compileToIR, inspectIR, inspectAccessibilityTree } from './ir';
+import { diagnoseLayout, formatDiagnosticsReport } from './diagnostics';
+import {
+  recordReloadEvent,
+  recordStateSyncDuration,
+  profileIRCompile,
+  buildProfilerReport,
+  formatProfilerReport,
+} from './profiler';
+import {
+  createWidgetSnapshot,
+  compareWidgetSnapshots,
+  renderLayoutToSVG,
+} from './snapshot';
+import { exportInspectorHTML } from './inspector';
 import {
   setEngineStorageBackend,
   enqueuePendingAction,
@@ -588,6 +602,7 @@ export const Widget = {
    * Yêu cầu hệ điều hành iOS và Android vẽ lại toàn bộ Home Screen Widgets ngay lập tức.
    */
   reloadAll: async (): Promise<boolean> => {
+    recordReloadEvent();
     if (!LiveActivityModule?.reloadAllWidgets) return false;
     try {
       return await LiveActivityModule.reloadAllWidgets();
@@ -601,6 +616,7 @@ export const Widget = {
    * Yêu cầu vẽ lại một Widget cụ thể theo kind (hỗ trợ cả iOS và Android).
    */
   reload: async (kind: string): Promise<boolean> => {
+    recordReloadEvent();
     if (!LiveActivityModule?.reloadWidget) return false;
     try {
       return await LiveActivityModule.reloadWidget(kind);
@@ -1060,6 +1076,41 @@ export const Widget = {
 
   /** ⏱️ Đánh giá trạng thái Cache (fresh / stale / miss) theo chuẩn Stale-While-Revalidate */
   evaluateCacheStatus,
+
+  // ─── NHÓM D: DEVELOPER EXPERIENCE, INSPECTOR, SNAPSHOT, PROFILER & DIAGNOSTICS (P1) ──
+
+  /** 🩺 Chẩn đoán Schema, Unsupported Props, Renderer Fallback & Accessibility Audit */
+  diagnose: diagnoseLayout,
+
+  /** 📋 Xuất báo cáo Diagnostics dạng ASCII đẹp mắt cho terminal */
+  formatDiagnostics: formatDiagnosticsReport,
+
+  /** ⏱️ Đo thời gian biên dịch UI IR và tỉ lệ Native vs Canvas */
+  profileIR: profileIRCompile,
+
+  /** 📊 Lấy báo cáo Native Renderer Profiler (IR compile, Bitmap RAM, RemoteViews Actions, Reload Budget 24h) */
+  getProfilerReport: async (widgetKey = 'main', appGroup?: string) => {
+    const nativeMetrics = await SharedStorage.get<any>(
+      `widget_profiler_metrics_${widgetKey}`,
+      appGroup
+    );
+    return buildProfilerReport(widgetKey, nativeMetrics || undefined);
+  },
+
+  /** 📋 Định dạng báo cáo Profiler ra chuỗi terminal dễ đọc */
+  formatProfilerReport,
+
+  /** 📸 Tạo Widget Snapshot đa kích thước (Small/Medium/Large) & đa giao diện (Light/Dark/Tinted/RTL) */
+  createSnapshot: createWidgetSnapshot,
+
+  /** 🔬 So sánh 2 Widget Snapshots phát hiện regression giao diện & ngữ nghĩa */
+  compareSnapshots: compareWidgetSnapshots,
+
+  /** 🎨 Kết xuất nhanh cây layout sang vector SVG (hỗ trợ Light/Dark/Tinted/RTL) */
+  renderToSVG: renderLayoutToSVG,
+
+  /** 🖥️ Xuất Visual Widget Inspector dạng HTML DevTools tự chứa mở trực tiếp trên trình duyệt */
+  exportInspectorHTML,
 };
 
 /**
@@ -1224,6 +1275,10 @@ export * from './types';
 export * from './builder';
 export * from './ir';
 export * from './actionQueue';
+export * from './diagnostics';
+export * from './profiler';
+export * from './snapshot';
+export * from './inspector';
 export { StyleSheet } from './builder';
 export * from './hooks';
 

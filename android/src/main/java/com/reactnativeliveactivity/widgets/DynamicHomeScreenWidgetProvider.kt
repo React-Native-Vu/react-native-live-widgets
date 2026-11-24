@@ -115,6 +115,7 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
             val heightPx = (logicalHeightDp * renderDensity).roundToInt().coerceAtLeast(220)
 
             val bindings = mutableListOf<ButtonActionBinding>()
+            val renderStartNs = System.nanoTime()
             val bmp = DynamicWidgetCanvasRenderer.renderWidgetBitmap(
                 context = context,
                 rootNode = activeNode,
@@ -124,7 +125,31 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                 family = family,
                 bindings = bindings
             )
+            val renderDurationMs = (System.nanoTime() - renderStartNs) / 1_000_000.0
             views.setImageViewBitmap(R.id.rn_widget_canvas, bmp)
+
+            // 📊 Ghi nhận Native Renderer Profiler Telemetry (Bitmap RAM, Render ms, RemoteViews Actions)
+            runCatching {
+                val bmpBytes = bmp.byteCount.toDouble()
+                val bmpMB = bmpBytes / (1024.0 * 1024.0)
+                val semCount = DynamicWidgetCanvasRenderer.lastSemanticNodes.size
+                val hitCount = bindings.size
+                val profJson = JSONObject().apply {
+                    put("bitmapWidthPx", widthPx)
+                    put("bitmapHeightPx", heightPx)
+                    put("bitmapMemoryMB", Math.round(bmpMB * 1000.0) / 1000.0)
+                    put("renderDurationMs", Math.round(renderDurationMs * 100.0) / 100.0)
+                    put("semanticNodeCount", semCount)
+                    put("hitZoneCount", hitCount)
+                    put("remoteViewsActionCount", semCount + hitCount + 2)
+                    put("recordedAt", System.currentTimeMillis())
+                }
+                DynamicWidgetStateStore.writeSharedString(
+                    context,
+                    "widget_profiler_metrics_$widgetKey",
+                    profJson.toString()
+                )
+            }
 
             // 📐 Ánh xạ toạ độ Bitmap -> toạ độ thật của widget trên Launcher.
             // ImageView dùng scaleType=fitCenter nên Bitmap có thể bị thu/phóng và chừa viền (letterbox).
