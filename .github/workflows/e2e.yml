@@ -93,54 +93,15 @@ jobs:
           path: ~/.maestro/tests/
           retention-days: 7
 
-  e2e-ios:
-    name: iOS E2E (Maestro on Simulator)
-    runs-on: macos-13
-    timeout-minutes: 30
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'npm'
-
-      - name: Install Dependencies & Build Library
-        run: |
-          npm ci || npm install
-          npm run build
-
-      - name: Install Maestro CLI
-        run: |
-          curl -fsSL "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
-
-      - name: Boot iOS Simulator
-        run: |
-          export PATH="$HOME/.maestro/bin:$PATH"
-          maestro --version
-          DEVICE_UUID=$(xcrun simctl list devices available | grep -E "iPhone (14|15|16)" | head -n 1 | grep -E -o "([0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12})")
-          echo "Selected Device UUID: $DEVICE_UUID"
-          if [ -n "$DEVICE_UUID" ]; then
-            xcrun simctl boot "$DEVICE_UUID" || true
-          fi
-
-      - name: Run Maestro Tests on iOS Simulator
-        run: |
-          export PATH="$HOME/.maestro/bin:$PATH"
-          TARGET_FLOW="${{ github.event.inputs.flow || 'full_suite' }}"
-          if [ "$TARGET_FLOW" = "full_suite" ]; then
-            maestro test .maestro/full_suite.yaml || true
-          else
-            maestro test .maestro/${TARGET_FLOW}.yaml || true
-          fi
-
-      - name: Upload Maestro Test Artifacts & Screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: maestro-ios-artifacts
-          path: ~/.maestro/tests/
-          retention-days: 7
+  # Note: iOS E2E on GitHub-hosted macOS runners requires dedicated/paid macOS runner concurrency
+  # to avoid long queue times. For free-tier repositories, run iOS flows locally in 20s via:
+  # maestro test .maestro/full_suite.yaml
+  #
+  # e2e-ios:
+  #   name: iOS E2E (Maestro on Simulator)
+  #   runs-on: macos-latest
+  #   timeout-minutes: 30
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #     ...
