@@ -1640,26 +1640,33 @@ console.log(ir.renderStrategy, ir.semanticSummary);</code></pre>
         <div id="a11y-layer" class="bg-darkCard border border-cardBorder rounded-2xl p-6 space-y-4">
           <h3 class="font-bold text-white text-lg flex items-center space-x-2">
             <i data-lucide="accessibility" class="w-5 h-5 text-sky-400"></i>
-            <span>Lớp Trợ năng Chuẩn hóa (VoiceOver iOS &amp; TalkBack Android)</span>
+            <span>Lớp Trợ năng Native Độc lập (VoiceOver iOS &amp; TalkBack Android)</span>
           </h3>
           <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Mọi node hỗ trợ đầy đủ <code>AccessibilityProps</code>: <code>accessible</code>, <code>accessibilityRole</code> (<code>'header' | 'button' | 'progressbar' | 'checkbox' | 'switch' | 'image' | 'summary'</code>), <code>accessibilityLabel</code>, <code>accessibilityHint</code>, và <code>accessibilityValue</code>. Trên Android, engine tự động duyệt đệ quy để gán tóm tắt vào <code>contentDescription</code> của Canvas và từng Hit Zone.
+            Thay vì gom chung thành 1 chuỗi văn bản trên Canvas, mọi node hỗ trợ đầy đủ <strong>True Native Accessibility Tree</strong> với <code>AccessibilityProps</code>: <code>accessible</code>, <code>accessibilityRole</code>, <code>accessibilityFocusOrder</code> (thứ tự duyệt), <code>accessibilityGroup</code> (<code>'combine' | 'contain'</code>), <code>accessibilityState</code> (<code>checked</code>, <code>disabled</code>, <code>expanded</code>, <code>selected</code>, <code>busy</code>), <code>accessibilityAdjustable</code>, <code>accessibilityLiveRegion</code> (<code>'polite' | 'assertive'</code>) và <code>layoutDirection: 'rtl'</code>. Trên Android, lớp phủ <code>rn_semantic_layer</code> dựng từng <code>AccessibilityNodeInfo</code> độc lập khớp toạ độ pixel giúp TalkBack focus từng phần tử riêng biệt; dùng <code>Widget.inspectAccessibilityTree(layout)</code> để kiểm tra cây focus ngay trên terminal.
           </p>
           <div class="relative">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700 transition">Copy</button>
-            <pre><code class="language-tsx">&lt;VStack padding={16}&gt;
-  &lt;Text typography="title2" accessibilityRole="header" accessibilityLabel="Bảng điều khiển chấm công"&gt;
+            <pre><code class="language-tsx">&lt;VStack padding={16} layoutDirection="ltr"&gt;
+  &lt;Text typography="title2" accessibilityRole="header" accessibilityFocusOrder={1} accessibilityLiveRegion="polite"&gt;
     BẢNG ĐIỀU KHIỂN CHẤM CÔNG
   &lt;/Text&gt;
-  &lt;Progress value={0.86} accessibilityLabel="Tiến độ hoàn thành ca" accessibilityValue="86 phần trăm" /&gt;
+  &lt;HStack accessibilityGroup="combine" accessibilityFocusOrder={2}&gt;
+    &lt;Image systemName="sparkles" accessible={false} /&gt;
+    &lt;Text&gt;Tiến độ ca làm&lt;/Text&gt;
+    &lt;Text&gt;86%&lt;/Text&gt;
+  &lt;/HStack&gt;
   &lt;Button
     title="Check-in vào ca"
     actionId="CHECK_IN"
-    accessibilityRole="button"
+    accessibilityFocusOrder={3}
+    accessibilityState={{ checked: false, disabled: false }}
     accessibilityHint="Chạm hai lần để gửi yêu cầu chấm công"
   /&gt;
-  &lt;Image systemName="sparkles" accessible={false} /&gt;
-&lt;/VStack&gt;</code></pre>
+&lt;/VStack&gt;
+
+// 🔍 Kiểm tra cây Focus Order &amp; State Description trực tiếp:
+console.log(Widget.inspectAccessibilityTree(layout));</code></pre>
           </div>
         </div>
 

@@ -73,8 +73,8 @@ const unsubscribe = Widget.onWidgetAction((actionId, payload) => {
 ```
 
 ### Architecture & Native Parity (v1.2.1 Updates)
-- **Native Semantic Coverage & Accessibility**: Standard `BaseSemanticProps` (`accessible`, `accessibilityRole`, `accessibilityLabel`, `accessibilityHint`, `accessibilityValue`) with full VoiceOver and TalkBack support.
-- **UI Intermediate Representation (IR)**: Inspect and compile layout trees with `Widget.inspectIR(layout)` and `Widget.compileIR(layout)`.
+- **True Native Accessibility Nodes (TalkBack & VoiceOver)**: Full `AccessibilityProps` (`accessible`, `accessibilityRole`, `accessibilityLabel`, `accessibilityHint`, `accessibilityValue`, `accessibilityFocusOrder`, `accessibilityGroup`, `accessibilityState`, `accessibilityAdjustable`, `accessibilityLiveRegion`, `layoutDirection`). Android builds independent pixel-aligned overlay nodes (`rn_semantic_layer`); iOS maps to SwiftUI `.accessibilitySortPriority` and `.accessibilityElement`.
+- **UI Intermediate Representation (IR) & A11y Inspector**: Inspect and compile layout trees with `Widget.inspectIR(layout)`, `Widget.compileIR(layout)`, and `Widget.inspectAccessibilityTree(layout, { rtl })`.
 - **Android Exact Dynamic Hit Layer**: Dynamic `FrameLayout` overlay with `computeCanvasMapping` compensating for `fitCenter` aspect ratio letterboxing, eliminating misclicks and phantom taps.
 - **Android Native Live Chronometer**: Realtime 1s countdowns driven by native `android.widget.Chronometer` without Canvas bitmap redraws.
 - **Dynamic Template Variable Interpolation**: Resolves `{{id}}`, `{{title}}`, and counter values dynamically, with initial `defaultChecked` persistence in `DynamicWidgetStateStore`.

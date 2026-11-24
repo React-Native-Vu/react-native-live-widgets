@@ -2,6 +2,18 @@
 
 All notable changes to `react-native-live-widgets` will be documented in this file.
 
+## [Unreleased]
+### Added
+- **True Native Accessibility Tree (P0 — TalkBack & VoiceOver)**:
+  - Extended `AccessibilityProps` & `SemanticNode` in UI IR with `accessibilityFocusOrder`, `accessibilityGroup` (`'combine' | 'contain' | 'none'`), `accessibilityState` (`checked`, `disabled`, `expanded`, `selected`, `busy`), `accessibilityAdjustable`, `accessibilityLiveRegion` (`'polite' | 'assertive'`), and RTL traversal (`layoutDirection: 'rtl'`).
+  - **Android Native Semantic Overlay (`rn_semantic_layer`)**: Replaced monolithic Canvas `contentDescription` with independent pixel-aligned transparent `AccessibilityNodeInfo` overlays (`rn_live_widget_semantic_node.xml`) supporting TalkBack per-element focus, `setStateDescription` (API 30+), `setAccessibilityHeading` (API 28+), and `setAccessibilityLiveRegion`.
+  - **iOS SwiftUI Accessibility Modifier**: Added `.accessibilitySortPriority()`, `.accessibilityElement(children:)`, `.isSelected`/`.isSummaryElement`/`.updatesFrequently` traits, and RTL `.layoutDirection`.
+  - **Accessibility Test Inspector**: Added `Widget.inspectAccessibilityTree(layout, { rtl })` and expanded IR test suite to 18 assertions.
+- **Tier-1 Community QA, CI/CD & Documentation**:
+  - Upgraded `.github/workflows/ci.yml` with multi-Node (18/20/22) test matrix, Expo Config Plugin automated verification (`scripts/test-config-plugin.js`), CocoaPods podspec validation, and Android structure verification.
+  - Added 7-flow Maestro E2E test suite (`.maestro/`) and Android KVM E2E workflow (`.github/workflows/e2e.yml`).
+  - Published `docs/COMPATIBILITY.md`, `docs/MIGRATION.md`, `docs/BENCHMARKS.md`, and capability guides in `docs/capabilities/`.
+
 ## [1.2.3] - 2026-11-18
 ### Fixed & Improved
 - **Automatic Xcode String Catalog Linking (`Localizable.xcstrings`)**:

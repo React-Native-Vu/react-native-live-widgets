@@ -1067,54 +1067,56 @@ Rather than making unverified claims of "100% parity", the engine provides an ex
 | **Dashed / Dotted Borders** | ✅ StrokeStyle | ✅ StrokeStyle | ⚠️ Solid | ✅ `DashPathEffect` | Automatically falls back to solid border |
 | **Dynamic Type (Accessibility)** | ✅ Native | ✅ Native | ✅ `fontScale` | ✅ `fontScale` | Automatically scales with OS font multiplier |
 | **RTL Layout Mirroring** | ✅ Native | ✅ Native | ✅ RTL | ✅ RTL | Reverses flex order and flips text alignment |
-| **Accessibility (TalkBack / VoiceOver)** | ✅ Native VoiceOver | ✅ Native VoiceOver | ✅ Notification Text | ✅ A11y Summary + Hit-Zones | Aggregated semantic `contentDescription` ensures full screen-reader readability |
+| **Accessibility (TalkBack / VoiceOver)** | ✅ Native VoiceOver | ✅ Native VoiceOver | ✅ Notification Text | ✅ Native Semantic Layer (`rn_semantic_layer`) | Independent native `AccessibilityNodeInfo` overlay per element, Focus Order, Grouping, State, Live Region & RTL |
 | **iOS 18 Tinted Mode** | ✅ Accentable | N/A | N/A | ✅ Material You | Resolves `tinted` key on iOS 18; falls back to dark/light color |
 | **Interactive Background Intents** | ✅ iOS 17+ | ✅ iOS 17+ | ✅ PendingIntent | ✅ PendingIntent | Updates local Shared Storage and refreshes timeline |
 
 ---
 
-### 12.3. ♿ Accessibility & Semantics (Phase 1 Fallback Layer)
+### 12.3. ♿ True Native Accessibility Tree (TalkBack & VoiceOver)
 
-To ensure users with visual impairments or screen-reader users (**VoiceOver on iOS**, **TalkBack on Android**) receive full context, the engine provides standard accessibility props:
+To guarantee enterprise-grade screen-reader accessibility (**VoiceOver on iOS**, **TalkBack on Android**), the UI IR compiles a dedicated **Semantic Tree** independent from Canvas rendering — supporting **Focus Order**, **Grouping**, **State Descriptions**, **Adjustable Actions**, **Live Regions**, and **RTL traversal**:
 
 ```tsx
-<VStack padding={16} backgroundColor="#0F172A">
-  {/* Header with semantic role */}
+<VStack padding={16} backgroundColor="#0F172A" layoutDirection="ltr">
+  {/* Header with explicit focus order & live region */}
   <Text
     typography="title2"
     accessibilityRole="header"
     accessibilityLabel="Shift Attendance Dashboard"
+    accessibilityFocusOrder={1}
+    accessibilityLiveRegion="polite"
   >
     ATTENDANCE DASHBOARD
   </Text>
 
-  {/* Progress gauge with spoken percentage */}
-  <Progress
-    value={0.86}
-    accessibilityLabel="Shift completion progress"
-    accessibilityValue="86 percent"
-  />
+  {/* Grouped container: screen readers announce as 1 unified focus target */}
+  <HStack accessibilityGroup="combine" accessibilityFocusOrder={2}>
+    <Image systemName="sparkles" accessible={false} />
+    <Text>Shift completion</Text>
+    <Text>86%</Text>
+  </HStack>
 
-  {/* Interactive button with action hint */}
+  {/* Interactive button with state & adjustable actions */}
   <Button
     title="Clock In"
     actionId="CLOCK_IN"
     accessibilityRole="button"
+    accessibilityFocusOrder={3}
+    accessibilityState={{ checked: false, disabled: false }}
     accessibilityLabel="Clock in to shift"
     accessibilityHint="Double tap to confirm attendance"
   />
-
-  {/* Decorative element hidden from screen readers */}
-  <Image systemName="sparkles" accessible={false} />
 </VStack>
 ```
 
-#### How Phase 1 Accessibility Works:
-1. **iOS (SwiftUI)**: Maps directly to native `.accessibilityLabel()`, `.accessibilityHint()`, `.accessibilityValue()`, and `.accessibilityAddTraits()`. Elements with `accessible={false}` receive `.accessibilityHidden(true)`.
-2. **Android (Canvas 2D)**:
-   - Recursively extracts an intelligent text summary (`extractAccessibilitySummary`) and binds it to the canvas `ImageView`'s `contentDescription`.
-   - Each interactive hit-zone receives its own `contentDescription` and action hint so TalkBack speaks each button individually when focused.
-3. **In-App Preview**: Maps to React Native Web/Mobile accessibility props.
+#### How True Native Accessibility Works:
+1. **iOS (SwiftUI)**: Maps directly to native `.accessibilityLabel()`, `.accessibilityHint()`, `.accessibilityValue()`, `.accessibilitySortPriority()`, `.accessibilityElement(children: .combine | .contain)`, `.accessibilityAddTraits()`, and `.environment(\.layoutDirection, .rightToLeft)`. Elements with `accessible={false}` receive `.accessibilityHidden(true)`.
+2. **Android (Native Semantic Overlay Layer — `rn_semantic_layer`)**:
+   - The background Canvas `ImageView` sets `importantForAccessibility="no"` whenever semantic nodes are active so TalkBack never reads duplicate monolithic text.
+   - Each semantic node (`Text`, `Header`, `Progress`, `Gauge`, `Badge`, `Timer`, or combined `Group`) receives an independent transparent overlay view (`rn_live_widget_semantic_node.xml`) positioned with pixel-exact letterbox-compensated bounds, enabling independent TalkBack focus, `setStateDescription` (Android 11+), `setAccessibilityHeading` (Android 9+), `setAccessibilityLiveRegion`, and RTL focus order.
+   - Each interactive hit-zone in `rn_hit_layer` carries its own `contentDescription` and action hint.
+3. **Accessibility Test Inspector**: Call `Widget.inspectAccessibilityTree(layout, { rtl })` to inspect focus order, grouping, state descriptions, and live regions directly in your terminal. See the full [Native Accessibility & TalkBack Guide](capabilities/accessibility-and-talkback.md).
 
 ---
 
