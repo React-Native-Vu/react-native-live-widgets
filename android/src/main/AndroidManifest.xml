@@ -18,6 +18,15 @@
             </intent-filter>
         </receiver>
 
+        <!-- 🧪 ADB Local FCM Push Simulator (chỉ phản hồi khi app có FLAG_DEBUGGABLE, tự khóa trên bản Release) -->
+        <receiver
+            android:name=".DebugFcmPushReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.reactnativeliveactivity.ACTION_SIMULATE_FCM_PUSH" />
+            </intent-filter>
+        </receiver>
+
         <!-- Service Headless JS chạy tác vụ ngầm khi người dùng bấm nút trên Widget mà App đang đóng -->
         <service
             android:name=".LiveActivityHeadlessTaskService"
