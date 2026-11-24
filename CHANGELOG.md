@@ -4,6 +4,11 @@ All notable changes to `react-native-live-widgets` will be documented in this fi
 
 ## [Unreleased]
 ### Added
+- **Persistent Action Queue & Atomic State Lifecycle Engine (Group B — P0)**:
+  - Added `Widget.enqueueAction`, `Widget.getPendingActions`, `Widget.syncPendingActions`, `Widget.recoverPendingActions`, `Widget.clearPendingActions`, and `usePendingActions()` hook with Idempotency Keys, Deduplication, Exponential/Linear/Fixed Retry Policy, and Dead-Letter handling.
+  - Added `Widget.registerStateSchema`, `Widget.getVersionedState`, and `Widget.updateStateAtomic` supporting State Versioning, automatic schema Migration, Conflict Resolution (`last_write_wins`, `server_wins`, `client_wins`, custom merge), and Multi-Instance Isolation.
+- **Background Data Engine Upgrades (Group C — P1)**:
+  - Added `PATCH`/`DELETE` REST support, **Stale-While-Revalidate (SWR)** (`cacheStrategy`, `staleTtlSeconds`), `offlineFallback`, `Widget.invalidateCache()`, `Widget.setSecureToken()` (`{{$secure.*}}` native header interpolation), `Widget.getSyncStatus()` observability telemetry, and `Widget.computeDataDiff()` incremental diffing.
 - **True Native Accessibility Tree (P0 — TalkBack & VoiceOver)**:
   - Extended `AccessibilityProps` & `SemanticNode` in UI IR with `accessibilityFocusOrder`, `accessibilityGroup` (`'combine' | 'contain' | 'none'`), `accessibilityState` (`checked`, `disabled`, `expanded`, `selected`, `busy`), `accessibilityAdjustable`, `accessibilityLiveRegion` (`'polite' | 'assertive'`), and RTL traversal (`layoutDirection: 'rtl'`).
   - **Android Native Semantic Overlay (`rn_semantic_layer`)**: Replaced monolithic Canvas `contentDescription` with independent pixel-aligned transparent `AccessibilityNodeInfo` overlays (`rn_live_widget_semantic_node.xml`) supporting TalkBack per-element focus, `setStateDescription` (API 30+), `setAccessibilityHeading` (API 28+), and `setAccessibilityLiveRegion`.

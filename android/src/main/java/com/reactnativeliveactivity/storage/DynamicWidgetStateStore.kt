@@ -646,7 +646,7 @@ object DynamicWidgetStateStore {
                         }
                     }
 
-                    if (bodyStr != null && (method == "POST" || method == "PUT")) {
+                    if (bodyStr != null && (method == "POST" || method == "PUT" || method == "PATCH" || method == "DELETE")) {
                         if (getRequestProperty("Content-Type") == null) {
                             setRequestProperty("Content-Type", "application/json")
                         }
@@ -696,21 +696,79 @@ object DynamicWidgetStateStore {
         return SourceFetchResult.Failed(lastError, lastStatus)
     }
 
+    private fun resolveSecureHeaders(context: Context, headers: JSONObject?): JSONObject? {
+        if (headers == null) return null
+        val resolved = JSONObject()
+        val keys = headers.keys()
+        val secureRegex = Regex("\\{\\{\\\$secure\\.([a-zA-Z0-9_.-]+)\\}\\}")
+        while (keys.hasNext()) {
+            val k = keys.next()
+            var v = headers.optString(k, "")
+            v = secureRegex.replace(v) { m ->
+                val credKey = m.groupValues[1]
+                readSharedString(context, "widget_secure_cred_$credKey") ?: ""
+            }
+            resolved.put(k, v)
+        }
+        return resolved
+    }
+
     /**
      * Đồng bộ API chạy ngầm trực tiếp từ BroadcastReceiver / AppWidgetProvider
      * kể cả khi ứng dụng React Native đã bị Kill hoàn toàn!
+     * Hỗ trợ đầy đủ REST (GET/POST/PUT/PATCH/DELETE), SWR, Cache Invalidation, Secure Token & Telemetry.
      */
     fun performRemoteSync(context: Context, widgetKey: String = "main", forceRefresh: Boolean = false) {
+        val syncStartMs = System.currentTimeMillis()
         val configJson = readSharedString(context, "widget_remote_config_$widgetKey")
         val cfg = if (!configJson.isNullOrEmpty()) runCatching { JSONObject(configJson) }.getOrNull() else null
         val state = loadState(context)
 
+        // Kiểm tra cờ Cache Invalidation chủ động
+        val invalidatedAt = readSharedString(context, "widget_cache_invalidated_$widgetKey")?.toLongOrNull() ?: 0L
+        val effectiveForce = forceRefresh || (invalidatedAt > state.updatedAt)
+
         val ttlSeconds = cfg?.optInt("cacheTtlSeconds", 0) ?: 0
-        if (!forceRefresh && ttlSeconds > 0 && state.lastSyncTime != null && state.syncStatus != "error") {
-            val ageMs = System.currentTimeMillis() - state.updatedAt
+        val staleTtlSeconds = cfg?.optInt("staleTtlSeconds", 0) ?: 0
+        val cacheStrategy = cfg?.optString("cacheStrategy", "cache_first") ?: "cache_first"
+        val ageMs = System.currentTimeMillis() - state.updatedAt
+
+        if (!effectiveForce && ttlSeconds > 0 && state.lastSyncTime != null && state.syncStatus != "error") {
             if (ageMs < ttlSeconds * 1000L) {
+                writeSharedString(
+                    context,
+                    "widget_sync_telemetry_$widgetKey",
+                    JSONObject().apply {
+                        put("widgetKey", widgetKey)
+                        put("state", "idle")
+                        put("cacheStatus", "fresh")
+                        put("lastSyncAt", state.updatedAt)
+                        put("isStale", false)
+                        put("isOffline", false)
+                    }.toString()
+                )
                 return
             }
+        }
+
+        val isWithinStaleWindow = cacheStrategy == "stale_while_revalidate" &&
+            staleTtlSeconds > 0 &&
+            state.lastSyncTime != null &&
+            ageMs < (ttlSeconds + staleTtlSeconds) * 1000L
+
+        if (isWithinStaleWindow) {
+            writeSharedString(
+                context,
+                "widget_sync_telemetry_$widgetKey",
+                JSONObject().apply {
+                    put("widgetKey", widgetKey)
+                    put("state", "revalidating")
+                    put("cacheStatus", "stale")
+                    put("lastSyncAt", state.updatedAt)
+                    put("isStale", true)
+                    put("isOffline", false)
+                }.toString()
+            )
         }
 
         val timeoutMs = (cfg?.optInt("timeoutMs", 8000) ?: 8000).coerceAtLeast(1000)
@@ -718,7 +776,7 @@ object DynamicWidgetStateStore {
         val maxRetries = cfg?.optInt("maxRetries", 0) ?: 0
         val retryDelayMs = cfg?.optInt("retryDelayMs", 500) ?: 500
         val defaultMethod = cfg?.optString("method", "GET")?.ifEmpty { null } ?: "GET"
-        val defaultHeaders = cfg?.optJSONObject("headers")
+        val defaultHeaders = resolveSecureHeaders(context, cfg?.optJSONObject("headers"))
         val authObj = cfg?.optJSONObject("authRefresh")
         val primaryUrl = cfg?.optString("url", "")?.ifEmpty { null }
             ?: if (cfg?.optJSONObject("sources") == null) "https://jsonplaceholder.typicode.com/todos/{{_randomId}}" else null

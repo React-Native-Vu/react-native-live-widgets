@@ -297,3 +297,36 @@ export function useWidgetState<T>(
 
   return [state, setWidgetState, reload];
 }
+
+/**
+ * 🎣 React Hook theo dõi & tự động khôi phục hàng đợi Pending Actions (Nhóm B - P0).
+ */
+export function usePendingActions(options?: {
+  widgetKey?: string;
+  instanceId?: string;
+  appGroup?: string;
+}) {
+  const [actions, setActions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await Widget.getPendingActions(options);
+      setActions(list);
+    } finally {
+      setLoading(false);
+    }
+  }, [options?.widgetKey, options?.instanceId, options?.appGroup]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return {
+    actions,
+    pendingCount: actions.filter((a) => a.status === 'queued' || a.status === 'failed').length,
+    loading,
+    refresh,
+  };
+}

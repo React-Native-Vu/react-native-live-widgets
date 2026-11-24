@@ -493,7 +493,8 @@ public enum DynamicWidgetStateStore {
       req.timeoutInterval = timeoutSecs
       if let headers = headers {
         for (k, v) in headers {
-          req.setValue(v, forHTTPHeaderField: k)
+          let resolvedVal = resolveSecureHeaderValue(v)
+          req.setValue(resolvedVal, forHTTPHeaderField: k)
         }
       }
 
@@ -578,7 +579,25 @@ public enum DynamicWidgetStateStore {
     return .failed(error: lastError, statusCode: lastStatus)
   }
 
+  private static func resolveSecureHeaderValue(_ raw: String) -> String {
+    guard raw.contains("{{$secure.") else { return raw }
+    var result = raw
+    if let regex = try? NSRegularExpression(pattern: "\\{\\{\\$secure\\.([a-zA-Z0-9_.-]+)\\}\\}") {
+      let matches = regex.matches(in: result, range: NSRange(result.startIndex..., in: result)).reversed()
+      for match in matches {
+        if let keyRange = Range(match.range(at: 1), in: result),
+           let fullRange = Range(match.range(at: 0), in: result) {
+          let credKey = String(result[keyRange])
+          let secret = DynamicWidgetProvider.readSharedString(forKey: "widget_secure_cred_\(credKey)", appGroup: "") ?? ""
+          result.replaceSubrange(fullRange, with: secret)
+        }
+      }
+    }
+    return result
+  }
+
   /// Chạy ngầm độc lập bên trong Widget Extension (kể cả khi Main App đã bị kill hoàn toàn)
+  /// Hỗ trợ đầy đủ REST (GET/POST/PUT/PATCH/DELETE), Cache Invalidation, SWR & Secure Token.
   public static func performRemoteSync(widgetKey: String = "main", forceRefresh: Bool = false) async {
     let configKey = "widget_remote_config_\(widgetKey)"
     guard let configJson = DynamicWidgetProvider.readSharedString(forKey: configKey, appGroup: ""),
@@ -590,9 +609,14 @@ public enum DynamicWidgetStateStore {
 
     var state = loadState()
     let now = Date().timeIntervalSince1970
+    let invalidatedMs = Double(DynamicWidgetProvider.readSharedString(forKey: "widget_cache_invalidated_\(widgetKey)", appGroup: "") ?? "") ?? 0
+    let effectiveForce = forceRefresh || (invalidatedMs / 1000.0 > state.updatedAt)
+
     let ttlSeconds = config.cacheTtlSeconds ?? 0
-    if !forceRefresh && ttlSeconds > 0 && state.lastSyncTime != nil && state.syncStatus != "error" {
+    if !effectiveForce && ttlSeconds > 0 && state.lastSyncTime != nil && state.syncStatus != "error" {
       if (now - state.updatedAt) < Double(ttlSeconds) {
+        let telemetry = "{\"widgetKey\":\"\(widgetKey)\",\"state\":\"idle\",\"cacheStatus\":\"fresh\",\"isStale\":false,\"isOffline\":false}"
+        DynamicWidgetProvider.writeSharedString(telemetry, forKey: "widget_sync_telemetry_\(widgetKey)", appGroup: "")
         return
       }
     }

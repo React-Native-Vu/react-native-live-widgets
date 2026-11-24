@@ -1,4 +1,5 @@
 import { ActiveActivityInfo, ControlWidgetConfig, EndActivityOptions, LiveActivityPushTokens, LiveActivityStateEvent, StartActivityOptions, UpdateActivityOptions, WidgetCapabilities, WidgetConfigOption, WidgetLayoutConfig, WidgetRemoteConfig, WidgetTimelineConfig, WidgetIR } from './types';
+import { enqueuePendingAction, getPendingActions, recoverPendingActions, syncPendingActions, clearPendingActions, registerStateSchema, readVersionedState, updateStateAtomic, computeDataDiff, evaluateCacheStatus } from './actionQueue';
 import { createDataBinding } from './builder';
 import { ActionHandler, GlobalActionHandler, registerAction, registerActionHandler, unregisterAction } from './dispatcher';
 export type { ActionHandler, GlobalActionHandler };
@@ -232,6 +233,34 @@ export declare const Widget: {
     inspectAccessibilityTree: (layout: any, options?: {
         rtl?: boolean;
     }) => string;
+    /** 📥 Đẩy 1 action vào Persistent Action Queue kèm Idempotency Key & Deduplication */
+    enqueueAction: typeof enqueuePendingAction;
+    /** 📋 Lấy danh sách các Pending Actions đang chờ đồng bộ */
+    getPendingActions: typeof getPendingActions;
+    /** 🔄 Khôi phục các action bị kẹt ở trạng thái 'syncing' sau khi app bị kill/crash */
+    recoverPendingActions: typeof recoverPendingActions;
+    /** ⚡ Đồng bộ hàng đợi Pending Actions lên backend với Retry Policy (exponential/linear/fixed) */
+    syncPendingActions: typeof syncPendingActions;
+    /** 🧹 Xóa Pending Actions khỏi hàng đợi (tất cả hoặc theo trạng thái) */
+    clearPendingActions: typeof clearPendingActions;
+    /** 📜 Đăng ký State Schema & hàm Migration khi nâng cấp phiên bản dữ liệu */
+    registerStateSchema: typeof registerStateSchema;
+    /** 📦 Đọc State có versioning + tự động chạy Migration nếu là phiên bản cũ */
+    getVersionedState: typeof readVersionedState;
+    /** 🔒 Cập nhật State nguyên tử (Atomic Update) kèm Conflict Resolution & Multi-instance Isolation */
+    updateStateAtomic: typeof updateStateAtomic;
+    /** 🗑️ Chủ động xóa Cache (TTL + ETag) để ép lần đồng bộ tiếp theo tải dữ liệu mới nhất */
+    invalidateCache: (widgetKey?: string, sourceKey?: string, appGroup?: string) => Promise<boolean>;
+    /** 🔐 Lưu token/credential bảo mật để Native Data Engine tự nội suy qua `{{$secure.<key>}}` */
+    setSecureToken: (tokenKey: string, tokenValue: string, appGroup?: string) => Promise<boolean>;
+    /** 🗑️ Xóa token bảo mật khỏi Shared Secure Store */
+    removeSecureToken: (tokenKey: string, appGroup?: string) => Promise<boolean>;
+    /** 📊 Theo dõi trạng thái đồng bộ & hiệu năng cache (Sync Observability) */
+    getSyncStatus: (widgetKey?: string, appGroup?: string) => Promise<any>;
+    /** 🔍 So sánh Diff dữ liệu giữa 2 snapshot (Data Diff / Incremental Update) */
+    computeDataDiff: typeof computeDataDiff;
+    /** ⏱️ Đánh giá trạng thái Cache (fresh / stale / miss) theo chuẩn Stale-While-Revalidate */
+    evaluateCacheStatus: typeof evaluateCacheStatus;
 };
 /**
  * 🎛️ Namespace cấu hình & quản lý Control Widget đa nền tảng
@@ -304,6 +333,7 @@ export declare const AudioPlayer: {
 export * from './types';
 export * from './builder';
 export * from './ir';
+export * from './actionQueue';
 export { StyleSheet } from './builder';
 export * from './hooks';
 /**

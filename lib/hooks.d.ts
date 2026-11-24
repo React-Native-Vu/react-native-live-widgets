@@ -67,4 +67,17 @@ export declare function useLiveActivity(initialActivityId?: string): UseLiveActi
  * ```
  */
 export declare function useWidgetState<T>(key: string, initialValue: T, appGroup?: string): [T, (newValue: T | ((prev: T) => T)) => Promise<void>, () => Promise<void>];
+/**
+ * 🎣 React Hook theo dõi & tự động khôi phục hàng đợi Pending Actions (Nhóm B - P0).
+ */
+export declare function usePendingActions(options?: {
+    widgetKey?: string;
+    instanceId?: string;
+    appGroup?: string;
+}): {
+    actions: any[];
+    pendingCount: number;
+    loading: boolean;
+    refresh: () => Promise<void>;
+};
 //# sourceMappingURL=hooks.d.ts.map

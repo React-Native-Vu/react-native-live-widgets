@@ -718,27 +718,36 @@ export interface WidgetAuthRefreshConfig {
     /** Tiền tố giá trị header (mặc định 'Bearer ') */
     headerPrefix?: string;
 }
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export interface WidgetRemoteSourceConfig {
     url: string;
-    method?: 'GET' | 'POST' | 'PUT';
+    method?: HttpMethod;
     headers?: Record<string, string>;
     body?: string | Record<string, any>;
     timeoutMs?: number;
     enableETag?: boolean;
+    /** Nếu nguồn này lỗi, giữ cache cũ hay dùng fallback */
+    optional?: boolean;
 }
 export interface WidgetRemoteConfig {
     /** URL API chính mà Widget Extension sẽ tự gọi ngầm (kể cả khi App chính đã bị kill) */
     url?: string;
-    /** HTTP Method (mặc định 'GET') */
-    method?: 'GET' | 'POST' | 'PUT';
-    /** Payload gửi kèm cho POST / PUT */
+    /** HTTP Method đầy đủ chuẩn REST (mặc định 'GET') */
+    method?: HttpMethod;
+    /** Payload gửi kèm cho POST / PUT / PATCH / DELETE */
     body?: string | Record<string, any>;
-    /** Headers xác thực (ví dụ { Authorization: 'Bearer ...' }) */
+    /** Headers xác thực (hỗ trợ placeholder bảo mật `Bearer {{$secure.access_token}}`) */
     headers?: Record<string, string>;
     /** Thời gian chờ phản hồi mạng tính bằng mili-giây (mặc định 8000ms) */
     timeoutMs?: number;
-    /** Thời gian sống của cache (giây) để tránh gọi API liên tục khi OS reload timeline */
+    /** Thời gian sống của cache tươi (giây) */
     cacheTtlSeconds?: number;
+    /** Chiến lược Cache (khuyên dùng 'stale_while_revalidate' để UI hiển thị tức thì <5ms rồi cập nhật ngầm) */
+    cacheStrategy?: 'cache_first' | 'network_first' | 'stale_while_revalidate';
+    /** Thời gian tối đa (giây) vẫn chấp nhận hiển thị dữ liệu cũ (stale) trong lúc đang revalidate ngầm */
+    staleTtlSeconds?: number;
+    /** Hành vi khi thiết bị mất mạng: 'stale_cache' (giữ dữ liệu cũ + cờ _offline=true) hoặc 'error_ui' */
+    offlineFallback?: 'stale_cache' | 'error_ui';
     /** Bật Conditional Request qua header If-None-Match / If-Modified-Since & HTTP 304 */
     enableETag?: boolean;
     /** Số lần thử lại tối đa khi lỗi mạng hoặc HTTP 5xx (mặc định 0, exponential backoff) */
@@ -747,6 +756,12 @@ export interface WidgetRemoteConfig {
     retryDelayMs?: number;
     /** Gọi đồng thời nhiều nguồn API, biến được gộp theo tiền tố `<sourceKey>.<path>` */
     sources?: Record<string, WidgetRemoteSourceConfig>;
+    /** Chiến lược gọi nhiều nguồn API: 'all_settled' (song song, không ngắt khi 1 nguồn lỗi) | 'fail_fast' */
+    parallelStrategy?: 'all_settled' | 'fail_fast';
+    /** Xử lý lỗi một phần khi gọi nhiều nguồn: 'keep_cached' (mặc định) | 'use_fallback' | 'abort' */
+    partialFailurePolicy?: 'keep_cached' | 'use_fallback' | 'abort';
+    /** Bật Data Diff để chỉ cập nhật các key thực sự thay đổi và bỏ qua reload Widget nếu dữ liệu y hệt */
+    enableDataDiff?: boolean;
     /** Ánh xạ tên biến đích: { targetKey: 'source.path|pipe' } */
     mapping?: Record<string, string>;
     /** Kiểm định dữ liệu trước khi cập nhật biến hiển thị trên Widget */
@@ -763,6 +778,96 @@ export interface WidgetRemoteConfig {
     refreshIntervalMinutes?: number;
     /** Alias ngắn gọn cho refreshIntervalMinutes */
     intervalMinutes?: number;
+}
+/**
+ * 📊 Sync Observability Telemetry (Nhóm C - P1)
+ */
+export interface WidgetSyncTelemetry {
+    widgetKey: string;
+    state: 'idle' | 'revalidating' | 'offline' | 'error';
+    cacheStatus: 'fresh' | 'stale' | 'miss';
+    lastSyncAt?: number;
+    lastDurationMs?: number;
+    changedKeysCount?: number;
+    sourceErrors?: Record<string, string>;
+    isStale?: boolean;
+    isOffline?: boolean;
+}
+export type PendingActionStatus = 'queued' | 'syncing' | 'acked' | 'failed' | 'dead_letter';
+export interface PendingWidgetAction {
+    id: string;
+    actionId: string;
+    widgetKey: string;
+    instanceId: string;
+    payload?: Record<string, any>;
+    /** Khóa bất biến đảm bảo backend không bao giờ xử lý trùng lặp 1 action hai lần */
+    idempotencyKey: string;
+    /** Khóa chống gửi trùng trong cửa sổ thời gian ngắn */
+    dedupeKey?: string;
+    status: PendingActionStatus;
+    retries: number;
+    maxRetries: number;
+    createdAt: number;
+    updatedAt: number;
+    nextRetryAt?: number;
+    lastError?: string;
+}
+export interface ActionRetryPolicy {
+    maxRetries?: number;
+    strategy?: 'exponential' | 'linear' | 'fixed';
+    baseDelayMs?: number;
+    maxDelayMs?: number;
+    jitter?: boolean;
+}
+export interface EnqueueActionOptions {
+    widgetKey?: string;
+    instanceId?: string;
+    payload?: Record<string, any>;
+    idempotencyKey?: string;
+    dedupeKey?: string;
+    dedupeWindowMs?: number;
+    maxRetries?: number;
+    appGroup?: string;
+}
+export interface SyncPendingActionsOptions {
+    widgetKey?: string;
+    instanceId?: string;
+    appGroup?: string;
+    retry?: ActionRetryPolicy;
+    /** Hàm thực thi gọi API backend cho từng pending action */
+    handler: (action: PendingWidgetAction) => Promise<{
+        ok: boolean;
+        error?: string;
+        serverState?: any;
+    } | boolean>;
+    /** Giữ lại các action đã acked để audit thay vì tự xóa (mặc định false) */
+    keepAcked?: boolean;
+}
+export interface SyncPendingActionsResult {
+    total: number;
+    acked: number;
+    failed: number;
+    deadLettered: number;
+    skipped: number;
+    errors: Array<{
+        id: string;
+        actionId: string;
+        error: string;
+    }>;
+}
+export interface StateEnvelope<T = any> {
+    _v: number;
+    _rev: number;
+    _updatedAt: number;
+    _source: 'app' | 'widget' | 'server';
+    _instanceId: string;
+    data: T;
+}
+export type ConflictResolutionStrategy<T = any> = 'last_write_wins' | 'server_wins' | 'client_wins' | ((local: StateEnvelope<T>, remote: StateEnvelope<T>) => T);
+export interface StateSchemaConfig<T = any> {
+    version: number;
+    migrate?: (oldData: any, fromVersion: number) => T;
+    conflictStrategy?: ConflictResolutionStrategy<T>;
 }
 export interface WidgetDataPipeOptions {
     default?: string | number | boolean;

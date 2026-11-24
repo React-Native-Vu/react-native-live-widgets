@@ -113,6 +113,7 @@ Until now, adding **Live Activities** or **Home Screen Widgets** to a React Nati
 ### 📚 Capability Guides:
 - 📱 **[Live Activities & Dynamic Island Guide](docs/capabilities/live-activities.md)**
 - ⚡ **[Interactive Home Screen Widgets Guide](docs/capabilities/interactive-widgets.md)**
+- 🔄 **[State Management & Persistent Action Queue Guide](docs/capabilities/state-and-action-queue.md)**
 - ♿ **[Native Accessibility, TalkBack & VoiceOver Guide](docs/capabilities/accessibility-and-talkback.md)**
 - ⏱️ **[Zero-Battery Hardware Timers Guide](docs/capabilities/zero-battery-timers.md)**
 - 🌐 **[Force-Killed Background Remote Sync Guide](docs/capabilities/background-remote-sync.md)**

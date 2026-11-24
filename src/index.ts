@@ -16,6 +16,19 @@ import {
   WidgetIR,
 } from './types';
 import { compileToIR, inspectIR, inspectAccessibilityTree } from './ir';
+import {
+  setEngineStorageBackend,
+  enqueuePendingAction,
+  getPendingActions,
+  recoverPendingActions,
+  syncPendingActions,
+  clearPendingActions,
+  registerStateSchema,
+  readVersionedState,
+  updateStateAtomic,
+  computeDataDiff,
+  evaluateCacheStatus,
+} from './actionQueue';
 import { UI, createDataBinding, flattenDataObject, resolveTemplateString } from './builder';
 
 declare const __DEV__: boolean | undefined;
@@ -968,6 +981,85 @@ export const Widget = {
   inspectAccessibilityTree: (layout: any, options?: { rtl?: boolean }): string => {
     return inspectAccessibilityTree(layout, options);
   },
+
+  // ─── NHÓM B: PERSISTENT ACTION QUEUE & ATOMIC STATE LIFECYCLE (P0) ────────
+
+  /** 📥 Đẩy 1 action vào Persistent Action Queue kèm Idempotency Key & Deduplication */
+  enqueueAction: enqueuePendingAction,
+
+  /** 📋 Lấy danh sách các Pending Actions đang chờ đồng bộ */
+  getPendingActions,
+
+  /** 🔄 Khôi phục các action bị kẹt ở trạng thái 'syncing' sau khi app bị kill/crash */
+  recoverPendingActions,
+
+  /** ⚡ Đồng bộ hàng đợi Pending Actions lên backend với Retry Policy (exponential/linear/fixed) */
+  syncPendingActions,
+
+  /** 🧹 Xóa Pending Actions khỏi hàng đợi (tất cả hoặc theo trạng thái) */
+  clearPendingActions,
+
+  /** 📜 Đăng ký State Schema & hàm Migration khi nâng cấp phiên bản dữ liệu */
+  registerStateSchema,
+
+  /** 📦 Đọc State có versioning + tự động chạy Migration nếu là phiên bản cũ */
+  getVersionedState: readVersionedState,
+
+  /** 🔒 Cập nhật State nguyên tử (Atomic Update) kèm Conflict Resolution & Multi-instance Isolation */
+  updateStateAtomic,
+
+  // ─── NHÓM C: BACKGROUND DATA ENGINE, SWR, CACHE & OBSERVABILITY (P1) ──────
+
+  /** 🗑️ Chủ động xóa Cache (TTL + ETag) để ép lần đồng bộ tiếp theo tải dữ liệu mới nhất */
+  invalidateCache: async (
+    widgetKey = 'main',
+    sourceKey?: string,
+    appGroup?: string
+  ): Promise<boolean> => {
+    try {
+      const markerKey = sourceKey
+        ? `widget_cache_invalidated_${widgetKey}_${sourceKey}`
+        : `widget_cache_invalidated_${widgetKey}`;
+      await SharedStorage.set(markerKey, Date.now(), appGroup);
+      return await Widget.reloadAll();
+    } catch {
+      return false;
+    }
+  },
+
+  /** 🔐 Lưu token/credential bảo mật để Native Data Engine tự nội suy qua `{{$secure.<key>}}` */
+  setSecureToken: async (
+    tokenKey: string,
+    tokenValue: string,
+    appGroup?: string
+  ): Promise<boolean> => {
+    return await SharedStorage.set(`widget_secure_cred_${tokenKey}`, tokenValue, appGroup);
+  },
+
+  /** 🗑️ Xóa token bảo mật khỏi Shared Secure Store */
+  removeSecureToken: async (tokenKey: string, appGroup?: string): Promise<boolean> => {
+    return await SharedStorage.remove(`widget_secure_cred_${tokenKey}`, appGroup);
+  },
+
+  /** 📊 Theo dõi trạng thái đồng bộ & hiệu năng cache (Sync Observability) */
+  getSyncStatus: async (widgetKey = 'main', appGroup?: string) => {
+    const telemetry = await SharedStorage.get<any>(`widget_sync_telemetry_${widgetKey}`, appGroup);
+    return (
+      telemetry || {
+        widgetKey,
+        state: 'idle',
+        cacheStatus: 'miss',
+        isStale: false,
+        isOffline: false,
+      }
+    );
+  },
+
+  /** 🔍 So sánh Diff dữ liệu giữa 2 snapshot (Data Diff / Incremental Update) */
+  computeDataDiff,
+
+  /** ⏱️ Đánh giá trạng thái Cache (fresh / stale / miss) theo chuẩn Stale-While-Revalidate */
+  evaluateCacheStatus,
 };
 
 /**
@@ -1131,8 +1223,12 @@ export const AudioPlayer = {
 export * from './types';
 export * from './builder';
 export * from './ir';
+export * from './actionQueue';
 export { StyleSheet } from './builder';
 export * from './hooks';
+
+// Kết nối Storage Backend mặc định (SharedStorage) cho Persistent Action Queue & Atomic State Engine
+setEngineStorageBackend(SharedStorage);
 
 /**
  * Định nghĩa cấu hình các Widget cho ứng dụng với đầy đủ Type Safety và gợi ý thuộc tính IDE.

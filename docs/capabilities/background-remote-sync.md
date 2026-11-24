@@ -14,21 +14,37 @@ Update widgets with fresh JSON data from your backend API even when your app is 
 
 ---
 
-## 💻 Configuration
+## 💻 Configuration (Stale-While-Revalidate, REST & Secure Credentials)
 
 ```tsx
 import { Widget } from 'react-native-live-widgets';
 
-// Configure remote synchronization
-await Widget.setRemoteConfig({
-  widgetId: 'crypto_prices',
+// 1. Store auth token securely (interpolated natively via {{$secure.access_token}})
+await Widget.setSecureToken('access_token', 'YOUR_SECURE_JWT');
+
+// 2. Configure Background Data Engine with SWR & Offline-First Cache
+await Widget.setRemoteConfig('crypto_prices', {
   url: 'https://api.yourdomain.com/widgets/crypto?symbol=BTC',
+  method: 'GET', // Supports GET, POST, PUT, PATCH, DELETE
   headers: {
-    'Authorization': 'Bearer YOUR_SECURE_TOKEN',
-    'Accept': 'application/json'
+    'Authorization': 'Bearer {{$secure.access_token}}',
+    'Accept': 'application/json',
   },
-  refreshIntervalMinutes: 15 // Minimum recommended interval
+  cacheTtlSeconds: 60,
+  staleTtlSeconds: 600,
+  cacheStrategy: 'stale_while_revalidate', // Instant render (<5ms) + background refresh
+  offlineFallback: 'stale_cache',
+  enableETag: true,
+  enableDataDiff: true, // Skips reload if payload unchanged
+  parallelStrategy: 'all_settled',
+  partialFailurePolicy: 'keep_cached',
+  refreshIntervalMinutes: 15,
 });
+
+// 3. Proactively invalidate cache or inspect sync observability telemetry
+await Widget.invalidateCache('crypto_prices');
+const telemetry = await Widget.getSyncStatus('crypto_prices');
+console.log(telemetry.cacheStatus, telemetry.state);
 ```
 
 ### Backend JSON Contract
