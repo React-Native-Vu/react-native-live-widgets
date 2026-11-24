@@ -2,32 +2,37 @@
 
 All notable changes to `react-native-live-widgets` will be documented in this file.
 
-## [Unreleased]
+## [1.2.4] - 2026-11-24
 ### Added
-- **Native Feature Expansion & Curated Ecosystem Primitives (Group E — P2)**:
+- **Native Feature Expansion & Curated Ecosystem Primitives (Group E)**:
   - Added standalone **`MediaSession`** API (`setMetadata`, `setPlaybackState`, `clear`, `onRemoteCommand`) wired directly to iOS `MPNowPlayingInfoCenter`/`MPRemoteCommandCenter` and Android `android.media.session.MediaSession`.
   - Added **`NavigationLive`** turn-by-turn Dynamic Island & Lock Screen Live Activity controller (`start`, `updateManeuver`, `end`, `buildLayout`).
   - Added **`SmartHomeControl`** builders (`createToggle`, `createSceneButton`) for iOS 18 Control Center & Android Quick Settings.
   - Added high-ROI primitives & utilities: `createListNode` (RAM-safe `maxItems` cap), `createTimelineNode`, `createDonutChartNode`, `createSparklineNode`, `whenNode`, `responsiveLayout`, `LocaleFormatter`, and `Widget.prefetchImages()`/`clearImageCache()`.
-- **Developer Experience, Visual Inspector, Snapshot Testing, Profiler & Diagnostics (Group D — P1)**:
+- **Developer Experience, Visual Inspector, Snapshot Testing, Profiler & Diagnostics (Group D)**:
   - Added `Widget.exportInspectorHTML()` generating a zero-dependency 3-pane DevTools HTML viewer (UI Tree, Dark/Light/Tinted SVG previews, Semantic Focus Tree, Diagnostics).
   - Added `Widget.createSnapshot()`, `Widget.compareSnapshots()`, and `Widget.renderToSVG()` for multi-size & Light/Dark/Tinted/RTL regression testing.
   - Added `Widget.profileIR()`, `Widget.getProfilerReport()`, `Widget.formatProfilerReport()` + Android native Bitmap RAM / render duration / RemoteViews action telemetry and 24-hour WidgetKit reload budget warnings.
   - Added `Widget.diagnose()` and `Widget.formatDiagnostics()` catching invalid UI schema, prop typos, platform limits, Canvas fallbacks, and dead-letter queue alerts.
-- **Persistent Action Queue & Atomic State Lifecycle Engine (Group B — P0)**:
+- **Persistent Action Queue & Atomic State Lifecycle Engine (Group B)**:
   - Added `Widget.enqueueAction`, `Widget.getPendingActions`, `Widget.syncPendingActions`, `Widget.recoverPendingActions`, `Widget.clearPendingActions`, and `usePendingActions()` hook with Idempotency Keys, Deduplication, Exponential/Linear/Fixed Retry Policy, and Dead-Letter handling.
   - Added `Widget.registerStateSchema`, `Widget.getVersionedState`, and `Widget.updateStateAtomic` supporting State Versioning, automatic schema Migration, Conflict Resolution (`last_write_wins`, `server_wins`, `client_wins`, custom merge), and Multi-Instance Isolation.
-- **Background Data Engine Upgrades (Group C — P1)**:
+- **Background Data Engine Upgrades (Group C)**:
   - Added `PATCH`/`DELETE` REST support, **Stale-While-Revalidate (SWR)** (`cacheStrategy`, `staleTtlSeconds`), `offlineFallback`, `Widget.invalidateCache()`, `Widget.setSecureToken()` (`{{$secure.*}}` native header interpolation), `Widget.getSyncStatus()` observability telemetry, and `Widget.computeDataDiff()` incremental diffing.
-- **True Native Accessibility Tree (P0 — TalkBack & VoiceOver)**:
+- **True Native Accessibility Tree (Group A — TalkBack & VoiceOver)**:
   - Extended `AccessibilityProps` & `SemanticNode` in UI IR with `accessibilityFocusOrder`, `accessibilityGroup` (`'combine' | 'contain' | 'none'`), `accessibilityState` (`checked`, `disabled`, `expanded`, `selected`, `busy`), `accessibilityAdjustable`, `accessibilityLiveRegion` (`'polite' | 'assertive'`), and RTL traversal (`layoutDirection: 'rtl'`).
-  - **Android Native Semantic Overlay (`rn_semantic_layer`)**: Replaced monolithic Canvas `contentDescription` with independent pixel-aligned transparent `AccessibilityNodeInfo` overlays (`rn_live_widget_semantic_node.xml`) supporting TalkBack per-element focus, `setStateDescription` (API 30+), `setAccessibilityHeading` (API 28+), and `setAccessibilityLiveRegion`.
+  - **Android Native Semantic Overlay (`rn_semantic_layer`)**: Replaced monolithic Canvas `contentDescription` with independent pixel-aligned transparent `AccessibilityNodeInfo` overlays (`rn_live_widget_semantic_node.xml`) using 100% `@RemotableViewMethod`-safe bindings.
   - **iOS SwiftUI Accessibility Modifier**: Added `.accessibilitySortPriority()`, `.accessibilityElement(children:)`, `.isSelected`/`.isSummaryElement`/`.updatesFrequently` traits, and RTL `.layoutDirection`.
-  - **Accessibility Test Inspector**: Added `Widget.inspectAccessibilityTree(layout, { rtl })` and expanded IR test suite to 18 assertions.
+  - **Accessibility Test Inspector**: Added `Widget.inspectAccessibilityTree(layout, { rtl })`.
+- **Android Debug FCM Push Simulator (`DebugFcmPushReceiver`)**:
+  - Added `FLAG_DEBUGGABLE`-guarded broadcast receiver (`ACTION_SIMULATE_FCM_PUSH`) allowing instant local `adb` simulation of FCM push-to-start, push-to-update, push-to-end Live Activities, and background widget sync without requiring Firebase project setup.
 - **Tier-1 Community QA, CI/CD & Documentation**:
-  - Upgraded `.github/workflows/ci.yml` with multi-Node (18/20/22) test matrix, Expo Config Plugin automated verification (`scripts/test-config-plugin.js`), CocoaPods podspec validation, and Android structure verification.
+  - Expanded automated unit test suite to **41/41 passing assertions** across Node 18, 20, and 22 in `.github/workflows/ci.yml`.
   - Added 7-flow Maestro E2E test suite (`.maestro/`) and Android KVM E2E workflow (`.github/workflows/e2e.yml`).
-  - Published `docs/COMPATIBILITY.md`, `docs/MIGRATION.md`, `docs/BENCHMARKS.md`, and capability guides in `docs/capabilities/`.
+  - Published `docs/RELEASE-1.2.4.md`, `docs/COMPATIBILITY.md`, `docs/MIGRATION.md`, `docs/BENCHMARKS.md`, and 7 capability guides in `docs/capabilities/`.
+
+### Fixed
+- **Android Launcher `"Can't load widget"` Safety**: Removed non-`@RemotableViewMethod` reflection calls (`setAccessibilityHeading`, `setStateDescription`, `setAccessibilityLiveRegion`) from `RemoteViews` in `DynamicHomeScreenWidgetProvider.kt`, encoding heading and state semantics cleanly via `@RemotableViewMethod` `setContentDescription`.
 
 ## [1.2.3] - 2026-11-18
 ### Fixed & Improved

@@ -14,7 +14,7 @@
 
 *Write 100% Declarative TypeScript. Render dynamically to Native SwiftUI (WidgetKit) & Android 2D Canvas without touching Xcode or Android Studio.*
 
-[🌐 Docs Website](https://react-native-vu.github.io/react-native-live-widgets/) • [📋 Compatibility Matrix](docs/COMPATIBILITY.md) • [📊 Benchmarks](docs/BENCHMARKS.md) • [🔄 Migration](docs/MIGRATION.md) • [🎭 E2E Tests](.maestro/README.md) • [🤖 llms.txt](https://react-native-vu.github.io/react-native-live-widgets/llms.txt) • [📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Tiếng Việt](docs/GUIDE-VI.md)
+[🌐 Docs Website](https://react-native-vu.github.io/react-native-live-widgets/) • [🚀 v1.2.4 Release Notes](docs/RELEASE-1.2.4.md) • [📋 Compatibility Matrix](docs/COMPATIBILITY.md) • [📊 Benchmarks](docs/BENCHMARKS.md) • [🔄 Migration](docs/MIGRATION.md) • [🎭 E2E Tests](.maestro/README.md) • [🤖 llms.txt](https://react-native-vu.github.io/react-native-live-widgets/llms.txt) • [📖 English Guide](docs/GUIDE-EN.md) • [🇻🇳 Tiếng Việt](docs/GUIDE-VI.md)
 
 ---
 
