@@ -321,37 +321,14 @@ class DynamicHomeScreenWidgetProvider : AppWidgetProvider() {
                 semView.setViewPadding(R.id.rn_semantic_node_root, padL, padT, padR, padB)
 
                 val descParts = mutableListOf<String>()
+                if (node.isHeading) descParts.add("Tiêu đề")
                 if (node.label.isNotEmpty()) descParts.add(node.label)
                 if (!node.value.isNullOrEmpty()) descParts.add(node.value)
+                if (!node.stateDescription.isNullOrEmpty()) descParts.add(node.stateDescription)
                 if (!node.hint.isNullOrEmpty()) descParts.add(node.hint)
                 val fullDesc = descParts.joinToString(". ")
+                // Chỉ dùng @RemotableViewMethod chuẩn (setContentDescription) để Launcher không bao giờ báo "Can't load widget"
                 semView.setContentDescription(R.id.rn_semantic_node, fullDesc)
-
-                // Android 11+ (API 30+): State Description (Checked, Disabled, Expanded, Busy)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !node.stateDescription.isNullOrEmpty()) {
-                    try {
-                        semView.setCharSequence(R.id.rn_semantic_node, "setStateDescription", node.stateDescription)
-                    } catch (_: Exception) {}
-                }
-
-                // Android 9+ (API 28+): Đánh dấu Heading để TalkBack hỗ trợ điều hướng theo tiêu đề
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && node.isHeading) {
-                    try {
-                        semView.setBoolean(R.id.rn_semantic_node, "setAccessibilityHeading", true)
-                    } catch (_: Exception) {}
-                }
-
-                // Dynamic Accessibility Live Region (Polite / Assertive)
-                if (node.liveRegion == "polite" || node.liveRegion == "assertive") {
-                    try {
-                        val regionMode = if (node.liveRegion == "assertive") {
-                            View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE
-                        } else {
-                            View.ACCESSIBILITY_LIVE_REGION_POLITE
-                        }
-                        semView.setInt(R.id.rn_semantic_node, "setAccessibilityLiveRegion", regionMode)
-                    } catch (_: Exception) {}
-                }
 
                 views.addView(R.id.rn_semantic_layer, semView)
             }
